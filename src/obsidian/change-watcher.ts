@@ -5,10 +5,13 @@ import { validateValue } from '../core/validate';
 import type { PropertyDef, ResolvedType } from '../core/schema-types';
 import type VaultSchemaPlugin from '../main';
 import { confirm } from './modals';
+import type { PlannedConversion } from './note-actions';
 import { chooseValue, preview } from './preview-modal';
 
 const QUIET_MS = 1500;
 const RENAME_WINDOW_MS = 10_000;
+/** After the last moved note, wait this long for the rest of a folder reorganisation. */
+const SETTLE_MS = 2500;
 
 /**
  * Asks about the things the spec says must ask: tag synonyms and unknown tags (rule 6), an invalid status
@@ -24,6 +27,8 @@ export class ChangeWatcher {
   private readonly renamedAt = new Map<string, number>();
   private readonly dismissed = new Set<string>();
   private busy: Promise<void> = Promise.resolve();
+  private readonly candidates = new Map<string, { file: TFile; from: ResolvedType; to: ResolvedType }>();
+  private candidateTimer: number | null = null;
   /** Switch the prompts off (used by the real-app test suite so unrelated checks are not interrupted). */
   enabled = true;
 
@@ -65,6 +70,7 @@ export class ChangeWatcher {
   stop(): void {
     for (const t of this.timers.values()) window.clearTimeout(t);
     this.timers.clear();
+    if (this.candidateTimer !== null) window.clearTimeout(this.candidateTimer);
   }
 
   private track(file: TFile, fm: Record<string, unknown> | undefined): void {
@@ -105,13 +111,29 @@ export class ChangeWatcher {
     const prevType = this.lastType.get(file.path);
     const prevCrumb = this.lastCrumb.get(file.path);
     this.track(file, fm);
+    if (!fm) return;
+
+    // A first breadcrumb segment that now belongs to another schema, right after a move. Collected for every note
+    // (not only open ones) so a folder reorganisation is handled once, as a batch.
+    const crumb = typeof fm.breadcrumb === 'string' ? fm.breadcrumb : '';
+    const typeNow = typeof fm.type === 'string' ? (pack.types.get(fm.type) ?? null) : null;
+    const moved = Date.now() - (this.renamedAt.get(file.path) ?? 0) < RENAME_WINDOW_MS;
+    if (typeNow && crumb && crumb !== prevCrumb && moved && plugin.notes.context(file).verdict.managed) {
+      const hit = matchNote(pack, { path: 'x.md', frontmatter: { breadcrumb: crumb } }, { mode: 'auto', noMatch: 'unmanaged' });
+      const to = hit.kind === 'matched' ? pack.types.get(hit.type) : undefined;
+      if (to && to.name !== typeNow.name && !this.dismissed.has(`convert:${file.path}:${typeNow.name}>${to.name}`)) {
+        this.candidates.set(file.path, { file, from: typeNow, to });
+        this.scheduleFlush();
+      }
+    }
+
     if (!this.isBeingEdited(file)) return;
 
     const ctx = plugin.notes.context(file);
-    if (!ctx.verdict.managed || !fm) return;
-    const type = typeof fm.type === 'string' ? (pack.types.get(fm.type) ?? null) : null;
+    if (!ctx.verdict.managed) return;
+    const type = typeNow;
 
-    // 1. the `type` property changed to another schema
+    // the `type` property changed to another schema
     if (type && prevType && prevType !== type.name) {
       const from = pack.types.get(prevType);
       const key = `convert:${file.path}:${prevType}>${type.name}`;
@@ -121,24 +143,68 @@ export class ChangeWatcher {
       }
     }
 
-    // 2. the first breadcrumb segment now belongs to another schema (after a move by the breadcrumb plugin)
-    const crumb = typeof fm.breadcrumb === 'string' ? fm.breadcrumb : '';
-    const moved = Date.now() - (this.renamedAt.get(file.path) ?? 0) < RENAME_WINDOW_MS;
-    if (type && crumb && crumb !== prevCrumb && moved) {
-      const hit = matchNote(pack, { path: 'x.md', frontmatter: { breadcrumb: crumb } }, { mode: 'auto', noMatch: 'unmanaged' });
-      if (hit.kind === 'matched' && hit.type !== type.name) {
-        const to = pack.types.get(hit.type);
-        const key = `convert:${file.path}:${type.name}>${hit.type}`;
-        if (to && !this.dismissed.has(key)) {
-          if (!(await plugin.actions.convert(file, to, type))) this.dismissed.add(key);
-          return;
-        }
-      }
-    }
-
     if (!ctx.type) return;
     await this.checkTags(file, ctx.type, fm);
     await this.checkStatus(file, ctx.type, fm);
+  }
+
+  private scheduleFlush(): void {
+    if (this.candidateTimer !== null) window.clearTimeout(this.candidateTimer);
+    this.candidateTimer = window.setTimeout(() => {
+      this.candidateTimer = null;
+      this.busy = this.busy.then(() => this.flushCandidates()).catch(() => undefined);
+    }, SETTLE_MS);
+  }
+
+  /** One window for a reorganisation of many notes; a single moved note keeps its own prompt. */
+  private async flushCandidates(): Promise<void> {
+    const { plugin } = this;
+    const list = [...this.candidates.values()].filter((c) => plugin.notes.frontmatterOf(c.file)?.type === c.from.name);
+    this.candidates.clear();
+    if (!this.enabled || list.length === 0) return;
+    if (list.length === 1 || !plugin.settings.batchMode) {
+      for (const c of list) {
+        if (!this.isBeingEdited(c.file)) continue;
+        if (!(await plugin.actions.convert(c.file, c.to, c.from))) this.dismissed.add(`convert:${c.file.path}:${c.from.name}>${c.to.name}`);
+      }
+      return;
+    }
+    await this.batchConvert(list);
+  }
+
+  private async batchConvert(list: { file: TFile; from: ResolvedType; to: ResolvedType }[]): Promise<void> {
+    const { plugin } = this;
+    const planned: PlannedConversion[] = [];
+    for (const c of list) {
+      const p = await plugin.actions.planConvert(c.file, c.to, c.from);
+      if (p) planned.push(p);
+    }
+    if (planned.length === 0) return;
+    const groups = new Map<string, PlannedConversion[]>();
+    for (const p of planned) groups.set(`${p.source.name} → ${p.to.name}`, [...(groups.get(`${p.source.name} → ${p.to.name}`) ?? []), p]);
+    const ok = await preview(plugin.app, {
+      title: `Convert ${planned.length} notes?`,
+      lead: 'Their breadcrumbs now point at other schemas. Values that no longer apply are kept in archived_fields; nothing is deleted.',
+      sections: [...groups.entries()].map(([heading, items]) => ({
+        heading: `${heading} (${items.length})`,
+        lines: items.map((p) => `${p.file.basename}: +${Object.keys(p.plan.added).length} added, ${Object.keys(p.plan.archived).length} archived`),
+      })),
+      confirmText: `Convert ${planned.length} notes`,
+    });
+    if (!ok) {
+      for (const p of planned) this.dismissed.add(`convert:${p.file.path}:${p.source.name}>${p.to.name}`);
+      return;
+    }
+    const progress = new Notice('', 0);
+    let failed = 0;
+    for (const [i, p] of planned.entries()) {
+      progress.setMessage(`Converting ${i + 1} of ${planned.length}…`);
+      const err = await plugin.actions.applyConversion(p);
+      if (err) failed++;
+      if (i % 5 === 4) await new Promise<void>((r) => window.setTimeout(r, 0));
+    }
+    progress.hide();
+    new Notice(`Converted ${planned.length - failed} of ${planned.length} notes.`);
   }
 
   private async checkTags(file: TFile, type: ResolvedType, fm: Record<string, unknown>): Promise<void> {

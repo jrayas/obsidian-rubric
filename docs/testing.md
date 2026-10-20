@@ -55,9 +55,11 @@ If `node` is not installed, use the project-local one: macOS/Linux `export PATH=
 | `tests/validate.test.ts` | Value validation per type; file-name rules for macOS and Windows; case and accent collisions |
 | `tests/tags.test.ts` | Rule 6: synonym replacement, unknown tags, duplicates, vocabulary add keeps comments |
 | `tests/convert.test.ts` | Rule 8: preview, `archived_fields`, nothing deleted; note creation from every type |
+| `tests/vault-check.test.ts` | The eleven checks each find a seeded problem; fixes resolve their own finding; the scan changes nothing; body tags; duplicates and allocation |
+| `tests/migrate.test.ts` | Schema 1 to 2: IDs, every nested block, domain handling, archived values, created/modified last, no value lost |
 | `tests/options.test.ts` | Options come from the note's schema; synonyms; locked properties and their notes; picking and toggling |
 | `tests/hold-state.test.ts` | The hold/latch state machine: delay, repeat, cancel on another key, pointer rule, Escape order, hotkey |
-| `scripts/e2e.mjs` (real Obsidian) | 47 checks across Phases 1-4: pack install, last good copy, hidden folder polling, prompts, settings page, decorations, hold/latch/Escape, saves, autocomplete, hint, commands-only, source-mode suggest, create from schema, ID allocation, every `modified` rule, tag/status/convert prompts, one-off schema choice, no rewrite of unchanged notes |
+| `scripts/e2e.mjs` (real Obsidian) | 58 checks across Phases 1-5: pack install, last good copy, hidden folder polling, prompts, settings page, decorations, hold/latch/Escape, saves, autocomplete, hint, commands-only, source-mode suggest, create from schema, ID allocation, every `modified` rule, tag/status/convert prompts, one-off schema choice, no rewrite of unchanged notes, the vault check window with a seeded problem per check, every fix, migration (single and batch), the local index, schema problems with file and line, a folder reorganisation of 12 notes processed once, 12 stamps with progress |
 
 ## Real-app checks that must pass before release
 

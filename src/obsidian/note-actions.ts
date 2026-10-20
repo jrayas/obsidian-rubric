@@ -5,9 +5,20 @@ import { planCompletion } from '../core/create';
 import { desiredOrder, editFrontmatter, readFrontmatter } from '../core/frontmatter';
 import type { Frontmatter } from '../core/frontmatter';
 import { describeChanges } from '../core/preview';
+import type { KeyChange } from '../core/frontmatter';
 import type { ResolvedType } from '../core/schema-types';
 import type VaultSchemaPlugin from '../main';
 import { preview } from './preview-modal';
+
+export interface PlannedConversion {
+  file: TFile;
+  /** The text the plan was made from; the write checks the note still equals it. */
+  text: string;
+  source: ResolvedType;
+  to: ResolvedType;
+  plan: ReturnType<typeof planConversion>;
+  changes: KeyChange[];
+}
 
 /** Previewed, approved changes to one note: convert its type, complete it with the properties its type needs. */
 export class NoteActions {
@@ -23,38 +34,52 @@ export class NoteActions {
     }
   }
 
+  /** Work out a conversion and what it would write, without showing or writing anything. */
+  async planConvert(file: TFile, to: ResolvedType, from?: ResolvedType | null): Promise<PlannedConversion | null> {
+    const loaded = await this.load(file);
+    if (!loaded) return null;
+    const source = from ?? this.plugin.notes.context(file, loaded.fm).type;
+    if (!source || source.name === to.name) return null;
+    const plan = planConversion(loaded.fm, source, to, new Date());
+    const dry = editFrontmatter(loaded.text, plan.apply, { order: (k) => desiredOrder(k, to), forceOrder: true });
+    return { file, text: loaded.text, source, to, plan, changes: dry.changes };
+  }
+
+  /** Write a planned conversion. The note must still equal the text the plan was made from. */
+  async applyConversion(p: PlannedConversion): Promise<string | null> {
+    const { plugin } = this;
+    plugin.watcher.acceptType(p.file.path, p.to.name);
+    const outcome = await plugin.queue.editExact(p.file, p.text, { mutate: p.plan.apply, forceOrder: true });
+    if (outcome.error) {
+      plugin.watcher.acceptType(p.file.path, p.source.name);
+      return outcome.error;
+    }
+    return null;
+  }
+
   /** Rule 8: preview, then convert. Values that no longer apply go to `archived_fields`; nothing is deleted. */
   async convert(file: TFile, to: ResolvedType, from?: ResolvedType | null): Promise<boolean> {
     const { plugin } = this;
-    const loaded = await this.load(file);
-    if (!loaded) return false;
-    const source = from ?? plugin.notes.context(file, loaded.fm).type;
-    if (!source) {
-      new Notice('This note has no schema yet. Choose one first.');
+    const planned = await this.planConvert(file, to, from);
+    if (!planned) {
+      const cur = from ?? plugin.notes.context(file).type;
+      new Notice(!cur ? 'This note has no schema yet. Choose one first.' : `The note is already a ${to.name}.`);
       return false;
     }
-    if (source.name === to.name) {
-      new Notice(`The note is already a ${to.name}.`);
-      return false;
-    }
-    const plan = planConversion(loaded.fm, source, to, new Date());
-    const dry = editFrontmatter(loaded.text, plan.apply, { order: (k) => desiredOrder(k, to), forceOrder: true });
     const lines = (o: Record<string, unknown>) => Object.entries(o).map(([k, v]) => `${k}: ${typeof v === 'string' ? v : JSON.stringify(v)}`);
     const ok = await preview(plugin.app, {
-      title: `Convert “${file.basename}” from ${source.name} to ${to.name}?`,
+      title: `Convert “${file.basename}” from ${planned.source.name} to ${to.name}?`,
       sections: [
-        { heading: 'Added with defaults', lines: lines(plan.added) },
-        { heading: 'Kept in archived_fields (not deleted)', lines: lines(plan.archived) },
-        { heading: 'All changes', lines: describeChanges(dry.changes) },
+        { heading: 'Added with defaults', lines: lines(planned.plan.added) },
+        { heading: 'Kept in archived_fields (not deleted)', lines: lines(planned.plan.archived) },
+        { heading: 'All changes', lines: describeChanges(planned.changes) },
       ],
       confirmText: 'Convert',
     });
     if (!ok) return false;
-    plugin.watcher.acceptType(file.path, to.name);
-    const outcome = await plugin.queue.editExact(file, loaded.text, { mutate: plan.apply, forceOrder: true });
-    if (outcome.error) {
-      plugin.watcher.acceptType(file.path, source.name);
-      new Notice(outcome.error);
+    const err = await this.applyConversion(planned);
+    if (err) {
+      new Notice(err);
       return false;
     }
     new Notice(`Converted “${file.basename}” to ${to.name}.`);

@@ -45,10 +45,10 @@ Ticked with date and time (local). Task definitions are in `docs/plan.md`.
 - [x] P4.7 Convert type — 2026-10-21 00:45
 
 ## Phase 5: vault check and migration
-- [ ] P5.1 Vault check (11 checks)
-- [ ] P5.2 Diff preview and approval
-- [ ] P5.3 Migration 1 → 2
-- [ ] P5.4 Batch mode
+- [x] P5.1 Vault check (11 checks) — 2026-10-21 01:02
+- [x] P5.2 Diff preview and approval — 2026-10-21 01:02
+- [x] P5.3 Migration 1 → 2 — 2026-10-21 01:02
+- [x] P5.4 Batch mode — 2026-10-21 01:02
 
 ## Phase 6: hardening and release
 - [ ] P6.1 Test plan run

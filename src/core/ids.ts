@@ -93,8 +93,8 @@ export function findDuplicates(notes: IdNote[]): IdNote[][] {
  * The older note in each duplicate group keeps its ID; every newer note gets the next free number for its
  * prefix and year, allocated one after another so two renumbered notes never share a number.
  */
-export function planRenumbering(notes: IdNote[], retired: Iterable<string> = []): Renumber[] {
-  const used = new Set(notes.map((n) => n.id));
+export function planRenumbering(notes: IdNote[], retired: Iterable<string> = [], alsoUsed: Iterable<string> = []): Renumber[] {
+  const used = new Set([...notes.map((n) => n.id), ...alsoUsed]);
   const gone = new Set(retired);
   const out: Renumber[] = [];
   for (const group of findDuplicates(notes)) {

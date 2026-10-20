@@ -7,6 +7,7 @@ import { NoteService } from './obsidian/note-service';
 import { ChangeWatcher } from './obsidian/change-watcher';
 import { openCreateNote } from './obsidian/create-note';
 import { IdService } from './obsidian/id-service';
+import { KnownIndex } from './obsidian/known-index';
 import { ModifiedStamper } from './obsidian/modified-stamper';
 import { NoteActions } from './obsidian/note-actions';
 import { OptionPickerModal } from './obsidian/picker-modal';
@@ -14,6 +15,7 @@ import { PropertiesLayer } from './obsidian/properties-layer';
 import { RegistryStore } from './obsidian/registry-store';
 import { SchemaValueSuggest } from './obsidian/source-suggest';
 import { propertyUnderFocus } from './obsidian/target-property';
+import { openVaultCheck } from './obsidian/vault-check-view';
 import { VocabularyStore } from './obsidian/vocabulary-store';
 import { WriteQueue } from './obsidian/write-queue';
 import { askSchemaChoice } from './obsidian/choice-modals';
@@ -29,6 +31,7 @@ export default class VaultSchemaPlugin extends Plugin {
   queue!: WriteQueue;
   layer!: PropertiesLayer;
   ids!: IdService;
+  known!: KnownIndex;
   actions!: NoteActions;
   vocabulary!: VocabularyStore;
   private stamper!: ModifiedStamper;
@@ -49,6 +52,7 @@ export default class VaultSchemaPlugin extends Plugin {
     this.ids = new IdService(this.app, () => this.settings);
     this.actions = new NoteActions(this);
     this.vocabulary = new VocabularyStore(this.app, this.schemas);
+    this.known = new KnownIndex(this);
     this.stamper = new ModifiedStamper(this);
     this.watcher = new ChangeWatcher(this);
     this.notes.applyType = (file, type) => this.applyType(file, type);
@@ -83,6 +87,11 @@ export default class VaultSchemaPlugin extends Plugin {
     });
 
     this.addCommand({
+      id: 'check-vault',
+      name: 'Check vault',
+      callback: () => openVaultCheck(this),
+    });
+    this.addCommand({
       id: 'convert-note-type',
       name: 'Convert this note to another type',
       checkCallback: (checking) => {
@@ -107,6 +116,7 @@ export default class VaultSchemaPlugin extends Plugin {
       void this.schemas.start().then(() => {
         this.notes.start();
         this.stamper.start();
+        this.known.start();
         this.watcher.start();
         this.syncLayer();
       });
@@ -133,6 +143,7 @@ export default class VaultSchemaPlugin extends Plugin {
   onunload(): void {
     this.layer?.uninstall();
     this.stamper?.stop();
+    this.known?.stop();
     this.watcher?.stop();
   }
 

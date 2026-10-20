@@ -1,4 +1,4 @@
-import { TFile } from 'obsidian';
+import { Notice, TFile } from 'obsidian';
 import { formatLocal, decideStamp, fingerprint } from '../core/timestamps';
 import type { NoteState } from '../core/timestamps';
 import { readFrontmatter } from '../core/frontmatter';
@@ -15,6 +15,10 @@ export const STAMP_DELAY_MS = 1500;
 export class ModifiedStamper {
   private readonly baseline = new Map<string, NoteState>();
   private readonly timers = new Map<string, number>();
+  private chain: Promise<void> = Promise.resolve();
+  private waiting = 0;
+  private finished = 0;
+  private progress: Notice | null = null;
 
   constructor(private readonly plugin: VaultSchemaPlugin) {}
 
@@ -117,9 +121,31 @@ export class ModifiedStamper {
       file.path,
       window.setTimeout(() => {
         this.timers.delete(file.path);
-        void this.stamp(file);
+        this.enqueue(file);
       }, STAMP_DELAY_MS),
     );
+  }
+
+  /**
+   * Stamps run one after another. When many notes change in a burst (a find and replace, a folder reorganisation)
+   * and batch mode is on, a single progress notice shows instead of a flurry of writes.
+   */
+  private enqueue(file: TFile): void {
+    this.waiting++;
+    if (this.waiting > 10 && this.plugin.settings.batchMode && !this.progress) this.progress = new Notice('', 0);
+    this.chain = this.chain
+      .then(() => this.stamp(file))
+      .catch(() => undefined)
+      .finally(() => {
+        this.finished++;
+        this.progress?.setMessage(`Stamping modified: ${this.finished} of ${this.waiting} notes…`);
+        if (this.finished >= this.waiting) {
+          this.progress?.hide();
+          this.progress = null;
+          this.waiting = 0;
+          this.finished = 0;
+        }
+      });
   }
 
   private async stamp(file: TFile): Promise<void> {

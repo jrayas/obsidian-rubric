@@ -66,6 +66,8 @@ export class WriteQueue {
   private readonly running = new Map<string, Promise<void>>();
   /** When this plugin last wrote each note (ms), so watchers can ignore the change events it caused. */
   readonly lastWrite = new Map<string, number>();
+  /** Called after a write that changed `id` or `created`, so the local index follows the plugin's own changes. */
+  onIdentityWritten: ((path: string, id: string | undefined, created: string | undefined) => void) | null = null;
 
   constructor(
     private readonly app: App,
@@ -115,6 +117,7 @@ export class WriteQueue {
             outcome.written = true;
             this.ledger.record(file.path, result.text);
             this.lastWrite.set(file.path, Date.now());
+            this.notifyIdentity(file.path, result.changes);
           }
           return result.text;
         });
@@ -134,6 +137,42 @@ export class WriteQueue {
     return next;
   }
 
+  /**
+   * Apply a text change that was previewed (body edits such as a tag in the text). Writes only if the file still
+   * equals `expectedText`.
+   */
+  async textExact(file: TFile, expectedText: string, transform: (text: string) => string): Promise<WriteOutcome> {
+    const outcome: WriteOutcome = { written: false, changes: [] };
+    const run = async (): Promise<void> => {
+      try {
+        await this.app.vault.process(file, (text) => {
+          if (text !== expectedText) {
+            outcome.error = 'The note changed after the check. Nothing was written; run the check again.';
+            return text;
+          }
+          const next = transform(text);
+          if (next !== text) {
+            outcome.written = true;
+            this.ledger.record(file.path, next);
+            this.lastWrite.set(file.path, Date.now());
+          }
+          return next;
+        });
+      } catch (e) {
+        outcome.written = false;
+        outcome.error = e instanceof Error ? e.message : String(e);
+      }
+    };
+    const prev = this.running.get(file.path) ?? Promise.resolve();
+    const next = prev.then(run);
+    this.running.set(file.path, next);
+    void next.finally(() => {
+      if (this.running.get(file.path) === next) this.running.delete(file.path);
+    });
+    await next;
+    return outcome;
+  }
+
   /** Convenience: set or remove single properties. `undefined` removes. */
   set(file: TFile, values: Record<string, unknown>): Promise<WriteOutcome> {
     return this.edit(file, {
@@ -144,6 +183,17 @@ export class WriteQueue {
         }
       },
     });
+  }
+
+  private notifyIdentity(path: string, changes: KeyChange[]): void {
+    const id = changes.find((c) => c.key === 'id');
+    const created = changes.find((c) => c.key === 'created');
+    if (!id && !created) return;
+    this.onIdentityWritten?.(
+      path,
+      typeof id?.after === 'string' ? id.after : undefined,
+      typeof created?.after === 'string' ? created.after : undefined,
+    );
   }
 
   private async flush(path: string): Promise<void> {
@@ -175,6 +225,7 @@ export class WriteQueue {
           outcome.written = true;
           this.ledger.record(path, result.text);
           this.lastWrite.set(path, Date.now());
+          this.notifyIdentity(path, result.changes);
         }
         return result.text;
       });

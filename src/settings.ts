@@ -17,6 +17,8 @@ export interface VaultSchemaSettings {
   skippedFolders: string[];
   /** IDs given up by renumbering. They are never handed out again. */
   retiredIds: string[];
+  /** First-seen ID and created per note path: the small local index behind check 9. */
+  index: Record<string, { id?: string; created?: string }>;
 }
 
 export const DEFAULT_SETTINGS: VaultSchemaSettings = {
@@ -32,11 +34,12 @@ export const DEFAULT_SETTINGS: VaultSchemaSettings = {
   batchMode: true,
   skippedFolders: [],
   retiredIds: [],
+  index: {},
 };
 
 /** Merge stored data over the defaults, ignoring unknown keys and wrong types. */
 export function mergeSettings(stored: unknown): VaultSchemaSettings {
-  const out: VaultSchemaSettings = { ...DEFAULT_SETTINGS, skippedFolders: [], retiredIds: [] };
+  const out: VaultSchemaSettings = { ...DEFAULT_SETTINGS, skippedFolders: [], retiredIds: [], index: {} };
   if (typeof stored !== 'object' || stored === null) return out;
   const s = stored as Record<string, unknown>;
   const rec = out as unknown as Record<string, unknown>;

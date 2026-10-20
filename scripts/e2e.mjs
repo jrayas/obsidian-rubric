@@ -782,6 +782,234 @@ await check('P4 unchanged notes are never rewritten', async () => {
   eq(await ev(`app.vault.adapter.stat('Knowledge/Created One.md').then(s => s.mtime)`), mtimeBefore, 'mtime changed');
 });
 
+// ---------------------------------------------------------------- Phase 5: vault check and migration
+await closeStrayModals();
+const nm = (title, extra = '', over = {}) => {
+  const base = { type: 'kb', schema: 2, id: null, name: title, status: 'draft', breadcrumb: 'Knowledge/Physics', created: '2026-01-05T10:00', modified: '2026-12-31T10:00', ...over };
+  const lines = Object.entries(base).filter(([, v]) => v !== null).map(([k, v]) => `${k}: ${v}`);
+  return `---\n${lines.join('\n')}\n${extra}---\nbody\n`;
+};
+const seed = async () => {
+  await write('Knowledge/V5 NoId.md', nm('V5 NoId'));
+  await write('Knowledge/V5 NoCreated.md', nm('V5 NoCreated', '', { id: 'KB-2026-0701', created: null }));
+  await write('Knowledge/V5 BadStatus.md', nm('V5 BadStatus', '', { id: 'KB-2026-0702', status: 'live' }));
+  await write('Knowledge/V5 OldId.md', nm('V5 OldId', '', { id: 'KB-000146', created: '2026-02-03T09:00' }));
+  await write('Knowledge/V5 DupA.md', nm('V5 DupA', '', { id: 'KB-2026-0777', created: '2026-01-01T10:00' }));
+  await write('Knowledge/V5 DupB.md', nm('V5 DupB', '', { id: 'KB-2026-0777', created: '2026-02-01T10:00' }));
+  await write('Knowledge/V5 Syn.md', nm('V5 Syn', 'tags:\n  - sop\n', { id: 'KB-2026-0703' }));
+  await write('Knowledge/V5 Unknown.md', nm('V5 Unknown', 'tags:\n  - xyzzy\n', { id: 'KB-2026-0704' }));
+  await write('Knowledge/V5 Body.md', nm('V5 Body', '', { id: 'KB-2026-0705' }).replace('body\n', 'Notes on #sop and #ghosts here.\n'));
+  await write('Knowledge/V5 NameMismatch.md', nm('V5 NameMismatch', '', { id: 'KB-2026-0706', name: 'Something else' }));
+  await write('Knowledge/V5 NoCrumb.md', nm('V5 NoCrumb', '', { id: 'KB-2026-0707', breadcrumb: null }));
+  await write('Knowledge/V5 BadCrumb.md', nm('V5 BadCrumb', '', { id: 'KB-2026-0708', breadcrumb: 'Nonsense/x' }));
+  await write('Knowledge/V5 Domain.md', nm('V5 Domain', 'domain: Knowledge\n', { id: 'KB-2026-0709' }));
+  await write('Knowledge/V5 Time.md', nm('V5 Time', '', { id: 'KB-2026-0710', created: '2026-09-01T10:00', modified: '2026-08-01T10:00' }));
+  for (const n of [1, 2, 3]) {
+    await write(`Knowledge/V5 Old${n}.md`, nm(`V5 Old${n}`, `source:\n  title: Lectures ${n}\n  author: Feynman\n  notes: free text\nreview:\n  cycle: 3-months\n  last: 2026-01-01\ndomain: Elsewhere\n`, { schema: 1, id: `KB-00020${n}`, created: '2026-02-03T09:00', modified: '2026-02-04T09:00' }));
+  }
+};
+const V5 = ['V5 NoId', 'V5 NoCreated', 'V5 BadStatus', 'V5 OldId', 'V5 DupA', 'V5 DupB', 'V5 Syn', 'V5 Unknown', 'V5 Body', 'V5 NameMismatch', 'V5 NoCrumb', 'V5 BadCrumb', 'V5 Domain', 'V5 Time', 'V5 Old1', 'V5 Old2', 'V5 Old3'];
+const hashAll = () => ev(`(async () => { const out = {}; for (const f of app.vault.getMarkdownFiles()) if (f.basename.startsWith('V5 ')) out[f.path] = await app.vault.adapter.read(f.path); return out; })()`);
+const report = () => ev(`(() => { const out = {}; const m = document.querySelector('.mod-vschema-check'); for (const sec of m.querySelectorAll('.vschema-section')) { const t = sec.querySelector('h4 a')?.textContent; if (!t) continue; out[t] = [...sec.querySelectorAll('.vschema-finding')].map(r => r.dataset.code); } return { summary: m.querySelector('.vschema-check-summary').textContent, notes: out, globals: [...m.querySelectorAll('.vschema-section')].filter(s => !s.querySelector('h4 a')).flatMap(s => [...s.querySelectorAll('.vschema-finding-msg')].map(e => e.textContent)) }; })()`);
+const openCheck = async () => {
+  await closeStrayModals();
+  await ev(`app.commands.executeCommandById('${PLUGIN_ID}:check-vault'); 0`);
+  await waitFor(() => ev(`!!document.querySelector('.mod-vschema-check')`), 'the report window');
+  await waitFor(() => ev(`!/Scanning/.test(document.querySelector('.vschema-check-summary').textContent)`), 'the scan to finish', 15000);
+  await sleep(300);
+};
+const clickFix = (note, code, label) =>
+  ev(`(() => { const m = document.querySelector('.mod-vschema-check'); const sec = [...m.querySelectorAll('.vschema-section')].find(s => s.querySelector('h4 a')?.textContent === ${JSON.stringify(note)}); if (!sec) throw new Error('no section for ${note}; have: ' + [...m.querySelectorAll('.vschema-section h4 a')].map(a => a.textContent).join(', ')); const row = [...sec.querySelectorAll('.vschema-finding')].find(r => r.dataset.code === ${JSON.stringify(code)}); if (!row) throw new Error('no ${code} for ${note}; have: ' + [...sec.querySelectorAll('.vschema-finding')].map(r => r.dataset.code)); const b = [...row.querySelectorAll('button')].find(x => x.textContent === ${JSON.stringify(label)}); if (!b) throw new Error('no button ${label}; have: ' + [...row.querySelectorAll('button')].map(x => x.textContent)); b.click(); return row.querySelector('.vschema-finding-msg').textContent; })()`);
+const findingMsg = (note, code) =>
+  ev(`(() => { const m = document.querySelector('.mod-vschema-check'); const sec = [...m.querySelectorAll('.vschema-section')].find(s => s.querySelector('h4 a')?.textContent === ${JSON.stringify(note)}); if (!sec) return null; const row = [...sec.querySelectorAll('.vschema-finding')].find(r => r.dataset.code === ${JSON.stringify(code)}); return row ? { msg: row.querySelector('.vschema-finding-msg').textContent, pre: row.querySelector('pre')?.textContent ?? null, buttons: [...row.querySelectorAll('button')].map(b => b.textContent) } : null; })()`);
+const gone = (note, code) => waitFor(async () => !(await findingMsg(note, code)), `${note}/${code} to disappear`, 6000);
+
+await seed();
+await sleep(4000); // let the first-seen index and baselines settle
+
+await check('P5 the vault check window finds a seeded problem for each check and writes nothing', async () => {
+  const before = await hashAll();
+  await openCheck();
+  const r = await report();
+  const want = {
+    'V5 NoId': 'missing-id', 'V5 NoCreated': 'missing-created', 'V5 BadStatus': 'value-enum', 'V5 OldId': 'old-id', 'V5 DupB': 'duplicate-id',
+    'V5 Syn': 'tag-synonym', 'V5 Unknown': 'tag-unknown', 'V5 Body': 'body-tag-synonym', 'V5 NameMismatch': 'name-mismatch', 'V5 NoCrumb': 'no-breadcrumb',
+    'V5 BadCrumb': 'breadcrumb-unmapped', 'V5 Domain': 'leftover-domain', 'V5 Time': 'created-after-modified', 'V5 Old1': 'old-schema',
+  };
+  for (const [title, code] of Object.entries(want)) assert((r.notes[title] ?? []).includes(code), `${title} should have ${code}, has ${JSON.stringify(r.notes[title])}`);
+  assert(!r.notes['V5 DupA'], 'the older duplicate must keep its ID and have no finding');
+  assert(/notes scanned/.test(r.summary) && /need you/.test(r.summary), `summary: ${r.summary}`);
+  eq(await hashAll(), before, 'files changed by a scan');
+});
+
+await check('P5 fixes show exactly what they will write; nothing is written before the button is pressed', async () => {
+  const noId = await findingMsg('V5 NoId', 'missing-id');
+  const idNoId = /KB-\d{4}-\d{4}/.exec(noId.msg)[0];
+  assert(!(await read('Knowledge/V5 NoId.md')).includes('id: KB'), 'written before approval');
+  await clickFix('V5 NoId', 'missing-id', 'Assign ID');
+  await gone('V5 NoId', 'missing-id');
+  eq((await fm('Knowledge/V5 NoId.md')).id, idNoId, 'the ID that was shown is the ID that was written');
+
+  await clickFix('V5 BadStatus', 'value-enum', 'review');
+  await gone('V5 BadStatus', 'value-enum');
+  eq((await fm('Knowledge/V5 BadStatus.md')).status, 'review', 'status');
+
+  await clickFix('V5 OldId', 'old-id', 'Convert ID');
+  await gone('V5 OldId', 'old-id');
+  eq((await fm('Knowledge/V5 OldId.md')).id, 'KB-2026-0146', 'converted ID');
+
+  const created = await findingMsg('V5 NoCreated', 'missing-created');
+  assert(created.msg.includes('estimated'), `should be listed as estimated: ${created.msg}`);
+  await clickFix('V5 NoCreated', 'missing-created', 'Fill created');
+  await gone('V5 NoCreated', 'missing-created');
+  assert(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test((await fm('Knowledge/V5 NoCreated.md')).created), 'created format');
+
+  await clickFix('V5 NameMismatch', 'name-mismatch', 'Set name to the file name');
+  await gone('V5 NameMismatch', 'name-mismatch');
+  eq((await fm('Knowledge/V5 NameMismatch.md')).name, 'V5 NameMismatch', 'name');
+
+  await clickFix('V5 Domain', 'leftover-domain', 'Remove domain');
+  await gone('V5 Domain', 'leftover-domain');
+  assert(!(await read('Knowledge/V5 Domain.md')).includes('domain:'), 'domain still there');
+});
+
+await check('P5 duplicate IDs: the older note keeps its ID, the newer gets the next free number, never reused', async () => {
+  const dup = await findingMsg('V5 DupB', 'duplicate-id');
+  const newId = /will get (KB-\d{4}-\d{4})/.exec(dup.msg)[1];
+  assert(newId !== 'KB-2026-0777', 'no new number');
+  await clickFix('V5 DupB', 'duplicate-id', 'Renumber');
+  await gone('V5 DupB', 'duplicate-id');
+  eq((await fm('Knowledge/V5 DupB.md')).id, newId, 'newer note');
+  eq((await fm('Knowledge/V5 DupA.md')).id, 'KB-2026-0777', 'older note');
+  assert(await ev(`${P}.settings.retiredIds.includes('KB-2026-0777')`), 'the renumbered ID must be retired');
+});
+
+await check('P5 tags: synonym replace, one-click vocabulary add (comments kept), body tag only with approval', async () => {
+  await clickFix('V5 Syn', 'tag-synonym', 'Replace');
+  await gone('V5 Syn', 'tag-synonym');
+  assert((await fmLines('Knowledge/V5 Syn.md')).includes('  - procedure'), 'synonym not replaced');
+  await clickFix('V5 Unknown', 'tag-unknown', 'Add to vocabulary');
+  await gone('V5 Unknown', 'tag-unknown');
+  assert((await read('_schema/vocabularies/tags.yaml')).includes('xyzzy') && (await read('_schema/vocabularies/tags.yaml')).includes('# Controlled tags.'), 'vocabulary');
+  assert((await read('Knowledge/V5 Body.md')).includes('#sop'), 'body changed before approval');
+  const body = await findingMsg('V5 Body', 'body-tag-unknown');
+  assert(body && body.buttons.length === 0, 'an unknown body tag is only reported');
+  await clickFix('V5 Body', 'body-tag-synonym', 'Replace in the note');
+  await gone('V5 Body', 'body-tag-synonym');
+  const text = await read('Knowledge/V5 Body.md');
+  assert(text.includes('#procedure') && text.includes('#ghosts'), `body: ${text}`);
+});
+
+await check('P5 migration: exact diff shown, then flat properties, archived_fields where info would be lost, created and modified last', async () => {
+  const f = await findingMsg('V5 Old1', 'old-schema');
+  assert(f.pre.includes('source_title: Lectures 1') && f.pre.includes('schema: 1 → 2') && f.pre.includes('id: KB-000201 → KB-2026-0201'), `diff: ${f.pre}`);
+  assert((await read('Knowledge/V5 Old1.md')).includes('source:'), 'written before approval');
+  await clickFix('V5 Old1', 'old-schema', 'Apply migration');
+  await gone('V5 Old1', 'old-schema');
+  const text = await read('Knowledge/V5 Old1.md');
+  const f1 = await fm('Knowledge/V5 Old1.md');
+  eq([f1.schema, f1.id, f1.source_title, f1.source_author, f1.review_cycle, f1.review_last], ['2', 'KB-2026-0201', 'Lectures 1', 'Feynman', '3-months', '2026-01-01'], 'flattened values');
+  assert(!/^source:/m.test(text) && !/^review:/m.test(text) && !/^domain:/m.test(text), 'nested blocks or domain remain');
+  assert(text.includes('archived_fields') && text.includes('free text') && text.includes('Elsewhere'), 'the information that does not fit was lost');
+  const keys = (await fmLines('Knowledge/V5 Old1.md')).filter((l) => /^[a-z_]+:/.test(l)).map((l) => l.split(':')[0]);
+  eq(keys.slice(-3), ['archived_fields', 'created', 'modified'], 'created and modified last');
+  eq([f1.created, f1.modified], ['2026-02-03T09:00', '2026-02-04T09:00'], 'timestamps kept');
+});
+
+await check('P5 migrate all notes of a type: one approval, progress, every note written from its own diff', async () => {
+  const label = await ev(`[...document.querySelectorAll('.mod-vschema-check .setting-item-name')].map(e => e.textContent).find(t => /^Migrate all kb notes/.test(t))`);
+  assert(label, 'the batch button should offer both remaining kb notes');
+  await ev(`[...document.querySelectorAll('.mod-vschema-check .setting-item')].find(r => /^Migrate all kb notes/.test(r.querySelector('.setting-item-name').textContent)).querySelector('button').click(); 0`);
+  await waitModal('Migrate 2 kb notes');
+  assert(!(await read('Knowledge/V5 Old2.md')).includes('schema: 2'), 'written before approval');
+  await clickButton('Migrate');
+  await waitFor(async () => (await fm('Knowledge/V5 Old3.md')).schema === '2' && (await fm('Knowledge/V5 Old2.md')).schema === '2', 'both notes to migrate', 10000);
+  eq([(await fm('Knowledge/V5 Old2.md')).source_title, (await fm('Knowledge/V5 Old3.md')).source_title], ['Lectures 2', 'Lectures 3'], 'flattened');
+  const prog = await ev(`document.querySelector('.vschema-progress').textContent`);
+  assert(/Migrated 2 of 2/.test(prog), `progress text: ${prog}`);
+});
+
+await check('P5 running the check again leaves no problem on the seeded notes (warnings without a fix remain)', async () => {
+  await ev(`[...document.querySelectorAll('.mod-vschema-check button')].find(b => b.textContent === 'Run again').click(); 0`);
+  await sleep(500);
+  await waitFor(() => ev(`!/Scanning/.test(document.querySelector('.vschema-check-summary').textContent)`), 'the rescan', 15000);
+  const r = await report();
+  const left = Object.entries(r.notes).filter(([t]) => t.startsWith('V5 ')).map(([t, codes]) => `${t}: ${codes.join(',')}`);
+  const expected = ['V5 NoCrumb: no-breadcrumb', 'V5 BadCrumb: breadcrumb-unmapped', 'V5 Time: created-after-modified', 'V5 Body: body-tag-unknown'];
+  eq(left.sort(), expected.sort(), 'remaining findings');
+});
+
+await check('P5 an ID changed outside the plugin is noticed from the local index and can be restored', async () => {
+  await closeStrayModals();
+  await write('Knowledge/V5 Idx.md', nm('V5 Idx', '', { id: 'KB-2026-0801' }));
+  await sleep(4500); // first sight goes into the index
+  await write('Knowledge/V5 Idx.md', (await read('Knowledge/V5 Idx.md')).replace('KB-2026-0801', 'KB-2026-0802'));
+  await sleep(1500);
+  await openCheck();
+  const f = await findingMsg('V5 Idx', 'id-changed');
+  assert(f && f.msg.includes('KB-2026-0801') && f.buttons.includes('Restore KB-2026-0801') && f.buttons.includes('Accept the new ID'), `finding: ${JSON.stringify(f)}`);
+  await clickFix('V5 Idx', 'id-changed', 'Restore KB-2026-0801');
+  await gone('V5 Idx', 'id-changed');
+  eq((await fm('Knowledge/V5 Idx.md')).id, 'KB-2026-0801', 'restored');
+});
+
+await check('P5 schema problems are listed with file and line', async () => {
+  const orig = await read('_schema/modules/review.yaml');
+  try {
+    await write('_schema/modules/review.yaml', orig.replace('default: 6-months', 'default: 9-months'));
+    await waitFor(() => ev(`${P}.schemas.status.problems.some(p => p.code === 'bad-default')`), 'the schema reload');
+    await ev(`[...document.querySelectorAll('.mod-vschema-check button')].find(b => b.textContent === 'Run again').click(); 0`);
+    await sleep(500);
+    await waitFor(() => ev(`!/Scanning/.test(document.querySelector('.vschema-check-summary').textContent)`), 'the rescan', 15000);
+    const r = await report();
+    assert(r.globals.some((g) => /9-months/.test(g) && /modules\/review\.yaml:\d+/.test(g)), `globals: ${JSON.stringify(r.globals)}`);
+  } finally {
+    await write('_schema/modules/review.yaml', orig);
+    await waitFor(() => ev(`${P}.schemas.status.problems.length === 0`), 'schema recovery');
+  }
+  await closeStrayModals();
+});
+
+await check('P5 batch mode: a folder reorganisation of many notes is processed once, with progress', async () => {
+  await closeStrayModals();
+  await ev(`app.vault.createFolder('Knowledge/Batch').catch(() => {}).then(() => 0)`);
+  const N = 12;
+  for (let i = 1; i <= N; i++) await write(`Knowledge/Batch/B${i}.md`, nm(`B${i}`, '', { id: `KB-2026-09${String(i).padStart(2, '0')}`, breadcrumb: 'Knowledge/Batch', kind: 'faq' }));
+  await sleep(3000);
+  const stampsBefore = {};
+  for (let i = 1; i <= N; i++) stampsBefore[i] = (await fm(`Knowledge/Batch/B${i}.md`)).modified;
+  // the folder moves (many rename events) and the breadcrumb plugin rewrites each breadcrumb
+  await ev(`(async () => { await app.vault.createFolder('Tasks').catch(() => {}); await app.fileManager.renameFile(app.vault.getFolderByPath('Knowledge/Batch'), 'Tasks/Batch'); return 0; })()`);
+  await sleep(600);
+  for (let i = 1; i <= N; i++) await write(`Tasks/Batch/B${i}.md`, (await read(`Tasks/Batch/B${i}.md`)).replace('breadcrumb: Knowledge/Batch', 'breadcrumb: Tasks/Batch'));
+  const m = await waitModal('Convert 12 notes');
+  assert(m.text.includes('kb → task (12)'), `one window should group all twelve: ${m.text.slice(0, 200)}`);
+  eq(await ev(`[...activeDocument.querySelectorAll('.modal')].filter(x => /Convert/.test(x.textContent)).length`), 1, 'windows');
+  for (let i = 1; i <= N; i++) assert((await fm(`Tasks/Batch/B${i}.md`)).type === 'kb', 'written before approval');
+  await clickButton('Convert 12 notes');
+  await waitFor(async () => { for (let i = 1; i <= N; i++) if ((await fm(`Tasks/Batch/B${i}.md`)).type !== 'task') return false; return true; }, 'all twelve conversions', 20000);
+  await sleep(1500);
+  for (let i = 1; i <= N; i++) {
+    const text = await read(`Tasks/Batch/B${i}.md`);
+    assert(text.includes('archived_fields') && text.includes('faq'), `B${i} lost kind`);
+    eq((await fm(`Tasks/Batch/B${i}.md`)).modified, stampsBefore[i], `B${i} modified changed by a move, a breadcrumb rewrite or a conversion`);
+  }
+  eq(await ev(`[...activeDocument.querySelectorAll('.modal')].filter(x => /Convert|status/.test(x.textContent)).length`), 0, 'a second window appeared');
+});
+
+await check('P5 batch mode: many edits are each stamped once, one after another, with a progress notice', async () => {
+  const N = 12;
+  await ev(`(() => { window.__noticeTexts = new Set(); window.__writes = {}; new MutationObserver(() => { for (const n of document.querySelectorAll('.notice')) window.__noticeTexts.add(n.textContent); }).observe(document.body, { childList: true, subtree: true, characterData: true }); app.vault.on('modify', f => { window.__writes[f.path] = (window.__writes[f.path] ?? 0) + 1; }); return 0; })()`);
+  for (let i = 1; i <= N; i++) await write(`Tasks/Batch/B${i}.md`, (await read(`Tasks/Batch/B${i}.md`)).replace('body', 'edited'));
+  await waitFor(async () => { for (let i = 1; i <= N; i++) if ((await fm(`Tasks/Batch/B${i}.md`)).modified === '2026-12-31T10:00') return false; return true; }, 'every note to be stamped', 25000);
+  await sleep(3000);
+  const writes = await ev('window.__writes');
+  for (let i = 1; i <= N; i++) eq(writes[`Tasks/Batch/B${i}.md`], 2, `writes to B${i} (our edit and exactly one stamp)`);
+  const texts = await ev('[...window.__noticeTexts]');
+  assert(texts.some((t) => /Stamping modified: \d+ of \d+ notes/.test(t)), `a progress notice should have shown: ${JSON.stringify(texts.slice(0, 5))}`);
+  eq(await strayModals(), 0, 'dialogs');
+});
+
 // ---------------------------------------------------------------- summary
 await check('no dialog is left open at the end', async () => {
   eq(await strayModals(), 0, 'open dialogs');
