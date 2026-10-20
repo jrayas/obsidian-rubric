@@ -69,3 +69,24 @@ export function holdStep(state: HoldState, input: HoldInput): HoldResult {
       return { state: 'closed', effects: ['hide'] };
   }
 }
+
+export interface ModifierFlags {
+  altKey: boolean;
+  shiftKey: boolean;
+  ctrlKey: boolean;
+  metaKey: boolean;
+}
+
+/** Is the chosen hold key still down, according to the modifier flags carried by any keyboard or mouse event? */
+export function isModifierHeld(holdKey: 'Alt' | 'Shift' | 'Control' | 'Meta', e: ModifierFlags): boolean {
+  switch (holdKey) {
+    case 'Alt':
+      return e.altKey;
+    case 'Shift':
+      return e.shiftKey;
+    case 'Control':
+      return e.ctrlKey;
+    case 'Meta':
+      return e.metaKey;
+  }
+}

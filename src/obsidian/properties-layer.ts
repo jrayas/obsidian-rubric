@@ -13,10 +13,11 @@
  */
 import { MarkdownView, Notice, Platform, setIcon } from 'obsidian';
 import type { App, TFile } from 'obsidian';
-import { holdStep } from '../core/hold-state';
+import { holdStep, isModifierHeld } from '../core/hold-state';
 import type { HoldEffect, HoldInput, HoldState } from '../core/hold-state';
 import { isLocked, lockNote, optionsFor } from '../core/options';
 import type VaultSchemaPlugin from '../main';
+import type { HoldKey } from '../settings';
 import { OptionListView } from './option-list';
 import { OptionSession } from './option-session';
 
@@ -67,6 +68,8 @@ export class PropertiesLayer {
   private failed = false;
   private readonly wrapped = new WeakMap<WidgetLike, WidgetLike>();
   private readonly fields = new Map<string, FieldController>();
+  /** Lost-key-release safety (any event without the hold key's flag counts as a release). Only the test suite turns it off. */
+  releaseSafety = true;
   /** The field whose list is open right now, so the hotkey can close it from inside the popover. */
   openField: FieldController | null = null;
   private covered = new Set<string>();
@@ -447,6 +450,12 @@ class FieldController {
     if (!this.docListening) {
       this.docListening = true;
       row.ownerDocument.addEventListener('keyup', (e) => this.onKeyUp(e), { signal: this.abort.signal, capture: true });
+      // A key release can go missing (the window lost focus, another app took the key). Any later event that shows the
+      // hold key is no longer down counts as the release, so a list can never stay stuck open.
+      row.ownerDocument.addEventListener('mousemove', (e) => this.releaseIfNotHeld(e), { signal: this.abort.signal, capture: true });
+      row.ownerDocument.addEventListener('mousedown', (e) => this.releaseIfNotHeld(e), { signal: this.abort.signal, capture: true });
+      row.ownerDocument.addEventListener('keydown', (e) => this.releaseIfNotHeld(e), { signal: this.abort.signal, capture: true });
+      row.ownerDocument.defaultView?.addEventListener('blur', () => this.releaseNow(), { signal: this.abort.signal });
     }
     row.addClass('vschema-field');
     row.toggleClass('vschema-locked', locked);
@@ -486,7 +495,7 @@ class FieldController {
     return this.row.ownerDocument;
   }
 
-  private holdKey(): string {
+  private holdKey(): HoldKey {
     return this.plugin.settings.holdKey;
   }
 
@@ -526,6 +535,21 @@ class FieldController {
     } else if (this.state === 'pending') {
       this.input({ type: 'otherKey' });
     }
+  }
+
+  /** The hold key is not down any more (as far as this event can tell): behave as if it was released. */
+  private releaseIfNotHeld(e: KeyboardEvent | MouseEvent): void {
+    if (!this.layer.releaseSafety) return;
+    if (this.state !== 'pending' && this.state !== 'hold') return;
+    if (isModifierHeld(this.holdKey(), e)) return;
+    this.releaseNow(e);
+  }
+
+  /** Release without the pointer rule (the key is gone, so there is nothing to wait for). */
+  private releaseNow(e?: Event): void {
+    if (this.state !== 'pending' && this.state !== 'hold') return;
+    const over = e instanceof MouseEvent && e.target instanceof Node && (this.popover?.contains(e.target) ?? false);
+    this.input({ type: 'holdUp', pointerOverList: over, alwaysHide: !over });
   }
 
   private onKeyUp(e: KeyboardEvent): void {
@@ -594,11 +618,25 @@ class FieldController {
       this.layer.openField = this;
       this.position(pop);
       if (loaded.kind === 'ready') {
-        const view = new OptionListView(pop, loaded.list, { onPick: (v) => session.pick(v) }, { filterable: latched, label: this.key });
+        const view = new OptionListView(
+          pop,
+          loaded.list,
+          {
+            onPick: async (v) => {
+              const next = await session.pick(v);
+              // A list kept open only so you could click: once a single choice is made, it is done.
+              if (this.state === 'sticky' && loaded.list.mode === 'single') this.input({ type: 'clickElsewhere' });
+              return next;
+            },
+          },
+          { filterable: latched, label: this.key },
+        );
         if (latched) view.focus();
       } else {
         pop.createDiv({ cls: 'vschema-lock-note', text: loaded.kind === 'locked' ? loaded.note : loaded.message });
       }
+      // A list kept open because the pointer was on it goes away when the pointer leaves it.
+      if (this.state === 'sticky') pop.addEventListener('mouseleave', () => this.input({ type: 'clickElsewhere' }), { once: true });
       this.listenWhileOpen();
     })();
   }

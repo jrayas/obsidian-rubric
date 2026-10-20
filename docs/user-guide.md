@@ -51,6 +51,8 @@ Notes outside the managed scope (the schema folder, anything excluded, or anythi
 | Click the ▾ button | The same list |
 | Hold the key on `id`, `schema`, `breadcrumb`, `created`, `modified` | A note saying who manages it. These never open a list |
 
+If the pointer is on the list when you let go of Option, the list stays so you can click; it closes after you pick a single value, or when the pointer leaves it, or on Escape or a click elsewhere. If the pointer is not on the list it hides at once. Turn on **Always hide the list on release** to hide it every time. If the key release is ever missed (for example the window lost focus), the list closes on the next mouse move or key press.
+
 Typing a symbol with Option held (for example Option+G on a Mac) does not open the list: another key pressed during the hold cancels it.
 
 Settings (*Settings → Vault Schema*): the hold key, the delay (default 330 ms), whether the list always hides on release, whether the focus hint shows, and **Commands only**, which turns all of this off while keeping the commands and the picker window.

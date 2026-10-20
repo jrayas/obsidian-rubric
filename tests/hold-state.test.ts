@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { holdStep } from '../src/core/hold-state';
+import { holdStep, isModifierHeld } from '../src/core/hold-state';
 import type { HoldInput, HoldState } from '../src/core/hold-state';
 
 /** Run a script of inputs and return the final state plus every effect, in order. */
@@ -105,5 +105,24 @@ describe('the list belongs to the property being edited', () => {
 
   it('a release with nothing pending does nothing', () => {
     expect(holdStep('closed', up())).toEqual({ state: 'closed', effects: [] });
+  });
+});
+
+describe('noticing that the hold key is no longer down', () => {
+  const none = { altKey: false, shiftKey: false, ctrlKey: false, metaKey: false };
+
+  it('reads the flag of the chosen key from any event', () => {
+    expect(isModifierHeld('Alt', { ...none, altKey: true })).toBe(true);
+    expect(isModifierHeld('Alt', none)).toBe(false);
+    expect(isModifierHeld('Alt', { ...none, shiftKey: true })).toBe(false);
+    expect(isModifierHeld('Shift', { ...none, shiftKey: true })).toBe(true);
+    expect(isModifierHeld('Control', { ...none, ctrlKey: true })).toBe(true);
+    expect(isModifierHeld('Meta', { ...none, metaKey: true })).toBe(true);
+    expect(isModifierHeld('Meta', { ...none, altKey: true })).toBe(false);
+  });
+
+  it('a forced release (key gone, no pointer rule) closes both the waiting and the open list', () => {
+    expect(holdStep('pending', { type: 'holdUp', pointerOverList: false, alwaysHide: true })).toEqual({ state: 'closed', effects: ['cancelTimer'] });
+    expect(holdStep('hold', { type: 'holdUp', pointerOverList: false, alwaysHide: true })).toEqual({ state: 'closed', effects: ['hide'] });
   });
 });

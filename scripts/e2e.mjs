@@ -28,6 +28,10 @@ run('debug-launch.mjs', ['--empty']);
 
 const client = await connect(await pickTarget('main'));
 await evaluate(client, 'app.setting.close(); 0'); // the trust flow leaves Obsidian's settings dialog open
+// The window need not be the focused app: make the page behave as if it is (focus events, keyboard routing).
+await client.send('Emulation.setFocusEmulationEnabled', { enabled: true }); // never bring the window to the front: that would steal the keyboard from whatever you are using
+// Hands off while this runs: a real pointer moving over the window carries no Option flag and would (rightly) count as a key release.
+console.log('Running against a real Obsidian window. Please do not touch the mouse or keyboard over it until this finishes.');
 const consoleErrors = [];
 client.onEvent((m) => {
   if (m.method === 'Runtime.exceptionThrown') consoleErrors.push(m.params.exceptionDetails.exception?.description ?? m.params.exceptionDetails.text);
@@ -216,6 +220,9 @@ await check('P2 settings page shows every group, and scope changes write scope.y
 });
 
 // ---------------------------------------------------------------- Phase 3: Properties area
+// A real mouse over the test window sends events without the Option flag; the safety that treats those as a key release
+// is switched off here and on again only in the checks that test it.
+await ev(`${P}.layer.releaseSafety = false; 0`);
 await ev(`${P}.watcher.enabled = false; 0`); // prompts for tags, status and type changes are tested in Phase 4
 const KB = `---\ntype: kb\nschema: 2\nid: KB-2026-0143\nname: Wave\nstatus: draft\ntags:\n  - sop\ndescription: hello\nlanguage: en-GB\nbreadcrumb: Knowledge/Physics\nkind: concept\ncreated: 2026-10-20T14:32\nmodified: 2026-10-20T14:32\n---\nbody\n`;
 await write('Knowledge/Wave.md', KB);
@@ -294,7 +301,7 @@ await check('P3 the release rule: pointer over the list keeps it until Escape', 
   await altDown();
   await sleep(600);
   const box = await ev(`(() => { const r = document.querySelector('.vschema-popover').getBoundingClientRect(); return { x: r.left + 20, y: r.top + 20 }; })()`);
-  await client.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: box.x, y: box.y });
+  await client.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: box.x, y: box.y, modifiers: 1 });
   await sleep(300);
   await altUp();
   await sleep(300);
@@ -310,7 +317,7 @@ await check('P3 "always hide on release" setting hides even over the list', asyn
   await altDown();
   await sleep(600);
   const box = await ev(`(() => { const r = document.querySelector('.vschema-popover').getBoundingClientRect(); return { x: r.left + 20, y: r.top + 20 }; })()`);
-  await client.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: box.x, y: box.y });
+  await client.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: box.x, y: box.y, modifiers: 1 });
   await sleep(300);
   await altUp();
   await sleep(300);
@@ -1348,6 +1355,121 @@ await check('P7 the new settings appear on the settings page', async () => {
   settings.close();
   await ev(`app.setting.close(); 0`);
   await setS({ onCreate: 'nothing' });
+});
+
+// ---------------------------------------------------------------- Option key robustness
+await ev(`${P}.layer.releaseSafety = true; 0`);
+await check('P8 a lost key release never leaves the list stuck: any event without the Option flag, or the window losing focus, closes it', async () => {
+  await ev(`${P}.watcher.enabled = false; 0`);
+  await openNote('Knowledge/Wave.md');
+  // 1. the release is never delivered; the next mouse move shows Option is up
+  await focusValue('status');
+  await altDown();
+  await sleep(600);
+  assert(await popover(), 'the list should be open while held');
+  await client.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: 400, y: 400, modifiers: 0 });
+  await sleep(400);
+  eq(await popover(), null, 'list after a mouse move with Option up');
+  await altUp();
+  // 2. the window loses focus while held
+  await focusValue('status');
+  await altDown();
+  await sleep(600);
+  assert(await popover(), 'the list should be open while held (2)');
+  await ev(`window.dispatchEvent(new Event('blur')); 0`);
+  await sleep(400);
+  eq(await popover(), null, 'list after the window lost focus');
+  await altUp();
+  // 3. a key press without Option
+  await focusValue('status');
+  await altDown();
+  await sleep(600);
+  await keyEvent('rawKeyDown', 'ArrowLeft', 'ArrowLeft', 37, { modifiers: 0 }); // a key that types nothing
+  await keyEvent('keyUp', 'ArrowLeft', 'ArrowLeft', 37, { modifiers: 0 });
+  await sleep(400);
+  eq(await popover(), null, 'list after a key pressed with Option up');
+  await altUp();
+});
+
+await check('P8 a list kept open because the pointer was on it closes after a single pick, and when the pointer leaves', async () => {
+  const overList = async () => {
+    const b = await ev(`(() => { const r = document.querySelector('.vschema-popover').getBoundingClientRect(); return { x: r.left + 30, y: r.top + 20 }; })()`);
+    await client.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: b.x, y: b.y, modifiers: 1 });
+    await sleep(250);
+  };
+  // pointer on the list at release: it stays (the spec rule)...
+  await sleep(1200);
+  await focusValue('status');
+  await altDown();
+  await sleep(600);
+  await overList();
+  await altUp();
+  await sleep(300);
+  assert(await popover(), 'list should stay while the pointer is on it');
+  // ...and a single choice closes it
+  await ev(`[...document.querySelectorAll('.vschema-option')].find(o => o.textContent.includes('review')).click(); 0`);
+  await waitFor(async () => (await fmLines('Knowledge/Wave.md')).includes('status: review'), 'the pick');
+  await sleep(500);
+  eq(await popover(), null, 'list after a single pick in a kept-open list');
+  // leaving the list closes it
+  await sleep(1200);
+  await focusValue('status');
+  await altDown();
+  await sleep(600);
+  await overList();
+  await altUp();
+  await sleep(300);
+  assert(await popover(), 'list should stay while the pointer is on it (2)');
+  await client.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: 3, y: 3, modifiers: 0 });
+  await sleep(500);
+  eq(await popover(), null, 'list after the pointer left it');
+  // a multi-choice list stays through a pick and closes when the pointer leaves
+  await sleep(1200);
+  await focusValue('tags');
+  await altDown();
+  await sleep(600);
+  await overList();
+  await altUp();
+  await sleep(300);
+  await ev(`[...document.querySelectorAll('.vschema-option')].find(o => o.textContent.includes('experiment')).click(); 0`);
+  await waitFor(async () => (await fmLines('Knowledge/Wave.md')).includes('  - experiment'), 'the tag pick');
+  await sleep(500);
+  assert(await popover(), 'a multi-choice list closed after a pick');
+  await client.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: 3, y: 3, modifiers: 0 });
+  await sleep(500);
+  eq(await popover(), null, 'multi-choice list after the pointer left');
+  await ev(`${P}.watcher.enabled = true; 0`);
+});
+
+await check('P8 stress: 24 hold and release cycles, pointer away or on the list, quick taps and slow holds: nothing ever stays stuck', async () => {
+  await ev(`${P}.watcher.enabled = false; 0`);
+  const stuck = [];
+  for (let i = 0; i < 24; i++) {
+    const onList = i % 3 === 0;
+    const quick = i % 4 === 1;
+    await client.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: 2, y: 2, modifiers: 0 });
+    await focusValue(i % 2 === 0 ? 'status' : 'kind');
+    await altDown();
+    await sleep(quick ? 120 : 650);
+    if (onList && !quick) {
+      const b = await ev(`(() => { const p = document.querySelector('.vschema-popover'); if (!p) return null; const r = p.getBoundingClientRect(); return { x: r.left + 30, y: r.top + 20 }; })()`);
+      if (b) {
+        await client.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: b.x, y: b.y, modifiers: 1 });
+        await sleep(150);
+      }
+    }
+    await altUp();
+    await sleep(350);
+    if (onList && !quick) {
+      // allowed to remain (pointer rule); leaving must close it
+      await client.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: 3, y: 3, modifiers: 0 });
+      await sleep(400);
+    }
+    if (await popover()) stuck.push(`cycle ${i} (${onList ? 'on list' : 'away'}, ${quick ? 'tap' : 'hold'})`);
+    if (await popover()) await escape();
+  }
+  eq(stuck, [], 'cycles that left the list open');
+  await ev(`${P}.watcher.enabled = true; ${P}.layer.releaseSafety = false; 0`);
 });
 
 // ---------------------------------------------------------------- summary

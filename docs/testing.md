@@ -121,6 +121,10 @@ Synthetic vault of 3,000 managed notes (about 1.2 KB each) across four types. Me
 
 Not measured: vaults far above 3,000 notes, a vault on a network drive, Windows.
 
+## Running the real-app suite
+
+It drives a real Obsidian window. Leave the mouse and keyboard alone while it runs: a real pointer over the window sends events without the Option flag and the plugin reads them as a key release. Do not use `dev/testvault` for the suite or hand-test in a scratch vault the suite is using.
+
 ## Not covered here (honest limits)
 
 - Windows: Alt/menu-bar focus, accent-name matching across systems, illegal-character rejection on a Windows file system.
