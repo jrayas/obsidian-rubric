@@ -20,11 +20,11 @@ Ticked with date and time (local). Task definitions are in `docs/plan.md`.
 - [x] P1.6 Plugin shell — 2026-10-20 23:38
 
 ## Phase 2: matching and scope
-- [ ] P2.1 Matching
-- [ ] P2.2 Scope
-- [ ] P2.3 Folder mapping read/write, conflicts
-- [ ] P2.4 No-match prompt
-- [ ] P2.5 Settings page
+- [x] P2.1 Matching — 2026-10-20 23:44
+- [x] P2.2 Scope — 2026-10-20 23:44
+- [x] P2.3 Folder mapping read/write, conflicts — 2026-10-20 23:44
+- [x] P2.4 No-match prompt — 2026-10-20 23:44
+- [x] P2.5 Settings page — 2026-10-20 23:44
 
 ## Phase 3: Properties area
 - [ ] P3.1 Commands and picker

@@ -35,7 +35,11 @@ If `node` is not installed, use the project-local one: macOS/Linux `export PATH=
 | `tests/helpers/` | Seeded notes, the in-memory `FileSource`, the pack loader used by all tests |
 | `tests/schema-pack.test.ts` | The shipped pack loads with zero problems; each type resolves to the spec's property list and order |
 | `tests/schema-loader.test.ts` | Folder detection; invalid YAML, unknown module, bad enum default, property type conflict each reported with file (and line); last-good-copy |
-| `tests/matcher.test.ts` | Rule 1 branches, case and accent variants, two schemas on one folder |
+| `tests/folder-detect.test.ts` | `_schema`, `.schema`, custom, both existing, not found |
+| `tests/embedded-pack.test.ts` | The pack embedded in `main.js` is identical to `schema-pack/` and loads cleanly |
+| `tests/matcher.test.ts` | Rule 1 branches, case and accent variants (NFC/NFD), two schemas on one folder, the three modes |
+| `tests/prompt-policy.test.ts` | Ask once per folder; never for sync arrivals; manual command always asks |
+| `tests/registry-edit.test.ts` | folders.yaml and scope.yaml edits keep comments; case and accent variants replaced |
 | `tests/scope.test.ts` | Rule 2 |
 | `tests/ids.test.ts` | Rule 4 |
 | `tests/timestamps.test.ts` | Rule 5 including loop guard |

@@ -8,8 +8,10 @@ export async function listTargets() {
 
 /** Pick a page target. `which` is 'main' (first app:// page that is not Settings) or 'settings'. */
 export async function pickTarget(which = 'main') {
-  const targets = (await listTargets()).filter((t) => t.type === 'page' && t.url.startsWith('app://'));
-  if (which === 'settings') return targets.find((t) => /^Settings/.test(t.title));
+  const pages = (await listTargets()).filter((t) => t.type === 'page');
+  // The settings window can be an about:blank page, so match it by title.
+  if (which === 'settings') return pages.find((t) => /^Settings/.test(t.title));
+  const targets = pages.filter((t) => t.url.startsWith('app://'));
   return targets.find((t) => !/^Settings/.test(t.title)) ?? targets[0];
 }
 

@@ -1,1 +1,15 @@
-/* Vault Schema styles. Classes are prefixed vschema- to avoid collisions. */
+/* Vault Schema styles. Every class is prefixed vschema- to avoid collisions. */
+
+.vschema-choice-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(8rem, 1fr));
+  gap: var(--size-4-2);
+  margin: var(--size-4-3) 0;
+}
+
+.vschema-choice {
+  display: flex;
+  align-items: center;
+  gap: var(--size-4-2);
+  cursor: pointer;
+}
