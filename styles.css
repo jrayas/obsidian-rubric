@@ -13,3 +13,88 @@
   gap: var(--size-4-2);
   cursor: pointer;
 }
+
+.vschema-picker-lead {
+  color: var(--text-muted);
+  margin-top: 0;
+}
+
+.vschema-lock-note {
+  color: var(--text-muted);
+  padding: var(--size-4-2);
+}
+
+/* The list of allowed values (picker window and Properties-area popover). */
+.vschema-options {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-4-2);
+}
+
+.vschema-option-list {
+  max-height: 16rem;
+  overflow-y: auto;
+}
+
+.vschema-option {
+  display: flex;
+  align-items: center;
+  gap: var(--size-4-2);
+  padding: var(--size-4-1) var(--size-4-2);
+  border-radius: var(--radius-s);
+  cursor: pointer;
+}
+
+.vschema-option:hover,
+.vschema-option.is-active {
+  background-color: var(--background-modifier-hover);
+}
+
+.vschema-check {
+  display: inline-flex;
+  width: var(--icon-s);
+  height: var(--icon-s);
+  color: var(--interactive-accent);
+}
+
+.vschema-option-note,
+.vschema-option-empty {
+  color: var(--text-faint);
+  font-size: var(--font-ui-smaller);
+}
+
+.vschema-popover,
+.vschema-hint {
+  position: fixed;
+  left: var(--vschema-left);
+  top: var(--vschema-top);
+  min-width: var(--vschema-min-width);
+  z-index: var(--layer-popover);
+}
+
+.vschema-popover {
+  padding: var(--size-4-2);
+  background-color: var(--background-primary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-m);
+  box-shadow: var(--shadow-s);
+}
+
+.vschema-hint {
+  width: max-content;
+  padding: var(--size-2-2) var(--size-4-2);
+  background-color: var(--background-secondary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-s);
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+  pointer-events: none;
+}
+
+.vschema-chevron {
+  margin-left: var(--size-4-1);
+}
+
+.vschema-locked .metadata-property-key {
+  opacity: 0.85;
+}

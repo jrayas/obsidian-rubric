@@ -69,6 +69,8 @@ Each task has an ID used in `tracking/progress.md`. "Done when" is copied from o
 
 ### Phase 4: writes and automation
 
+Note: P4.1 was built during Phase 3 (picks must save); see `decisions.md` D-30.
+
 | ID | Task | Done when |
 | --- | --- | --- |
 | P4.1 | Write queue: one per note, compare-first, one write, order check, own-write marking | No loops; unchanged notes not rewritten; CRLF kept |

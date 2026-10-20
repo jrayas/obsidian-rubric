@@ -3,7 +3,12 @@ import { STARTER_PACK } from './pack';
 import { SchemaService } from './obsidian/schema-service';
 import { confirm } from './obsidian/modals';
 import { NoteService } from './obsidian/note-service';
+import { OptionPickerModal } from './obsidian/picker-modal';
+import { PropertiesLayer } from './obsidian/properties-layer';
 import { RegistryStore } from './obsidian/registry-store';
+import { SchemaValueSuggest } from './obsidian/source-suggest';
+import { propertyUnderFocus } from './obsidian/target-property';
+import { WriteQueue } from './obsidian/write-queue';
 import { VaultSchemaSettingTab } from './obsidian/settings-tab';
 import { DEFAULT_SETTINGS, mergeSettings } from './settings';
 import type { VaultSchemaSettings } from './settings';
@@ -13,13 +18,23 @@ export default class VaultSchemaPlugin extends Plugin {
   schemas!: SchemaService;
   registry!: RegistryStore;
   notes!: NoteService;
+  queue!: WriteQueue;
+  layer!: PropertiesLayer;
+  private readonly shownOnce = new Set<string>();
 
   async onload(): Promise<void> {
     this.settings = mergeSettings(await this.loadData());
     this.schemas = new SchemaService(this.app, this, () => this.settings);
     this.registry = new RegistryStore(this.app, this.schemas);
     this.notes = new NoteService(this.app, this, this.schemas, this.registry, () => this.settings, () => this.saveSettings());
+    this.queue = new WriteQueue(this.app, (file, fm) => {
+      const pack = this.schemas.pack;
+      const ctx = this.notes.context(file, fm);
+      return ctx.type ?? (pack && typeof fm.type === 'string' ? (pack.types.get(fm.type) ?? null) : null);
+    });
+    this.layer = new PropertiesLayer(this);
     this.addSettingTab(new VaultSchemaSettingTab(this.app, this));
+    this.registerEditorSuggest(new SchemaValueSuggest(this));
 
     this.addCommand({
       id: 'reload-schemas',
@@ -48,9 +63,19 @@ export default class VaultSchemaPlugin extends Plugin {
       },
     });
 
-    this.app.workspace.onLayoutReady(() => {
-      void this.schemas.start().then(() => this.notes.start());
+    this.addCommand({
+      id: 'show-all-options',
+      name: 'Show all options for this property',
+      callback: () => this.showAllOptions(),
     });
+
+    this.app.workspace.onLayoutReady(() => {
+      void this.schemas.start().then(() => {
+        this.notes.start();
+        this.syncLayer();
+      });
+    });
+    this.register(this.schemas.onChange(() => this.layer.refreshCovered()));
   }
 
   async saveSettings(): Promise<void> {
@@ -58,8 +83,42 @@ export default class VaultSchemaPlugin extends Plugin {
   }
 
   /** Called by the settings page after a setting that needs a side effect changes. */
-  async onSettingChanged(_key: keyof VaultSchemaSettings): Promise<void> {
+  async onSettingChanged(key: keyof VaultSchemaSettings): Promise<void> {
     await this.saveSettings();
+    if (key === 'commandsOnly') this.syncLayer();
+  }
+
+  /** Install or remove the Properties-area layer to match the "commands only" setting. */
+  syncLayer(): void {
+    if (this.settings.commandsOnly) this.layer.uninstall();
+    else this.layer.install();
+  }
+
+  onunload(): void {
+    this.layer?.uninstall();
+  }
+
+  /** Show a notice. */
+  notify(message: string): void {
+    new Notice(message);
+  }
+
+  /** Show a notice only the first time `id` is seen in this session. */
+  notifyOnce(id: string, message: string): void {
+    if (this.shownOnce.has(id)) return;
+    this.shownOnce.add(id);
+    new Notice(message);
+  }
+
+  /** The command and hotkey target: latch the list of the focused property, or open the picker window. */
+  private showAllOptions(): void {
+    if (this.layer.installed && this.layer.toggleFocused()) return;
+    const target = propertyUnderFocus(this.app);
+    if (!target) {
+      new Notice('Click into a property first.');
+      return;
+    }
+    new OptionPickerModal(this, target.file, target.key).open();
   }
 
   /** Show the schema folder in the system file manager (Finder or Explorer). */

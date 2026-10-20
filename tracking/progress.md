@@ -27,16 +27,16 @@ Ticked with date and time (local). Task definitions are in `docs/plan.md`.
 - [x] P2.5 Settings page — 2026-10-20 23:44
 
 ## Phase 3: Properties area
-- [ ] P3.1 Commands and picker
-- [ ] P3.2 Source-mode autocomplete
-- [ ] P3.3 Widget decorator layer
-- [ ] P3.4 Hold Option/Alt
-- [ ] P3.5 Latched hotkey
-- [ ] P3.6 Locked properties
-- [ ] P3.7 Hint and ▾ button
+- [x] P3.1 Commands and picker — 2026-10-21 00:17
+- [x] P3.2 Source-mode autocomplete — 2026-10-21 00:17
+- [x] P3.3 Widget decorator layer — 2026-10-21 00:17
+- [x] P3.4 Hold Option/Alt — 2026-10-21 00:17
+- [x] P3.5 Latched hotkey — 2026-10-21 00:17
+- [x] P3.6 Locked properties — 2026-10-21 00:17
+- [x] P3.7 Hint and ▾ button — 2026-10-21 00:17
 
 ## Phase 4: writes and automation
-- [ ] P4.1 Write queue
+- [x] P4.1 Write queue — 2026-10-21 00:17
 - [ ] P4.2 Create note from type
 - [ ] P4.3 ID rules
 - [ ] P4.4 Stamp modified

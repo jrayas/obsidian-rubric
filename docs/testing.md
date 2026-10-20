@@ -22,7 +22,7 @@ Tests never get weakened to pass; a failing test is a bug in code or a recorded 
 | Build the dev vault | `npm run vault:create` |
 | Launch isolated Obsidian | `npm run debug:launch` (add `-- --release` semantics: files come from the repo root) |
 | Drive it | `npm run debug -- eval "<js>"`, `reload`, `console`, `screenshot [file]`, `status`, `stop` |
-| End-to-end scripted check | `npm run e2e` (builds, launches, runs `scripts/e2e.mjs`, stops) |
+| Real-app checks | `npm run e2e` (builds, launches an isolated Obsidian, runs every check, stops; `-- --keep` leaves it running, `-- --only <text>` filters) |
 
 If `node` is not installed, use the project-local one: macOS/Linux `export PATH="$PWD/.tools/node/bin:$PATH"`; Windows PowerShell `$env:Path = "$PWD\.tools\node;$env:Path"` (after unpacking a Windows Node zip there).
 
@@ -50,6 +50,9 @@ If `node` is not installed, use the project-local one: macOS/Linux `export PATH=
 | `tests/migrate.test.ts` | Schema 1 → 2 diff exactness, flattening, batch mode |
 | `tests/hold-state.test.ts` | Rule set for hold, latch, delay, cancel, pointer, Escape order |
 | `tests/fs-names.test.ts` | Illegal characters, case-only folder collisions |
+| `tests/options.test.ts` | Options come from the note's schema; synonyms; locked properties and their notes; picking and toggling |
+| `tests/hold-state.test.ts` | The hold/latch state machine: delay, repeat, cancel on another key, pointer rule, Escape order, hotkey |
+| `scripts/e2e.mjs` (real Obsidian) | 29 checks across Phases 1-3: pack install, last good copy, hidden folder polling, prompts, settings page, decorations, hold/latch/Escape, saves, autocomplete, hint, commands-only, source-mode suggest |
 
 ## Real-app checks that must pass before release
 

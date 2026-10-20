@@ -1,9 +1,9 @@
 # Current
 
-**Updated:** 2026-10-20 23:44
+**Updated:** 2026-10-21 00:17
 
-**Just finished:** Phase 2 (matching, scope, folder mapping, no-match prompt, settings page). 93 unit tests green; lint, typecheck, build clean; real-app checks recorded in log.
+**Just finished:** Phase 3 (Properties area) and the write queue (P4.1, pulled forward). 153 unit tests plus 29 real-app checks pass; lint, typecheck, build clean.
 
-**Working on / next:** Phase 3 — Properties area. Start with P3.1 (commands and picker), then the decorator layer.
+**Working on / next:** Phase 4 remaining: P4.2 create note from a type, P4.3 ID rules, P4.4 stamp modified, P4.5 tag prompts, P4.6 status prompt, P4.7 convert type. Wire `NoteService.applyType` (D-24).
 
-**Blockers:** none. Note: `NoteService.applyType` is wired in Phase 4 (D-24).
+**Blockers:** none.
