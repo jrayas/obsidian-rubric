@@ -34,10 +34,11 @@ An Obsidian desktop plugin, **Vault Schema** (`vault-schema`, version 0.1.0, min
 ## Update: automation settings (requested after the first handover)
 
 Added and tested (decisions D-48 to D-52, user guide section "New notes, renames and moves"):
-- **When a note is created in a mapped folder**: Ask with a preview (default) / Fill automatically / Do nothing, with an adjustable wait for templates.
-- **Keep  in step with the file name** (on): follows a rename only when  was empty or filled by the plugin.
-- **Set breadcrumb from the folder** (off): for people not using a breadcrumb plugin.
-- **Ask about changes in** open notes / every note, and separate switches for tag, status and type-change prompts.
-- 265 unit tests and 76 real-app checks pass (stable over repeated runs).
 
-**Please look at:** while testing I found that notes created through Obsidian in  were being moved into an  folder and given , even with this plugin disabled. Your Obsidian lists that vault as open. It is not this plugin; it is most likely your own breadcrumb setup acting on a vault your Obsidian has open. The test scripts now use a scratch vault in the system temp folder.
+- **When a note is created in a mapped folder**: Ask with a preview (default), Fill automatically, or Do nothing, with an adjustable wait so templates can finish.
+- **Keep name in step with the file name** (on): follows a rename only when `name` was empty or filled by the plugin.
+- **Set breadcrumb from the folder** (off): for people who do not use a breadcrumb plugin.
+- **Ask about changes in** open notes or every note, and separate switches for tag, status and type-change prompts.
+- 265 unit tests and 76 real-app checks pass, stable over repeated runs.
+
+**Please look at:** while testing I found that notes created through Obsidian in `dev/scratch/vault` were being moved into an `Inbox` folder and given `breadcrumb: ""`, even with this plugin disabled. Your Obsidian lists that vault as open. It is not this plugin; it is most likely your own breadcrumb setup acting on a vault your Obsidian has open. The test scripts now use a scratch vault in the system temp folder.
