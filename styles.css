@@ -98,3 +98,23 @@
 .vschema-locked .metadata-property-key {
   opacity: 0.85;
 }
+
+.vschema-preview-heading {
+  margin-bottom: var(--size-2-1);
+  font-weight: var(--font-semibold);
+}
+
+.vschema-preview {
+  margin-top: 0;
+  padding: var(--size-4-2);
+  overflow-x: auto;
+  background-color: var(--background-secondary);
+  border-radius: var(--radius-s);
+  white-space: pre-wrap;
+}
+
+.vschema-error {
+  min-height: var(--size-4-4);
+  color: var(--text-error);
+  font-size: var(--font-ui-smaller);
+}

@@ -50,9 +50,14 @@ If `node` is not installed, use the project-local one: macOS/Linux `export PATH=
 | `tests/migrate.test.ts` | Schema 1 → 2 diff exactness, flattening, batch mode |
 | `tests/hold-state.test.ts` | Rule set for hold, latch, delay, cancel, pointer, Escape order |
 | `tests/fs-names.test.ts` | Illegal characters, case-only folder collisions |
+| `tests/ids.test.ts` | Rule 4: format, per type per year, new year restarts, retired IDs never reused, old IDs convert, duplicates (older keeps), several renumbered at once |
+| `tests/timestamps.test.ts` | Rule 5: what changes the fingerprint (not modified or breadcrumb), every stamp decision, loop guard |
+| `tests/validate.test.ts` | Value validation per type; file-name rules for macOS and Windows; case and accent collisions |
+| `tests/tags.test.ts` | Rule 6: synonym replacement, unknown tags, duplicates, vocabulary add keeps comments |
+| `tests/convert.test.ts` | Rule 8: preview, `archived_fields`, nothing deleted; note creation from every type |
 | `tests/options.test.ts` | Options come from the note's schema; synonyms; locked properties and their notes; picking and toggling |
 | `tests/hold-state.test.ts` | The hold/latch state machine: delay, repeat, cancel on another key, pointer rule, Escape order, hotkey |
-| `scripts/e2e.mjs` (real Obsidian) | 29 checks across Phases 1-3: pack install, last good copy, hidden folder polling, prompts, settings page, decorations, hold/latch/Escape, saves, autocomplete, hint, commands-only, source-mode suggest |
+| `scripts/e2e.mjs` (real Obsidian) | 47 checks across Phases 1-4: pack install, last good copy, hidden folder polling, prompts, settings page, decorations, hold/latch/Escape, saves, autocomplete, hint, commands-only, source-mode suggest, create from schema, ID allocation, every `modified` rule, tag/status/convert prompts, one-off schema choice, no rewrite of unchanged notes |
 
 ## Real-app checks that must pass before release
 

@@ -211,6 +211,7 @@ await check('P2 settings page shows every group, and scope changes write scope.y
 });
 
 // ---------------------------------------------------------------- Phase 3: Properties area
+await ev(`${P}.watcher.enabled = false; 0`); // prompts for tags, status and type changes are tested in Phase 4
 const KB = `---\ntype: kb\nschema: 2\nid: KB-2026-0143\nname: Wave\nstatus: draft\ntags:\n  - sop\ndescription: hello\nlanguage: en-GB\nbreadcrumb: Knowledge/Physics\nkind: concept\ncreated: 2026-10-20T14:32\nmodified: 2026-10-20T14:32\n---\nbody\n`;
 await write('Knowledge/Wave.md', KB);
 await write('Templates/Plain.md', '---\nstatus: whatever\n---\nbody\n');
@@ -503,6 +504,282 @@ await check('P3 source-mode autocomplete suggests schema values after `key: ` an
   eq(res.freeText, null, 'free-text property');
   eq(res.tagListItem, ['procedure'], 'tag list item');
   eq(res.body, null, 'body');
+});
+
+// ---------------------------------------------------------------- Phase 4: writes and automation
+await ev(`${P}.watcher.enabled = true; 0`);
+const modalInfo = () =>
+  ev(`(() => { const m = [...activeDocument.querySelectorAll('.modal')].filter(x => !x.querySelector('.vertical-tab-nav-item')).pop(); return m ? { title: m.querySelector('.modal-title')?.textContent, text: m.textContent, buttons: [...m.querySelectorAll('button')].map(b => b.textContent), pre: [...m.querySelectorAll('pre')].map(p => p.textContent) } : null; })()`);
+const waitModal = (titlePart) => waitFor(async () => { const m = await modalInfo(); return m && m.title && m.title.includes(titlePart) ? m : null; }, `a dialog titled "${titlePart}"`, 6000);
+const nowStamp = () => ev(`(() => { const d = new Date(), p = n => String(n).padStart(2, '0'); return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + 'T' + p(d.getHours()) + ':' + p(d.getMinutes()); })()`);
+const minutesApart = (a, b) => Math.abs(new Date(a + ':00').getTime() - new Date(b + ':00').getTime()) / 60000;
+const fm = async (path) => Object.fromEntries((await fmLines(path)).filter((l) => /^[A-Za-z_]+:/.test(l)).map((l) => [l.slice(0, l.indexOf(':')), l.slice(l.indexOf(':') + 1).trim()]));
+const YEAR = await ev('new Date().getFullYear()');
+
+await check('P4 create note from schema: ID, created, every default, schema order, created and modified last', async () => {
+  await closeStrayModals();
+  await ev(`app.commands.executeCommandById('${PLUGIN_ID}:create-note-from-schema'); 0`);
+  await waitModal('Create note from schema');
+  await ev(`(() => { const m = [...activeDocument.querySelectorAll('.modal')].pop(); const sel = m.querySelectorAll('select')[0]; sel.value = 'kb'; sel.dispatchEvent(new Event('change', { bubbles: true })); const t = m.querySelector('input[type=text]'); t.value = 'Created One'; t.dispatchEvent(new Event('input', { bubbles: true })); return 0; })()`);
+  await sleep(300);
+  await clickButton('Create');
+  await waitFor(() => ev(`!!app.vault.getFileByPath('Knowledge/Created One.md')`), 'the note');
+  const lines = (await fmLines('Knowledge/Created One.md')).filter(Boolean);
+  const f = await fm('Knowledge/Created One.md');
+  eq(lines.map((l) => l.split(':')[0]), ['type', 'schema', 'id', 'name', 'status', 'aliases', 'language', 'related', 'supersedes', 'review_cycle', 'kind', 'audience', 'confidence', 'created', 'modified'], 'property order');
+  assert(new RegExp(`^KB-${YEAR}-\\d{4}$`).test(f.id), `ID shape: ${f.id}`);
+  eq([f.type, f.status, f.kind, f.name, f.schema], ['kb', 'draft', 'concept', 'Created One', '2'], 'values');
+  eq(f.created, f.modified, 'created equals modified at creation');
+  assert(minutesApart(f.created, await nowStamp()) <= 2, 'created is local time now');
+  eq(await ev(`activeDocument.querySelectorAll('.vschema-choice-list').length`), 0, 'no schema prompt for a note that already has an id');
+});
+
+await check('P4 an illegal file name is rejected on create (macOS and Windows characters)', async () => {
+  await closeStrayModals();
+  await ev(`app.commands.executeCommandById('${PLUGIN_ID}:create-note-from-schema'); 0`);
+  await waitModal('Create note from schema');
+  const messages = [];
+  for (const bad of ['a:b', 'what?', 'CON', 'end.']) {
+    await ev(`(() => { const m = [...activeDocument.querySelectorAll('.modal')].pop(); const t = m.querySelector('input[type=text]'); t.value = ${JSON.stringify(bad)}; t.dispatchEvent(new Event('input', { bubbles: true })); return 0; })()`);
+    await sleep(100);
+    await clickButton('Create');
+    await sleep(200);
+    messages.push(await ev(`[...activeDocument.querySelectorAll('.modal')].pop().querySelector('.vschema-error').textContent`));
+  }
+  assert(messages.every((m) => m.length > 0), `each bad name needs a message: ${JSON.stringify(messages)}`);
+  eq(await ev(`app.vault.getMarkdownFiles().filter(f => /^Knowledge\\/(a:b|what|CON|end)/.test(f.path)).length`), 0, 'files created');
+  await closeStrayModals();
+});
+
+await check('P4 two notes created at once get different numbers; numbering is per type and year', async () => {
+  const ids = await ev(`(async () => { const p = ${P}; const [a, b] = await Promise.all([p.ids.exclusive(async () => p.ids.allocate('KB', ${YEAR})), p.ids.exclusive(async () => p.ids.allocate('KB', ${YEAR}))]); const t = p.ids.allocate('TK', ${YEAR}); const next = p.ids.allocate('KB', ${YEAR + 1}); return { a, b, t, next }; })()`);
+  assert(ids.a !== ids.b, `same ID twice: ${ids.a}`);
+  eq(ids.next, `KB-${YEAR + 1}-0001`, 'a new year restarts at 0001');
+  assert(ids.t.startsWith('TK-'), 'prefix per type');
+});
+
+await check('P4 modified: an edit stamps once after the pause, with no loop', async () => {
+  await write('Knowledge/Stamp.md', '---\ntype: kb\nschema: 2\nid: KB-2026-0900\nname: Stamp\nstatus: draft\ncreated: 2026-10-20T14:32\nmodified: 2026-10-20T14:32\n---\nbody\n');
+  await sleep(1500);
+  await ev(`app.workspace.getLeaf(false).openFile(app.vault.getFileByPath('Knowledge/Stamp.md')).then(() => 0)`);
+  await sleep(500);
+  await ev(`(() => { window.__mods = []; app.vault.on('modify', f => { if (f.path === 'Knowledge/Stamp.md') window.__mods.push(Date.now()); }); return 0; })()`);
+  await write('Knowledge/Stamp.md', (await read('Knowledge/Stamp.md')).replace('body', 'body edited'));
+  await sleep(1000);
+  eq((await fm('Knowledge/Stamp.md')).modified, '2026-10-20T14:32', 'stamped before the pause ended');
+  await waitFor(async () => (await fm('Knowledge/Stamp.md')).modified !== '2026-10-20T14:32', 'the stamp', 6000);
+  const m = (await fm('Knowledge/Stamp.md')).modified;
+  assert(minutesApart(m, await nowStamp()) <= 2, `stamped local time, got ${m}`);
+  eq((await fm('Knowledge/Stamp.md')).created, '2026-10-20T14:32', 'created untouched');
+  await sleep(3500);
+  eq(await ev('window.__mods.length'), 2, 'file writes: our edit and exactly one stamp');
+  eq((await fm('Knowledge/Stamp.md')).modified, m, 'modified changed again (loop)');
+});
+
+await check('P4 modified: a burst of edits is stamped once, after it stops', async () => {
+  const before = (await fm('Knowledge/Stamp.md')).modified;
+  await sleep(61000 - (Date.now() % 60000) + 1500); // cross a minute boundary so a second stamp would show
+  await ev(`(() => { window.__mods = []; return 0; })()`);
+  for (let i = 0; i < 4; i++) {
+    await write('Knowledge/Stamp.md', (await read('Knowledge/Stamp.md')).replace(/body[^\n]*/, `body burst ${i}`));
+    await sleep(500);
+  }
+  await waitFor(async () => (await fm('Knowledge/Stamp.md')).modified !== before, 'the stamp', 6000);
+  await sleep(2500);
+  eq(await ev('window.__mods.length'), 5, 'four edits plus one stamp');
+});
+
+await check('P4 modified: a move, a breadcrumb-only change and the plugin’s own writes do not change it', async () => {
+  const fixed = '2026-10-20T14:32';
+  await write('Knowledge/Quiet.md', `---\ntype: kb\nschema: 2\nid: KB-2026-0901\nname: Quiet\nstatus: draft\nbreadcrumb: Knowledge\ncreated: ${fixed}\nmodified: ${fixed}\n---\nbody\n`);
+  await sleep(1500);
+  await ev(`app.fileManager.renameFile(app.vault.getFileByPath('Knowledge/Quiet.md'), 'Projects/Quiet.md').then(() => 0)`).catch(async () => {
+    await ev(`app.vault.createFolder('Projects').catch(() => {}).then(() => app.fileManager.renameFile(app.vault.getFileByPath('Knowledge/Quiet.md'), 'Projects/Quiet.md')).then(() => 0)`);
+  });
+  await sleep(3500);
+  eq((await fm('Projects/Quiet.md')).modified, fixed, 'modified after a move');
+  await write('Projects/Quiet.md', (await read('Projects/Quiet.md')).replace('breadcrumb: Knowledge', 'breadcrumb: Projects/Alpha'));
+  await sleep(3500);
+  eq((await fm('Projects/Quiet.md')).modified, fixed, 'modified after a breadcrumb-only change');
+  // the plugin's own write (a pick through the queue)
+  await ev(`(async () => { const f = app.vault.getFileByPath('Projects/Quiet.md'); await ${P}.queue.set(f, { status: 'review' }); return 0; })()`);
+  await sleep(3500);
+  eq((await fm('Projects/Quiet.md')).status, 'review', 'the pick');
+  eq((await fm('Projects/Quiet.md')).modified, fixed, 'modified after our own write');
+});
+
+await check('P4 modified: a change arriving with a newer modified inside is accepted as it is (sync); one without gets stamped', async () => {
+  await write('Knowledge/Sync.md', '---\ntype: kb\nschema: 2\nid: KB-2026-0902\nname: Sync\nstatus: draft\ncreated: 2026-10-20T14:32\nmodified: 2026-10-20T14:32\n---\nbody\n');
+  await sleep(1500);
+  await write('Knowledge/Sync.md', '---\ntype: kb\nschema: 2\nid: KB-2026-0902\nname: Sync\nstatus: draft\ncreated: 2026-10-20T14:32\nmodified: 2026-11-30T08:15\n---\nbody changed elsewhere\n');
+  await sleep(4000);
+  eq((await fm('Knowledge/Sync.md')).modified, '2026-11-30T08:15', 'the incoming modified was overwritten');
+  await write('Knowledge/Sync.md', (await read('Knowledge/Sync.md')).replace('changed elsewhere', 'changed again'));
+  await waitFor(async () => (await fm('Knowledge/Sync.md')).modified !== '2026-11-30T08:15', 'a stamp for the change without a new modified', 6000);
+});
+
+await check('P4 modified: switched off by the setting', async () => {
+  await ev(`${P}.settings.stampModified = false; 0`);
+  const before = (await fm('Knowledge/Sync.md')).modified;
+  await write('Knowledge/Sync.md', (await read('Knowledge/Sync.md')).replace('changed again', 'changed thrice'));
+  await sleep(3500);
+  eq((await fm('Knowledge/Sync.md')).modified, before, 'stamped with the setting off');
+  await ev(`${P}.settings.stampModified = true; 0`);
+});
+
+await check('P4 excluded notes are never stamped', async () => {
+  await write('Templates/T2.md', '---\nid: KB-2026-0903\nmodified: 2026-10-20T14:32\n---\nbody\n');
+  await sleep(1500);
+  await write('Templates/T2.md', '---\nid: KB-2026-0903\nmodified: 2026-10-20T14:32\n---\nbody 2\n');
+  await sleep(3500);
+  eq((await fm('Templates/T2.md')).modified, '2026-10-20T14:32', 'modified in an excluded folder');
+});
+
+await check('P4 tag synonyms ask first, showing old and new; Replace writes the preferred term', async () => {
+  await write('Knowledge/Tagged.md', '---\ntype: kb\nschema: 2\nid: KB-2026-0904\nname: Tagged\nstatus: draft\ntags:\n  - idea\ncreated: 2026-10-20T14:32\nmodified: 2026-10-20T14:32\n---\nbody\n');
+  await sleep(1500);
+  await ev(`app.workspace.getLeaf(false).openFile(app.vault.getFileByPath('Knowledge/Tagged.md')).then(() => 0)`);
+  await sleep(800);
+  await write('Knowledge/Tagged.md', (await read('Knowledge/Tagged.md')).replace('  - idea', '  - idea\n  - sop'));
+  const m = await waitModal('Replace tag synonyms');
+  assert(m.pre.join('\n').includes('sop → procedure'), `preview should show old and new: ${m.pre}`);
+  assert((await fmLines('Knowledge/Tagged.md')).includes('  - sop'), 'replaced before approval');
+  await clickButton('Replace');
+  await waitFor(async () => (await fmLines('Knowledge/Tagged.md')).includes('  - procedure'), 'the replacement');
+  assert(!(await fmLines('Knowledge/Tagged.md')).includes('  - sop'), 'synonym still there');
+});
+
+await check('P4 an unknown tag asks: Add to vocabulary writes one term and keeps comments; Cancel changes nothing and is not repeated', async () => {
+  await write('Knowledge/Tagged.md', (await read('Knowledge/Tagged.md')).replace('  - idea', '  - idea\n  - mystery'));
+  const m = await waitModal('Add “mystery” to the tags vocabulary');
+  assert(m.buttons.includes('Add to vocabulary') && m.buttons.includes('Cancel'), `buttons: ${m.buttons}`);
+  await clickButton('Add to vocabulary');
+  await waitFor(async () => (await read('_schema/vocabularies/tags.yaml')).includes('mystery'), 'the vocabulary file');
+  assert((await read('_schema/vocabularies/tags.yaml')).includes('# Controlled tags.'), 'vocabulary comments lost');
+  await waitFor(() => ev(`${P}.schemas.pack.vocabularies.get('tags').lookup.has('mystery')`), 'the vocabulary to reload');
+  assert((await fmLines('Knowledge/Tagged.md')).includes('  - mystery'), 'the tag was removed from the note');
+  // cancel path
+  await write('Knowledge/Tagged.md', (await read('Knowledge/Tagged.md')).replace('  - idea', '  - idea\n  - nonsense'));
+  await waitModal('Add “nonsense” to the tags vocabulary');
+  await clickButton('Cancel');
+  await sleep(500);
+  assert((await fmLines('Knowledge/Tagged.md')).includes('  - nonsense'), 'cancel changed the note');
+  assert(!(await read('_schema/vocabularies/tags.yaml')).includes('nonsense'), 'cancel wrote the vocabulary');
+  await write('Knowledge/Tagged.md', (await read('Knowledge/Tagged.md')).replace('body', 'body 2'));
+  await sleep(3500);
+  eq(await ev(`[...activeDocument.querySelectorAll('.modal')].filter(m => /nonsense/.test(m.textContent)).length`), 0, 'asked again for the same tag');
+});
+
+await check('P4 an invalid status asks with the allowed values as choices', async () => {
+  await write('Knowledge/Tagged.md', (await read('Knowledge/Tagged.md')).replace('status: draft', 'status: live'));
+  const m = await waitModal('is not a kb status');
+  for (const v of ['draft', 'review', 'published', 'outdated', 'archived']) assert(m.buttons.includes(v), `missing choice ${v}: ${m.buttons}`);
+  await clickButton('review');
+  await waitFor(async () => (await fmLines('Knowledge/Tagged.md')).includes('status: review'), 'the chosen status');
+});
+
+await check('P4 changing `type` previews the conversion; Convert keeps every old value in archived_fields and deletes nothing', async () => {
+  await write('Knowledge/Conv.md', '---\ntype: kb\nschema: 2\nid: KB-2026-0905\nname: Conv\nstatus: published\ntags:\n  - idea\nlanguage: en-GB\nkind: how-to\naudience: team\nconfidence: high\nmy_custom: keep me\ncreated: 2026-10-20T14:32\nmodified: 2026-10-20T14:32\n---\nbody\n');
+  await sleep(1500);
+  await ev(`app.workspace.getLeaf(false).openFile(app.vault.getFileByPath('Knowledge/Conv.md')).then(() => 0)`);
+  await sleep(800);
+  await write('Knowledge/Conv.md', (await read('Knowledge/Conv.md')).replace('type: kb', 'type: task'));
+  const m = await waitModal('Convert “Conv” from kb to task');
+  const pre = m.pre.join('\n');
+  assert(pre.includes('priority: 3') && pre.includes('status: todo'), `added defaults should show: ${pre}`);
+  assert(pre.includes('kind: how-to') && pre.includes('status: published'), `archived values should show: ${pre}`);
+  assert((await fmLines('Knowledge/Conv.md')).includes('type: task'), 'precondition');
+  await clickButton('Convert');
+  await waitFor(async () => (await read('Knowledge/Conv.md')).includes('archived_fields'), 'archived_fields');
+  const text = await read('Knowledge/Conv.md');
+  for (const kept of ['kind: how-to', 'audience: team', 'confidence: high', 'status: published', 'my_custom: keep me', 'id: KB-2026-0905']) assert(text.includes(kept), `value lost: ${kept}`);
+  const f = await fm('Knowledge/Conv.md');
+  eq([f.type, f.status, f.priority], ['task', 'todo', '3'], 'new type values');
+  const keys = (await fmLines('Knowledge/Conv.md')).filter((l) => /^[a-z_]+:/.test(l)).map((l) => l.split(':')[0]);
+  eq(keys.slice(-3), ['archived_fields', 'created', 'modified'], 'archived_fields sits before created and modified');
+  assert(text.endsWith('---\nbody\n'), 'body changed');
+});
+
+await check('P4 "Not now" on a conversion changes nothing and does not ask again', async () => {
+  await write('Knowledge/Conv.md', (await read('Knowledge/Conv.md')).replace('type: task', 'type: project'));
+  await waitModal('Convert “Conv” from task to project');
+  await clickButton('Not now');
+  await sleep(500);
+  assert((await fmLines('Knowledge/Conv.md')).includes('type: project'), 'precondition');
+  // the note now carries a task status that a project does not allow: a separate, legitimate prompt on the next change
+  await write('Knowledge/Conv.md', (await read('Knowledge/Conv.md')).replace('body', 'body 1'));
+  await waitModal('is not a project status');
+  await clickButton('Not now');
+  await sleep(300);
+  assert(!(await read('Knowledge/Conv.md')).includes('priority: 3\n  '), 'unexpected change');
+  await write('Knowledge/Conv.md', (await read('Knowledge/Conv.md')).replace('body', 'body 2'));
+  await sleep(3500);
+  eq(await ev(`[...activeDocument.querySelectorAll('.modal')].filter(m => /Convert/.test(m.textContent)).length`), 0, 'asked again');
+});
+
+await check('P4 the convert command works from the palette', async () => {
+  await write('Knowledge/Cmd.md', '---\ntype: kb\nschema: 2\nid: KB-2026-0906\nname: Cmd\nstatus: draft\nkind: faq\ncreated: 2026-10-20T14:32\nmodified: 2026-10-20T14:32\n---\nbody\n');
+  await sleep(1500);
+  await ev(`app.workspace.getLeaf(false).openFile(app.vault.getFileByPath('Knowledge/Cmd.md')).then(() => 0)`);
+  await sleep(800);
+  await ev(`app.commands.executeCommandById('${PLUGIN_ID}:convert-note-type'); 0`);
+  await waitModal('Convert “Cmd”');
+  await ev(`[...activeDocument.querySelectorAll('.vschema-choice')].find(l => l.textContent === 'task').querySelector('input').click(); 0`);
+  await sleep(100);
+  await clickButton('Preview');
+  await waitModal('Convert “Cmd” from kb to task');
+  await clickButton('Convert');
+  await waitFor(async () => (await read('Knowledge/Cmd.md')).includes('archived_fields'), 'the conversion');
+  assert((await read('Knowledge/Cmd.md')).includes('kind: faq'), 'kind lost');
+});
+
+await check('P4 a move that changes the first breadcrumb segment asks to convert; the preview equals what is written', async () => {
+  await write('Knowledge/Mover.md', '---\ntype: kb\nschema: 2\nid: KB-2026-0907\nname: Mover\nstatus: draft\nbreadcrumb: Knowledge/Physics\nkind: concept\ncreated: 2026-10-20T14:32\nmodified: 2026-10-20T14:32\n---\nbody\n');
+  await sleep(1500);
+  await ev(`app.workspace.getLeaf(false).openFile(app.vault.getFileByPath('Knowledge/Mover.md')).then(() => 0)`);
+  await sleep(800);
+  await ev(`app.fileManager.renameFile(app.vault.getFileByPath('Knowledge/Mover.md'), 'Tasks/Mover.md').then(() => 0)`);
+  await sleep(500);
+  await write('Tasks/Mover.md', (await read('Tasks/Mover.md')).replace('breadcrumb: Knowledge/Physics', 'breadcrumb: Tasks/Today'));
+  const m = await waitModal('Convert “Mover” from kb to task');
+  const before = await read('Tasks/Mover.md');
+  await clickButton('Convert');
+  await waitFor(async () => (await read('Tasks/Mover.md')).includes('type: task'), 'the conversion');
+  const after = await read('Tasks/Mover.md');
+  const shown = m.pre[m.pre.length - 1].split('\n');
+  for (const line of shown) {
+    const key = line.replace(/^[+-]\s*/, '').split(':')[0];
+    assert(after.includes(key + ':') || line.startsWith('-'), `a previewed change was not written: ${line}`);
+  }
+  assert(after.includes('breadcrumb: Tasks/Today'), 'the breadcrumb must stay as the breadcrumb plugin wrote it');
+  assert(before !== after, 'nothing was written');
+});
+
+await check('P4 a one-off schema choice (remember off) adds the type’s properties after a preview', async () => {
+  await ev(`app.vault.createFolder('Loose').catch(() => {}).then(() => 0)`);
+  await ev(`app.vault.create('Loose/Solo.md', '').then(() => 0)`);
+  await waitFor(() => choiceShown(), 'the schema prompt', 6000);
+  await ev(`[...activeDocument.querySelectorAll('.vschema-choice')].find(l => l.textContent === 'task').querySelector('input').click(); 0`);
+  await ev(`(() => { const m = [...activeDocument.querySelectorAll('.modal')].pop(); const t = m.querySelector('.checkbox-container'); if (t.classList.contains('is-enabled')) t.click(); return 0; })()`);
+  await sleep(200);
+  await clickButton('Apply');
+  const m = await waitModal('Add task properties');
+  assert(m.pre.join('\n').includes('+ id: TK-'), `the preview should show the ID it will use: ${m.pre}`);
+  eq(await ev(`activeDocument.querySelectorAll('.vschema-choice-list').length`), 0, 'prompt still open');
+  assert((await read('Loose/Solo.md')) === '', 'written before approval');
+  await clickButton('Add properties');
+  await waitFor(async () => (await read('Loose/Solo.md')).includes('id: TK-'), 'the properties');
+  const f = await fm('Loose/Solo.md');
+  eq([f.type, f.status, f.priority, f.name], ['task', 'todo', '3', 'Solo'], 'values');
+  assert(!(await read('_schema/registry/folders.yaml')).includes('Loose'), 'folder mapping written although remember was off');
+});
+
+await check('P4 unchanged notes are never rewritten', async () => {
+  const mtimeBefore = await ev(`app.vault.adapter.stat('Knowledge/Created One.md').then(s => s.mtime)`);
+  await sleep(1100);
+  const out = await ev(`${P}.queue.set(app.vault.getFileByPath('Knowledge/Created One.md'), { status: 'draft', kind: 'concept' }).then(o => o)`);
+  eq(out.written, false, 'written flag');
+  eq(await ev(`app.vault.adapter.stat('Knowledge/Created One.md').then(s => s.mtime)`), mtimeBefore, 'mtime changed');
 });
 
 // ---------------------------------------------------------------- summary

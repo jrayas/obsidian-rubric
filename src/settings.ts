@@ -15,6 +15,8 @@ export interface VaultSchemaSettings {
   batchMode: boolean;
   /** Folders the user answered "Not now" for; not asked again on every open. */
   skippedFolders: string[];
+  /** IDs given up by renumbering. They are never handed out again. */
+  retiredIds: string[];
 }
 
 export const DEFAULT_SETTINGS: VaultSchemaSettings = {
@@ -29,11 +31,12 @@ export const DEFAULT_SETTINGS: VaultSchemaSettings = {
   stampModified: true,
   batchMode: true,
   skippedFolders: [],
+  retiredIds: [],
 };
 
 /** Merge stored data over the defaults, ignoring unknown keys and wrong types. */
 export function mergeSettings(stored: unknown): VaultSchemaSettings {
-  const out: VaultSchemaSettings = { ...DEFAULT_SETTINGS, skippedFolders: [] };
+  const out: VaultSchemaSettings = { ...DEFAULT_SETTINGS, skippedFolders: [], retiredIds: [] };
   if (typeof stored !== 'object' || stored === null) return out;
   const s = stored as Record<string, unknown>;
   const rec = out as unknown as Record<string, unknown>;

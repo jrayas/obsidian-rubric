@@ -16,6 +16,8 @@ export interface QueuedEdit {
   mutate: (fm: Frontmatter) => void;
   /** Reorder the properties after this edit (module order, own fields, created and modified last). */
   forceOrder?: boolean;
+  /** Leave the property order alone (the silent `modified` stamp must change nothing else). */
+  keepOrder?: boolean;
 }
 
 interface Pending {
@@ -62,6 +64,8 @@ export class WriteQueue {
   readonly ledger = new OwnWriteLedger();
   private readonly pending = new Map<string, Pending>();
   private readonly running = new Map<string, Promise<void>>();
+  /** When this plugin last wrote each note (ms), so watchers can ignore the change events it caused. */
+  readonly lastWrite = new Map<string, number>();
 
   constructor(
     private readonly app: App,
@@ -82,6 +86,52 @@ export class WriteQueue {
         if (this.running.get(file.path) === next) this.running.delete(file.path);
       });
     });
+  }
+
+  /**
+   * Apply an edit that was previewed. `expectedText` is the file the preview was made from: if the note has
+   * changed since, nothing is written, so what is written is exactly what was shown.
+   */
+  editExact(file: TFile, expectedText: string, edit: QueuedEdit): Promise<WriteOutcome> {
+    const run = async (): Promise<WriteOutcome> => {
+      const outcome: WriteOutcome = { written: false, changes: [] };
+      try {
+        let lastDraft: Frontmatter = {};
+        await this.app.vault.process(file, (text) => {
+          if (text !== expectedText) {
+            outcome.error = 'The note changed after the preview was made. Nothing was written; try again.';
+            return text;
+          }
+          const result = editFrontmatter(
+            text,
+            (fm) => {
+              edit.mutate(fm);
+              lastDraft = fm;
+            },
+            { order: (keys) => { const t = this.typeFor(file, lastDraft); return t ? desiredOrder(keys, t) : keys; }, forceOrder: edit.forceOrder === true },
+          );
+          outcome.changes = result.changes;
+          if (result.changed) {
+            outcome.written = true;
+            this.ledger.record(file.path, result.text);
+            this.lastWrite.set(file.path, Date.now());
+          }
+          return result.text;
+        });
+      } catch (e) {
+        outcome.written = false;
+        outcome.error = e instanceof Error ? e.message : String(e);
+      }
+      return outcome;
+    };
+    const prev = this.running.get(file.path) ?? Promise.resolve();
+    const next = prev.then(run);
+    const tail = next.then(() => undefined);
+    this.running.set(file.path, tail);
+    void tail.finally(() => {
+      if (this.running.get(file.path) === tail) this.running.delete(file.path);
+    });
+    return next;
   }
 
   /** Convenience: set or remove single properties. `undefined` removes. */
@@ -117,12 +167,14 @@ export class WriteQueue {
               return type ? desiredOrder(keys, type) : keys;
             },
             forceOrder: entry.edits.some((e) => e.forceOrder === true),
+            ...(entry.edits.every((e) => e.keepOrder === true) ? { order: (keys: string[]) => keys } : {}),
           },
         );
         outcome.changes = result.changes;
         if (result.changed) {
           outcome.written = true;
           this.ledger.record(path, result.text);
+          this.lastWrite.set(path, Date.now());
         }
         return result.text;
       });

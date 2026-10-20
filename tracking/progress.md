@@ -37,12 +37,12 @@ Ticked with date and time (local). Task definitions are in `docs/plan.md`.
 
 ## Phase 4: writes and automation
 - [x] P4.1 Write queue — 2026-10-21 00:17
-- [ ] P4.2 Create note from type
-- [ ] P4.3 ID rules
-- [ ] P4.4 Stamp modified
-- [ ] P4.5 Tag prompts
-- [ ] P4.6 Status prompt
-- [ ] P4.7 Convert type
+- [x] P4.2 Create note from type — 2026-10-21 00:45
+- [x] P4.3 ID rules — 2026-10-21 00:45
+- [x] P4.4 Stamp modified — 2026-10-21 00:45
+- [x] P4.5 Tag prompts — 2026-10-21 00:45
+- [x] P4.6 Status prompt — 2026-10-21 00:45
+- [x] P4.7 Convert type — 2026-10-21 00:45
 
 ## Phase 5: vault check and migration
 - [ ] P5.1 Vault check (11 checks)

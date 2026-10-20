@@ -1,14 +1,22 @@
 import { Notice, Plugin, normalizePath } from 'obsidian';
+import type { TFile } from 'obsidian';
 import { STARTER_PACK } from './pack';
 import { SchemaService } from './obsidian/schema-service';
 import { confirm } from './obsidian/modals';
 import { NoteService } from './obsidian/note-service';
+import { ChangeWatcher } from './obsidian/change-watcher';
+import { openCreateNote } from './obsidian/create-note';
+import { IdService } from './obsidian/id-service';
+import { ModifiedStamper } from './obsidian/modified-stamper';
+import { NoteActions } from './obsidian/note-actions';
 import { OptionPickerModal } from './obsidian/picker-modal';
 import { PropertiesLayer } from './obsidian/properties-layer';
 import { RegistryStore } from './obsidian/registry-store';
 import { SchemaValueSuggest } from './obsidian/source-suggest';
 import { propertyUnderFocus } from './obsidian/target-property';
+import { VocabularyStore } from './obsidian/vocabulary-store';
 import { WriteQueue } from './obsidian/write-queue';
+import { askSchemaChoice } from './obsidian/choice-modals';
 import { VaultSchemaSettingTab } from './obsidian/settings-tab';
 import { DEFAULT_SETTINGS, mergeSettings } from './settings';
 import type { VaultSchemaSettings } from './settings';
@@ -20,6 +28,11 @@ export default class VaultSchemaPlugin extends Plugin {
   notes!: NoteService;
   queue!: WriteQueue;
   layer!: PropertiesLayer;
+  ids!: IdService;
+  actions!: NoteActions;
+  vocabulary!: VocabularyStore;
+  private stamper!: ModifiedStamper;
+  watcher!: ChangeWatcher;
   private readonly shownOnce = new Set<string>();
 
   async onload(): Promise<void> {
@@ -33,6 +46,12 @@ export default class VaultSchemaPlugin extends Plugin {
       return ctx.type ?? (pack && typeof fm.type === 'string' ? (pack.types.get(fm.type) ?? null) : null);
     });
     this.layer = new PropertiesLayer(this);
+    this.ids = new IdService(this.app, () => this.settings);
+    this.actions = new NoteActions(this);
+    this.vocabulary = new VocabularyStore(this.app, this.schemas);
+    this.stamper = new ModifiedStamper(this);
+    this.watcher = new ChangeWatcher(this);
+    this.notes.applyType = (file, type) => this.applyType(file, type);
     this.addSettingTab(new VaultSchemaSettingTab(this.app, this));
     this.registerEditorSuggest(new SchemaValueSuggest(this));
 
@@ -64,6 +83,21 @@ export default class VaultSchemaPlugin extends Plugin {
     });
 
     this.addCommand({
+      id: 'convert-note-type',
+      name: 'Convert this note to another type',
+      checkCallback: (checking) => {
+        const file = this.app.workspace.getActiveFile();
+        if (!file || file.extension !== 'md' || !this.schemas.pack) return false;
+        if (!checking) void this.convertActive(file);
+        return true;
+      },
+    });
+    this.addCommand({
+      id: 'create-note-from-schema',
+      name: 'Create note from schema',
+      callback: () => openCreateNote(this),
+    });
+    this.addCommand({
       id: 'show-all-options',
       name: 'Show all options for this property',
       callback: () => this.showAllOptions(),
@@ -72,6 +106,8 @@ export default class VaultSchemaPlugin extends Plugin {
     this.app.workspace.onLayoutReady(() => {
       void this.schemas.start().then(() => {
         this.notes.start();
+        this.stamper.start();
+        this.watcher.start();
         this.syncLayer();
       });
     });
@@ -96,6 +132,33 @@ export default class VaultSchemaPlugin extends Plugin {
 
   onunload(): void {
     this.layer?.uninstall();
+    this.stamper?.stop();
+    this.watcher?.stop();
+  }
+
+  /** A schema was chosen for one note without remembering the folder: give the note what its type needs. */
+  private async applyType(file: TFile, typeName: string): Promise<void> {
+    const type = this.schemas.pack?.types.get(typeName);
+    if (type) await this.actions.complete(file, type);
+  }
+
+  private async convertActive(file: TFile): Promise<void> {
+    const pack = this.schemas.pack;
+    if (!pack) return;
+    const current = this.notes.context(file).type;
+    if (!current) {
+      new Notice('This note has no schema yet. Choose one first.');
+      return;
+    }
+    const choice = await askSchemaChoice(this.app, {
+      title: `Convert “${file.basename}”`,
+      lead: `The note is a ${current.name}. Which type should it become?`,
+      types: pack.typeNames.filter((t) => t !== current.name),
+      allowUnmanaged: false,
+      applyText: 'Preview',
+    });
+    const to = choice?.type ? pack.types.get(choice.type) : null;
+    if (to) await this.actions.convert(file, to, current);
   }
 
   /** Show a notice. */

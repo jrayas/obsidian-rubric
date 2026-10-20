@@ -123,8 +123,8 @@ describe('line endings are preserved (rule 9)', () => {
   });
 
   it('keeps a byte order mark', () => {
-    const r = editFrontmatter('﻿' + NOTE, (fm) => void (fm.status = 'review'));
-    expect(r.text.charAt(0)).toBe('﻿');
+    const r = editFrontmatter('\ufeff' + NOTE, (fm) => void (fm.status = 'review'));
+    expect(r.text.charAt(0)).toBe('\ufeff');
     expect(readFrontmatter(r.text)?.status).toBe('review');
   });
 });

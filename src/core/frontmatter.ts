@@ -44,8 +44,8 @@ interface Split {
 
 /** Split a file into opening delimiter, YAML text and the rest. Null when there is no frontmatter. */
 function split(text: string): Split | null {
-  const body = text.charAt(0) === '﻿' ? text.slice(1) : text;
-  const bom = body.length === text.length ? '' : '﻿';
+  const body = text.charAt(0) === '\ufeff' ? text.slice(1) : text;
+  const bom = body.length === text.length ? '' : '\ufeff';
   const firstEnd = body.indexOf('\n');
   const first = firstEnd < 0 ? body : body.slice(0, firstEnd);
   if (!/^---[ \t]*\r?$/.test(first) || firstEnd < 0) return null;
