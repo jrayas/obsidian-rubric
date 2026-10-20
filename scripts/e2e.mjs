@@ -1010,6 +1010,144 @@ await check('P5 batch mode: many edits are each stamped once, one after another,
   eq(await strayModals(), 0, 'dialogs');
 });
 
+// ---------------------------------------------------------------- Phase 6: hardening
+await check('P6 only the three release files are installed, and the bundle has no eval, network or storage use', async () => {
+  const files = await ev(`app.vault.adapter.list('.obsidian/plugins/${PLUGIN_ID}').then(l => l.files.map(f => f.split('/').pop()).sort())`);
+  eq(files.filter((f) => f !== 'data.json'), ['main.js', 'manifest.json', 'styles.css'], 'plugin folder');
+  const js = await ev(`app.vault.adapter.read('.obsidian/plugins/${PLUGIN_ID}/main.js')`);
+  for (const bad of ['eval(', 'new Function', 'innerHTML', 'XMLHttpRequest', 'fetch(', 'localStorage']) assert(!js.includes(bad), `bundle contains ${bad}`);
+});
+
+await check('P6 latched single-choice pick saves at once and keeps the list open', async () => {
+  await ev(`${P}.watcher.enabled = false; 0`);
+  await openNote('Knowledge/Wave.md');
+  await focusValue('status');
+  await ev(`app.commands.executeCommandById('${PLUGIN_ID}:show-all-options'); 0`);
+  await waitFor(() => popover(), 'the latched list');
+  await ev(`[...document.querySelectorAll('.vschema-option')].find(o => o.textContent.includes('outdated')).click(); 0`);
+  await waitFor(async () => (await fmLines('Knowledge/Wave.md')).includes('status: outdated'), 'the pick to save');
+  await sleep(500);
+  const p = await popover();
+  assert(p, 'the latched list closed after a single-choice pick');
+  eq(p.checked, ['outdated'], 'tick moved');
+  await escape();
+  await sleep(300);
+  await ev(`${P}.watcher.enabled = true; 0`);
+});
+
+await check('P6 an Obsidian update that removes the widget layer: one notice, no errors, commands still work', async () => {
+  await ev(`(() => { ${P}.layer.uninstall(); return 0; })()`);
+  await sleep(500);
+  const before = consoleErrors.length;
+  // Swap the internals only for the span of one synchronous call, so just the plugin's detection sees a manager without the features.
+  await ev(`(() => { const real = app.metadataTypeManager; app.metadataTypeManager = {}; try { ${P}.syncLayer(); ${P}.syncLayer(); ${P}.syncLayer(); } finally { app.metadataTypeManager = real; } return 0; })()`);
+  await sleep(300);
+  const notices = await ev(`[...activeDocument.querySelectorAll('.notice')].filter(n => /Properties area features are unavailable/.test(n.textContent)).length`);
+  eq(notices, 1, 'notices after three attempts');
+  eq(await ev(`${P}.layer.installed`), false, 'layer installed');
+  eq(consoleErrors.length, before, 'console errors');
+  // the picker window still works
+  await openNote('Knowledge/Wave.md');
+  await focusValue('status');
+  await ev(`app.commands.executeCommandById('${PLUGIN_ID}:show-all-options'); 0`);
+  await waitFor(() => ev(`!!activeDocument.querySelector('.modal .vschema-option-list')`), 'the picker window');
+  await closeStrayModals();
+  await ev(`${P}.syncLayer(); 0`);
+  await waitFor(() => ev(`${P}.layer.installed`), 'the layer to come back');
+});
+
+await check('P6 an error inside the layer switches it off once; the notes and native editing stay usable', async () => {
+  await ev(`(() => { ${P}.layer.eligibility = () => { throw new Error('simulated layer failure'); }; return 0; })()`);
+  const before = consoleErrors.length;
+  await openNote('Tasks/Review.md');
+  await openNote('Knowledge/Wave.md');
+  await sleep(800);
+  eq(await ev(`${P}.layer.installed`), false, 'layer should be off after the failure');
+  const switchedOff = await ev(`[...activeDocument.querySelectorAll('.notice')].filter(n => /switched off after an error/.test(n.textContent)).length`);
+  eq(switchedOff, 1, 'switch-off notices');
+  eq(consoleErrors.length - before, 1, 'logged errors (one, not repeated)');
+  consoleErrors.splice(before); // that single error was the one this check provokes
+  assert((await ev(`document.querySelectorAll('.metadata-property').length`)) > 5, 'the Properties area stopped rendering');
+  eq(await ev(`document.querySelectorAll('.vschema-chevron, .vschema-popover').length`), 0, 'controls left behind');
+  await ev(`delete ${P}.layer.eligibility; ${P}.layer.failed = false; ${P}.syncLayer(); 0`);
+  await waitFor(() => ev(`${P}.layer.installed`), 'the layer to come back');
+});
+
+await check('P6 disabling the plugin removes every patch and control; enabling it restores them', async () => {
+  await ev(`(async () => { await app.plugins.disablePlugin('${PLUGIN_ID}'); return 0; })()`);
+  await sleep(800);
+  const state = await ev(`(() => { const m = app.metadataTypeManager; const info = m.getTypeInfo('status', 'x'); return { unpatched: info.inferred === m.registeredTypeWidgets.text, nativeValues: /iterateFileCache/.test(app.metadataCache.getFrontmatterPropertyValuesForKey.toString()), chevrons: document.querySelectorAll('.vschema-chevron, .vschema-popover, .vschema-hint').length, loaded: !!${P} }; })()`).catch(async () => ev(`(() => { const m = app.metadataTypeManager; const info = m.getTypeInfo('status', 'x'); return { unpatched: info.inferred === m.registeredTypeWidgets.text, nativeValues: /iterateFileCache/.test(app.metadataCache.getFrontmatterPropertyValuesForKey.toString()), chevrons: document.querySelectorAll('.vschema-chevron, .vschema-popover, .vschema-hint').length, loaded: false }; })()`));
+  eq([state.unpatched, state.nativeValues, state.chevrons], [true, true, 0], 'Obsidian internals after disabling');
+  await ev(`(async () => { await app.plugins.enablePlugin('${PLUGIN_ID}'); return 0; })()`);
+  await waitFor(() => ev(`!!${P}?.schemas?.pack`), 'the schemas to load again', 8000);
+  await waitFor(() => ev(`${P}.layer.installed`), 'the layer to install again');
+  await openNote('Tasks/Review.md');
+  await openNote('Knowledge/Wave.md');
+  assert((await ev(`document.querySelectorAll('.vschema-chevron').length`)) > 0, 'no controls after enabling again');
+});
+
+await check('P6 a change arriving through sync while a stamp is pending is accepted, not overwritten (sync conflict)', async () => {
+  await ev(`${P}.watcher.enabled = false; 0`);
+  await write('Knowledge/Conflict.md', '---\ntype: kb\nschema: 2\nid: KB-2026-0910\nname: Conflict\nstatus: draft\ncreated: 2026-10-20T14:32\nmodified: 2026-10-20T14:32\n---\nbody\n');
+  await sleep(1500);
+  await write('Knowledge/Conflict.md', (await read('Knowledge/Conflict.md')).replace('body', 'local edit')); // starts the stamp timer
+  await sleep(600);
+  await write('Knowledge/Conflict.md', '---\ntype: kb\nschema: 2\nid: KB-2026-0910\nname: Conflict\nstatus: review\ncreated: 2026-10-20T14:32\nmodified: 2027-01-02T03:04\n---\nbody from the other device\n');
+  await sleep(4500);
+  const f = await fm('Knowledge/Conflict.md');
+  eq(f.modified, '2027-01-02T03:04', 'the other device’s modified was overwritten');
+  assert((await read('Knowledge/Conflict.md')).includes('body from the other device'), 'the incoming body was lost');
+  await ev(`${P}.watcher.enabled = true; 0`);
+});
+
+await check('P6 a note written with a newer schema is read-only: nothing writes to it, the picker says why, the check reports it', async () => {
+  await ev(`${P}.watcher.enabled = false; 0`);
+  const text = '---\ntype: kb\nschema: 3\nid: KB-2026-0920\nname: Future\nstatus: draft\nfuture_field: x\ncreated: 2026-10-20T14:32\nmodified: 2026-10-20T14:32\n---\nbody\n';
+  await write('Knowledge/Future.md', text);
+  await sleep(1500);
+  const out = await ev(`${P}.queue.set(app.vault.getFileByPath('Knowledge/Future.md'), { status: 'review' }).then(o => o)`);
+  assert(out.error && /read-only/.test(out.error), `expected a read-only error, got ${JSON.stringify(out)}`);
+  eq(await read('Knowledge/Future.md'), text, 'the note was changed');
+  await write('Knowledge/Future.md', text.replace('body', 'edited elsewhere'));
+  await sleep(4000);
+  eq((await fm('Knowledge/Future.md')).modified, '2026-10-20T14:32', 'modified stamped on a read-only note');
+  await openNote('Knowledge/Future.md');
+  await focusValue('status');
+  await ev(`${P}.layer.toggleFocused(); 0`);
+  await ev(`document.querySelector('.metadata-property[data-property-key="status"] .vschema-chevron')?.click(); 0`);
+  await sleep(600);
+  const p = await popover();
+  assert(!p || (p.note ?? '').length > 0 || p.options.length === 0, 'the list must not offer picks for a read-only note');
+  await escape();
+  await openCheck();
+  const f = await findingMsg('Future', 'newer-schema');
+  assert(f && f.buttons.length === 0 && /read-only/.test(f.msg), `finding: ${JSON.stringify(f)}`);
+  await closeStrayModals();
+  await ev(`${P}.watcher.enabled = true; 0`);
+});
+
+await check('P6 the matching mode setting writes registry/folders.yaml and the plugin follows it', async () => {
+  await ev(`app.setting.open(); app.setting.openTabById('${PLUGIN_ID}'); 0`);
+  const settings = await connect(await waitFor(() => pickTarget('settings'), 'the settings window'));
+  await sleep(1200);
+  try {
+    await evaluate(settings, `(() => { const row = [...document.querySelectorAll('.setting-item')].find(r => r.querySelector('.setting-item-name')?.textContent === 'Mode' && /Combined: type/.test(r.textContent)); const s = row.querySelector('select'); s.value = 'manual'; s.dispatchEvent(new Event('change', { bubbles: true })); return 0; })()`);
+    await waitFor(() => read('_schema/registry/folders.yaml').then((t) => /mode: manual/.test(t)), 'folders.yaml to change');
+    await waitFor(() => ev(`${P}.schemas.pack.folders.mode === 'manual'`), 'the pack to reload');
+    // manual mode does not guess a folder from a schema name
+    await ev(`app.vault.createFolder('kb').catch(() => {}).then(() => 0)`);
+    await write('kb/Guess.md', '---\nstatus: draft\n---\nx');
+    await sleep(800);
+    eq(await ev(`${P}.notes.context(app.vault.getFileByPath('kb/Guess.md')).match.kind`), 'ask', 'manual mode should ask, not guess');
+  } finally {
+    await evaluate(settings, `(() => { const row = [...document.querySelectorAll('.setting-item')].find(r => r.querySelector('.setting-item-name')?.textContent === 'Mode' && /Combined: type/.test(r.textContent)); const s = row.querySelector('select'); s.value = 'combined'; s.dispatchEvent(new Event('change', { bubbles: true })); return 0; })()`);
+    await waitFor(() => read('_schema/registry/folders.yaml').then((t) => /mode: combined/.test(t)), 'folders.yaml to change back');
+    settings.close();
+    await ev(`app.setting.close(); 0`);
+  }
+  assert((await read('_schema/registry/folders.yaml')).includes('# Fixed by design'), 'comments lost');
+});
+
 // ---------------------------------------------------------------- summary
 await check('no dialog is left open at the end', async () => {
   eq(await strayModals(), 0, 'open dialogs');

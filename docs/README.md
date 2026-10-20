@@ -16,6 +16,7 @@ Every document for this project lives in `docs/` and is linked here. Start with 
 
 Related, outside `docs/`:
 
+- `../README.md`: the public README (features, install, commands, privacy, limits).
 - `../Vault Schema Plugin Specification for Claude Code.md`: the single source of truth.
 - `../schema-pack/REFERENCE.md`: what every schema attribute means (shipped to users).
 - `../tracking/progress.md`, `current.md`, `log.md`: live state.

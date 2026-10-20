@@ -132,14 +132,15 @@ export class ModifiedStamper {
    */
   private enqueue(file: TFile): void {
     this.waiting++;
-    if (this.waiting > 10 && this.plugin.settings.batchMode && !this.progress) this.progress = new Notice('', 0);
+    // notes whose quiet period has not ended yet are part of the same burst
+    if (this.waiting + this.timers.size > 10 && this.plugin.settings.batchMode && !this.progress) this.progress = new Notice('', 0);
     this.chain = this.chain
       .then(() => this.stamp(file))
       .catch(() => undefined)
       .finally(() => {
         this.finished++;
-        this.progress?.setMessage(`Stamping modified: ${this.finished} of ${this.waiting} notes…`);
-        if (this.finished >= this.waiting) {
+        this.progress?.setMessage(`Stamping modified: ${this.finished} of ${this.waiting + this.timers.size} notes…`);
+        if (this.finished >= this.waiting && this.timers.size === 0) {
           this.progress?.hide();
           this.progress = null;
           this.waiting = 0;

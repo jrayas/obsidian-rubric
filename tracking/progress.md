@@ -51,7 +51,7 @@ Ticked with date and time (local). Task definitions are in `docs/plan.md`.
 - [x] P5.4 Batch mode — 2026-10-21 01:02
 
 ## Phase 6: hardening and release
-- [ ] P6.1 Test plan run
-- [ ] P6.2 Manifest minimum version, desktop-only
-- [ ] P6.3 User docs and release checklist
-- [ ] P6.4 Package and clean-vault install
+- [x] P6.1 Test plan run — 2026-10-21 01:33
+- [x] P6.2 Manifest minimum version, desktop-only — 2026-10-21 01:33
+- [x] P6.3 User docs and release checklist — 2026-10-21 01:33
+- [x] P6.4 Package and clean-vault install — 2026-10-21 01:33

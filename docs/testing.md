@@ -74,6 +74,52 @@ Recorded in `tracking/log.md` with command output and screenshot paths:
 - Vault check on the seeded vault → results match (item 11).
 - Release-files-only install in a clean vault.
 
+## Manual checklist for the Mac run (spec test plan, twelve items)
+
+Each item was run as an automated real-app check on macOS, Obsidian 1.14.4, using the production build and only the three release files. Evidence is the check named in `scripts/e2e.mjs` and the dated entries in `tracking/log.md`.
+
+| # | Item | Result | Check |
+| --- | --- | --- | --- |
+| 1 | Loads with no console errors | Pass | "P1 plugin loads…", "no console errors during the whole run" |
+| 2 | Click into a property: autocomplete shows schema values | Pass | "P3 typing in a property autocompletes…" |
+| 3 | Hold Option: list after the delay, hides on release; a symbol does not open it | Pass | "P3 hold shows the list only after the delay…", "another key during the hold cancels it" |
+| 4 | Latched hotkey: stays open; hotkey and Escape close it; first Escape closes only the list | Pass | "P3 latched list…", "first Escape closes only the list…" |
+| 5 | Locked properties ignore Option and the hotkey and show their note | Pass | "P3 locked properties ignore the hold…" |
+| 6 | Single pick saves and keeps the list open when latched; multi ticks save each change | Pass | "P6 latched single-choice pick…", "P3 latched list…" |
+| 7 | Commands only turns the features off; commands still work | Pass | "P3 commands-only switches…" |
+| 8 | Edit a note: `modified` updates once after the pause and not again | Pass | "P4 modified: an edit stamps once…", "a burst…" |
+| 9 | Move: breadcrumb changes, `modified` does not, first-segment change shows the convert prompt | Pass (breadcrumb plugin simulated by writing the breadcrumb) | "P4 modified: a move, a breadcrumb-only change…", "P4 a move that changes the first breadcrumb segment…" |
+| 10 | Edit a schema file: reload; break it: last good copy and a warning | Pass | "P1 a broken schema file keeps the last good copy…" |
+| 11 | Vault check on the test vault matches the seeded problems | Pass | "P5 the vault check window finds a seeded problem for each check…" |
+| 12 | Sync a changed note between two machines: no prompt, no `modified` bounce | **Simulated only**: a sync arrival is a file written from outside with a newer `modified` | "P4 modified: a change arriving with a newer modified…", "P6 a change arriving through sync while a stamp is pending…", "P2 notes arriving like sync… never prompt" |
+
+Windows-specific checks (Alt and the menu bar, accent names across systems, an illegal file name on a Windows file system) were **not run**: no Windows machine. The file-name rule itself is unit-tested (`tests/validate.test.ts`).
+
+## Definition of done: failure cases (spec)
+
+| Case | Evidence |
+| --- | --- |
+| Breaking a schema file leaves notes safe | Last good copy stays; no note write happens on a schema error ("P1 a broken schema file…") |
+| An Obsidian update removes the widget layer | "P6 an Obsidian update that removes the widget layer…": one notice, no console errors, commands and picker work |
+| An error inside the layer | "P6 an error inside the layer switches it off once…" |
+| A sync conflict | "P6 a change arriving through sync while a stamp is pending is accepted, not overwritten"; every write is atomic (`vault.process`) and refuses if the note changed since its preview |
+| Clean install | The e2e vault contains only `main.js`, `manifest.json`, `styles.css` (+ `data.json`) |
+| With the breadcrumb plugin absent | All checks run without it. **With it installed: not tested**; its writes are simulated |
+
+## Performance (macOS, Obsidian 1.14.4, `node scripts/perf.mjs 3000`)
+
+Synthetic vault of 3,000 managed notes (about 1.2 KB each) across four types. Measured 2026-10-21.
+
+| Measure | Result |
+| --- | --- |
+| Plugin `onload` | 8 ms |
+| Long main-thread tasks (over 50 ms) while loading and scanning in the background | none |
+| Full vault check, 3,000 notes | 0.7 s; one 338 ms burst while the checks compute |
+| Renderer memory | 297 MB before, 149 MB after startup, 206 MB after a check (noisy: Obsidian's own garbage collection dominates) |
+| `data.json` | 301 KB (the first-seen index, 100 bytes per note) |
+
+Not measured: vaults far above 3,000 notes, a vault on a network drive, Windows.
+
 ## Not covered here (honest limits)
 
 - Windows: Alt/menu-bar focus, accent-name matching across systems, illegal-character rejection on a Windows file system.

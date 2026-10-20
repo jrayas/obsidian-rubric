@@ -1,6 +1,7 @@
 import { TFile } from 'obsidian';
 import { readFrontmatter } from '../core/frontmatter';
 import type { Frontmatter } from '../core/frontmatter';
+import { isNewerThanSchema, newerSchemaMessage } from '../core/migrate';
 import { applyPick, lockNote, optionsFor } from '../core/options';
 import type { OptionItem, OptionList, OptionValue } from '../core/options';
 import type { PropertyDef, ResolvedType } from '../core/schema-types';
@@ -47,7 +48,8 @@ export class OptionSession {
     const fm = await this.currentFrontmatter();
     const ctx = plugin.notes.context(this.file, fm);
     if (!ctx.verdict.managed) return { kind: 'unavailable', message: 'This note is outside the managed scope.' };
-    if (!ctx.type) return { kind: 'unavailable', message: 'This note has no schema. Use “Choose schema for this note”.' };
+    if (!ctx.type) return { kind: 'unavailable', message: 'This note has no schema. Choose one first.' };
+    if (isNewerThanSchema(fm, ctx.type)) return { kind: 'unavailable', message: newerSchemaMessage(fm, ctx.type) };
     const def = ctx.type.byName.get(this.key) ?? [...ctx.type.byName.values()].find((p) => p.name.toLowerCase() === this.key.toLowerCase());
     const note = lockNote(this.key, def);
     if (note) return { kind: 'locked', def, note };

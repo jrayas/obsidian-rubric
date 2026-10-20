@@ -39,6 +39,15 @@ export function domainRepeatsBreadcrumb(fm: Frontmatter, key: 'domain' | 'domain
   return value === crumb || crumb.startsWith(value + '/') || crumb.split('/')[0] === value;
 }
 
+/** A note written against a newer schema than this one knows is read-only: an older plugin must not rewrite it. */
+export function isNewerThanSchema(fm: Frontmatter, type: ResolvedType): boolean {
+  return typeof fm.schema === 'number' && fm.schema > type.version;
+}
+
+export function newerSchemaMessage(fm: Frontmatter, type: ResolvedType): string {
+  return `This note was written with schema ${String(fm.schema)}, newer than the ${String(type.version)} this ${type.name} schema knows, so it is read-only here. Update the schema files or the plugin.`;
+}
+
 export function needsMigration(fm: Frontmatter, type: ResolvedType): boolean {
   return typeof fm.schema === 'number' && fm.schema < type.version;
 }

@@ -1,6 +1,7 @@
 import type { App, TFile } from 'obsidian';
 import { contentHash } from '../core/hash';
-import { FrontmatterError, desiredOrder, editFrontmatter } from '../core/frontmatter';
+import { FrontmatterError, desiredOrder, editFrontmatter, readFrontmatter } from '../core/frontmatter';
+import { isNewerThanSchema, newerSchemaMessage } from '../core/migrate';
 import type { Frontmatter, KeyChange } from '../core/frontmatter';
 import type { ResolvedType } from '../core/schema-types';
 
@@ -104,6 +105,11 @@ export class WriteQueue {
             outcome.error = 'The note changed after the preview was made. Nothing was written; try again.';
             return text;
           }
+          const readOnly = this.readOnlyReason(file, text);
+          if (readOnly) {
+            outcome.error = readOnly;
+            return text;
+          }
           const result = editFrontmatter(
             text,
             (fm) => {
@@ -150,6 +156,11 @@ export class WriteQueue {
             outcome.error = 'The note changed after the check. Nothing was written; run the check again.';
             return text;
           }
+          const readOnly = this.readOnlyReason(file, text);
+          if (readOnly) {
+            outcome.error = readOnly;
+            return text;
+          }
           const next = transform(text);
           if (next !== text) {
             outcome.written = true;
@@ -185,6 +196,19 @@ export class WriteQueue {
     });
   }
 
+  /** A note on a newer schema than this plugin knows must not be rewritten. Returns the reason, or null. */
+  private readOnlyReason(file: TFile, text: string): string | null {
+    let fm: Frontmatter | undefined;
+    try {
+      fm = readFrontmatter(text);
+    } catch {
+      return null;
+    }
+    if (!fm) return null;
+    const type = this.typeFor(file, fm);
+    return type && isNewerThanSchema(fm, type) ? newerSchemaMessage(fm, type) : null;
+  }
+
   private notifyIdentity(path: string, changes: KeyChange[]): void {
     const id = changes.find((c) => c.key === 'id');
     const created = changes.find((c) => c.key === 'created');
@@ -205,6 +229,11 @@ export class WriteQueue {
       const file = this.app.vault.getFileByPath(path) ?? entry.file;
       let lastDraft: Frontmatter = {};
       await this.app.vault.process(file, (text) => {
+        const readOnly = this.readOnlyReason(file, text);
+        if (readOnly) {
+          outcome.error = readOnly;
+          return text;
+        }
         const result = editFrontmatter(
           text,
           (fm) => {

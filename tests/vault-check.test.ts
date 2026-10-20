@@ -371,3 +371,14 @@ describe('the report', () => {
     expect([...checks].sort((a, b) => a - b)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
   });
 });
+
+describe('a note on a newer schema than this plugin knows (spec: read-only)', () => {
+  it('is reported with no fix and no migration is offered', () => {
+    const r = run([note('Future', { schema: 3 })]);
+    const f = r.findings.find((x) => x.code === 'newer-schema') as Finding;
+    expect(f.check).toBe(7);
+    expect(f.fixes).toEqual([]);
+    expect(f.message).toContain('read-only');
+    expect(codes(r)).not.toContain('old-schema');
+  });
+});

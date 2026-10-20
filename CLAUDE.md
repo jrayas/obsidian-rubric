@@ -32,6 +32,8 @@ dev/            scratch vaults (git-ignored)    .tools/   project-local Node (gi
 | Build (production) | `npm run build` |
 | Dev watch (set `VAULT_SCHEMA_DEV_DIR` to copy output into a vault's plugin folder) | `npm run dev` |
 | Create test vault | `npm run vault:create` |
+| Real-app checks (builds, launches an isolated Obsidian, runs every check, stops) | `npm run e2e` (`-- --keep` leaves it running, `-- --only <text>` filters; needs Obsidian installed) |
+| Performance sanity on a synthetic vault | `node scripts/perf.mjs 3000` |
 | Launch isolated Obsidian | `npm run debug:launch` |
 | Drive it | `npm run debug -- eval "<js>"` / `reload` / `console` / `screenshot [file]` / `stop` |
 | Log a line | `node scripts/log.mjs "message"` |
@@ -52,3 +54,13 @@ Set an environment variable: bash/zsh `export NAME=value`; PowerShell `$env:NAME
 - British English in docs and UI text.
 - Do not weaken tests to pass. If the spec and real Obsidian behaviour disagree, record it in `docs/decisions.md`, choose the most sensible option and continue.
 - Commit after each task with a clear message; do not touch files outside the project folder; do not touch the user's own Obsidian (the harness uses an isolated profile in `dev/scratch`).
+
+## Lessons recorded while building (read before changing code)
+
+- **Do not run `eslint --fix` on `src/` or `tests/`.** It once renamed a field called `global` to `window` and re-introduced literal BOM characters. Fix lint by hand.
+- Obsidian internals live in **one file**, `src/obsidian/properties-layer.ts`. Everything it touches is feature-detected and restored on uninstall. Do not use those internals anywhere else.
+- Notes are written only through `WriteQueue`. `processFrontMatter` breaks CRLF files, so do not use it.
+- Every approved fix is written with `editExact`/`textExact` from the text its preview was made from.
+- The real-app suite is the source of truth for UI behaviour (hold, latch, autocomplete, prompts). Run it after any change to `src/obsidian/`. Synthetic CDP key events need `nativeVirtualKeyCode`; a programmatic `focus()` does not place a caret (select the contents before `Input.insertText`).
+- Prompts run one at a time. A prompt left open in a test blocks every later one.
+- Windows, Obsidian 1.13.7, the real breadcrumb plugin and real sync cannot be tested on the macOS dev machine; see `docs/release-checklist.md` for the manual steps.

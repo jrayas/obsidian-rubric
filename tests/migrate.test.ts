@@ -124,3 +124,14 @@ describe('migration schema 1 to 2', () => {
     expect(once.text.endsWith('---\nbody\n')).toBe(true);
   });
 });
+
+describe('read-only notes from a newer schema', () => {
+  it('detects a schema number above the type’s version, and says why', async () => {
+    const { isNewerThanSchema, newerSchemaMessage } = await import('../src/core/migrate');
+    expect(isNewerThanSchema({ schema: 3 }, t('kb'))).toBe(true);
+    expect(isNewerThanSchema({ schema: 2 }, t('kb'))).toBe(false);
+    expect(isNewerThanSchema({ schema: 1 }, t('kb'))).toBe(false);
+    expect(isNewerThanSchema({}, t('kb'))).toBe(false);
+    expect(newerSchemaMessage({ schema: 3 }, t('kb'))).toContain('schema 3');
+  });
+});

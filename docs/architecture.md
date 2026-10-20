@@ -81,3 +81,36 @@ See `schema-pack/REFERENCE.md` (shipped to users too). Short version:
 ## Platform notes
 
 The code uses `Platform.isMacOS` for the default hold key (`Alt` is the same DOM modifier on both systems; the Mac key is labelled Option). Folder names are compared lower-cased and Unicode-NFC/NFD-normalised with accents folded. File-name validation rejects characters illegal on either system. Paths use `normalizePath` inside Obsidian and forward slashes in vault paths; Node scripts use `path.join`.
+
+## Modules as built
+
+`src/core/` (pure, no `obsidian` import; unit tested)
+
+| File | Job |
+| --- | --- |
+| `schema-types.ts`, `yaml-file.ts`, `semver.ts` | Data model, YAML with line numbers, version compare |
+| `schema-loader.ts` | Load and validate the pack; problems name file and line |
+| `folder-detect.ts`, `normalise.ts` | `_schema`/`.schema`/custom detection; case- and accent-insensitive names |
+| `matcher.ts`, `scope.ts`, `prompt-policy.ts` | Rule 1 (modes combined/auto/manual), rule 2, when to ask |
+| `registry-edit.ts` | Comment-preserving edits of `folders.yaml` and `scope.yaml` |
+| `frontmatter.ts` | Read, edit (compare first), order, keep EOL and BOM, keep untouched formatting |
+| `validate.ts`, `options.ts`, `hold-state.ts` | Value rules; option lists, autocomplete, lock notes; the hold/latch state machine |
+| `ids.ts`, `timestamps.ts`, `hash.ts` | Rule 4, rule 5 and the fingerprint, content hash |
+| `tags.ts`, `convert.ts`, `create.ts` | Rule 6, rule 8, creation and completion of a note |
+| `migrate.ts`, `note-check.ts`, `preview.ts` | Schema 1 to 2; the eleven checks with previewed fixes; diff lines |
+| `fs-names.ts` | File-name rules for macOS and Windows, case collisions |
+
+`src/obsidian/` (adapters)
+
+| File | Job |
+| --- | --- |
+| `vault-source.ts`, `schema-service.ts` | Read the schema folder (hidden too), hot reload, polling, last good copy |
+| `registry-store.ts`, `vocabulary-store.ts` | The only schema-file writers |
+| `note-service.ts`, `choice-modals.ts`, `settings-tab.ts` | Scope and matching for a file; the no-match prompt; the settings page |
+| `write-queue.ts` | The only note writer: one queued write per note, `editExact`/`textExact`, own-write ledger, read-only guard for newer schemas |
+| `option-list.ts`, `option-session.ts`, `picker-modal.ts`, `source-suggest.ts`, `target-property.ts` | The option list view, loading and saving a property's options, the picker window, Source-mode autocomplete |
+| `properties-layer.ts` | **The only file that touches undocumented internals** (decorator, field controllers, native suggest muting) |
+| `modified-stamper.ts`, `change-watcher.ts`, `known-index.ts`, `id-service.ts` | Stamping with the loop guard; tag/status/convert prompts and batch conversion; the first-seen index; ID allocation |
+| `note-actions.ts`, `create-note.ts`, `preview-modal.ts`, `modals.ts` | Convert and complete a note; create from schema; previews and choices |
+| `vault-check.ts`, `vault-check-view.ts` | Scan, apply fixes, the report window with batch migration |
+| `main.ts` | Wiring, commands, lifecycle |

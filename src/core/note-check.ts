@@ -8,7 +8,7 @@ import { desiredOrder, editFrontmatter, readFrontmatter } from './frontmatter';
 import type { Frontmatter } from './frontmatter';
 import { convertOldId, parseId, parseOldId, planRenumbering, nextId, yearOf } from './ids';
 import { matchNote } from './matcher';
-import { domainRepeatsBreadcrumb, needsMigration, planMigration } from './migrate';
+import { domainRepeatsBreadcrumb, isNewerThanSchema, needsMigration, newerSchemaMessage, planMigration } from './migrate';
 import { describeChanges } from './preview';
 import { caseCollisions } from './fs-names';
 import { checkTags } from './tags';
@@ -306,6 +306,10 @@ export function checkNote(ctx: CheckContext, note: NoteInput, allocate: (prefix:
     add(7, 'old-schema', 'problem', `schema ${plan.from} → ${plan.to}`, [
       fmFix('Apply migration', note.text, type, plan.apply, { forceOrder: true }),
     ]);
+  }
+
+  if (isNewerThanSchema(fm, type)) {
+    add(7, 'newer-schema', 'warning', `${newerSchemaMessage(fm, type)} No fix is offered.`);
   }
 
   // 8. leftover domain ------------------------------------------------------------------------------------------
