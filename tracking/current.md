@@ -1,9 +1,9 @@
 # Current
 
-**Updated:** 2026-10-20 23:45
+**Updated:** 2026-10-20 23:38
 
-**Working on:** Phase 0 complete; starting Phase 1 (P1.1 schema pack files).
+**Just finished:** Phase 1 (schema foundation). 49 unit tests green; lint, typecheck and build clean; real-app run verified install, hot reload, last-good-copy and hidden-folder polling (see log).
 
-**Next:** P1.1 → P1.6, then Phase 2.
+**Working on / next:** Phase 2 — matching, scope, folder mapping, no-match prompt, settings page (P2.1 first).
 
-**Blockers:** none. Known limits: Windows and Obsidian 1.13.7 cannot be tested on this machine (see `docs/decisions.md` D-13, D-15).
+**Blockers:** none.

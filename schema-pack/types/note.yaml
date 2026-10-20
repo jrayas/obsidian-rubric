@@ -1,0 +1,12 @@
+type: note
+description: A general note.
+uses: [base, findability, taxonomy, relations]
+overrides:
+  status:
+    values: [draft, in-progress, evergreen, archived]
+    default: draft
+properties:
+  confidence:
+    type: enum
+    values: [low, medium, high]
+    default: medium

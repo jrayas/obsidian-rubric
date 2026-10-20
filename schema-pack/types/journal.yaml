@@ -1,0 +1,29 @@
+type: journal
+description: A journal entry.
+uses: [base, findability, relations]
+overrides:
+  status:
+    values: [open, closed]
+    default: open
+properties:
+  date:
+    type: date
+    required: true
+    default: today
+  period:
+    type: enum
+    values: [daily, weekly, monthly, yearly]
+    default: daily
+  mood:
+    type: integer
+    min: 1
+    max: 5
+  energy:
+    type: integer
+    min: 1
+    max: 5
+  location:
+    type: string
+  highlights:
+    type: list
+    items: string

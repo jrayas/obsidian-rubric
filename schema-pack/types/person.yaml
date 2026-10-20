@@ -1,0 +1,36 @@
+type: person
+description: A person.
+uses: [base, findability, relations]
+overrides:
+  status:
+    values: [active, dormant, archived]
+    default: active
+properties:
+  relationship:
+    type: enum
+    values: [friend, family, colleague, client, mentor, other]
+  organisation:
+    type: string
+  role:
+    type: string
+  location:
+    type: string
+  birthday:
+    type: date
+  last_contacted:
+    type: date
+  follow_up:
+    type: date
+  contact_email:
+    type: string
+  contact_phone:
+    type: string
+  contact_website:
+    type: url
+  contact_social:
+    type: list
+    items: url
+  met_date:
+    type: date
+  met_where:
+    type: string

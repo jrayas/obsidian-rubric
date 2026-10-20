@@ -1,0 +1,12 @@
+module: taxonomy
+description: Where the note sits in the folder tree.
+properties:
+  breadcrumb:
+    type: string
+    locked: true
+    managed_by: external
+    pattern: '^[^/\\]+(/[^/\\]+)*$'
+    description: >-
+      Folder path starting with the root folder, separated by /, no leading or
+      trailing slash, never the note's own name. Written by the breadcrumb
+      plugin; this plugin only reads it.

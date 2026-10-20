@@ -17,6 +17,8 @@ export default defineConfig(
     'package-lock.json',
     'tsconfig.json',
     'scripts',
+    'eslint.config.mts',
+    'vitest.config.ts',
     'schema-pack',
     'docs',
     'tracking',

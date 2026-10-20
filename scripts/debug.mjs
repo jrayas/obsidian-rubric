@@ -105,7 +105,7 @@ switch (cmd) {
   case 'stop': {
     try {
       const c = await open();
-      await c.send('Browser.close').catch(() => {});
+      await Promise.race([c.send('Browser.close').catch(() => {}), sleep(1500)]);
       c.close();
     } catch {
       /* not running */

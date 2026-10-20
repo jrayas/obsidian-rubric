@@ -12,12 +12,12 @@ Ticked with date and time (local). Task definitions are in `docs/plan.md`.
 - [x] P0.7 Structure, tooling, test approach — 2026-10-20 23:45
 
 ## Phase 1: schema foundation
-- [ ] P1.1 Schema pack files + REFERENCE.md
-- [ ] P1.2 Schema folder detection
-- [ ] P1.3 Load and resolve
-- [ ] P1.4 Validation with file and line
-- [ ] P1.5 Last good copy, hot reload, reload command
-- [ ] P1.6 Plugin shell
+- [x] P1.1 Schema pack files + REFERENCE.md — 2026-10-20 23:38
+- [x] P1.2 Schema folder detection — 2026-10-20 23:38
+- [x] P1.3 Load and resolve — 2026-10-20 23:38
+- [x] P1.4 Validation with file and line — 2026-10-20 23:38
+- [x] P1.5 Last good copy, hot reload, reload command — 2026-10-20 23:38
+- [x] P1.6 Plugin shell — 2026-10-20 23:38
 
 ## Phase 2: matching and scope
 - [ ] P2.1 Matching

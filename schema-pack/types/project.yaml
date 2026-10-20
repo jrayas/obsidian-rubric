@@ -1,0 +1,23 @@
+type: project
+description: A project. Milestones are task notes whose `project` link points here.
+uses: [base, findability, taxonomy, relations]
+overrides:
+  status:
+    values: [planning, idea, active, on-hold, done, cancelled]
+    default: planning
+properties:
+  priority:
+    type: integer
+    min: 1
+    max: 5
+    default: 3
+  start:
+    type: date
+  deadline:
+    type: date
+  outcome:
+    type: string
+  stakeholders:
+    type: list
+    items: link
+    target: person        # link suggestions are limited to person notes

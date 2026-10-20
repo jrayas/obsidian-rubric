@@ -1,0 +1,11 @@
+module: provenance
+description: Where the information came from (flat, so the Properties area can edit it).
+properties:
+  source_title:
+    type: string
+  source_author:
+    type: string
+  source_url:
+    type: url
+  source_accessed:
+    type: date
