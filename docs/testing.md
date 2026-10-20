@@ -59,7 +59,7 @@ If `node` is not installed, use the project-local one: macOS/Linux `export PATH=
 | `tests/migrate.test.ts` | Schema 1 to 2: IDs, every nested block, domain handling, archived values, created/modified last, no value lost |
 | `tests/options.test.ts` | Options come from the note's schema; synonyms; locked properties and their notes; picking and toggling |
 | `tests/hold-state.test.ts` | The hold/latch state machine: delay, repeat, cancel on another key, pointer rule, Escape order, hotkey |
-| `scripts/e2e.mjs` (real Obsidian) | 58 checks across Phases 1-5: pack install, last good copy, hidden folder polling, prompts, settings page, decorations, hold/latch/Escape, saves, autocomplete, hint, commands-only, source-mode suggest, create from schema, ID allocation, every `modified` rule, tag/status/convert prompts, one-off schema choice, no rewrite of unchanged notes, the vault check window with a seeded problem per check, every fix, migration (single and batch), the local index, schema problems with file and line, a folder reorganisation of 12 notes processed once, 12 stamps with progress |
+| `scripts/e2e.mjs` (real Obsidian) | 67 checks across Phases 1-6: pack install, last good copy, hidden folder polling, prompts, settings page, decorations, hold/latch/Escape, saves, autocomplete, hint, commands-only, source-mode suggest, create from schema, ID allocation, every `modified` rule, tag/status/convert prompts, one-off schema choice, no rewrite of unchanged notes, the vault check window with a seeded problem per check, every fix, migration (single and batch), the local index, schema problems with file and line, a folder reorganisation of 12 notes processed once, 12 stamps with progress |
 
 ## Real-app checks that must pass before release
 

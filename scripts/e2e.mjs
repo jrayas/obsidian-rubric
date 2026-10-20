@@ -1148,6 +1148,28 @@ await check('P6 the matching mode setting writes registry/folders.yaml and the p
   assert((await read('_schema/registry/folders.yaml')).includes('# Fixed by design'), 'comments lost');
 });
 
+await check('P6 a note with Windows line endings keeps them through a pick, a stamp and a conversion', async () => {
+  await ev(`${P}.watcher.enabled = false; 0`);
+  const crlf = '---\r\ntype: kb\r\nschema: 2\r\nid: KB-2026-0930\r\nname: Crlf\r\nstatus: draft\r\ntags:\r\n  - idea\r\ncreated: 2026-10-20T14:32\r\nmodified: 2026-10-20T14:32\r\n---\r\nline one\r\nline two\r\n';
+  await write('Knowledge/Crlf.md', crlf);
+  await sleep(1500);
+  const lone = (t) => /[^\r]\n/.test(t) || t.startsWith('\n');
+  await ev(`${P}.queue.set(app.vault.getFileByPath('Knowledge/Crlf.md'), { status: 'review', language: 'en-GB' }).then(() => 0)`);
+  let text = await read('Knowledge/Crlf.md');
+  assert(text.includes('status: review') && !lone(text), `a pick broke the line endings: ${JSON.stringify(text.slice(0, 120))}`);
+  await write('Knowledge/Crlf.md', text.replace('line one', 'line one edited'));
+  await waitFor(async () => !(await read('Knowledge/Crlf.md')).includes('modified: 2026-10-20T14:32'), 'the stamp', 6000);
+  text = await read('Knowledge/Crlf.md');
+  assert(!lone(text), `a stamp broke the line endings: ${JSON.stringify(text.slice(0, 160))}`);
+  assert(text.endsWith('line one edited\r\nline two\r\n'), 'the body changed');
+  const task = await ev(`${P}.schemas.pack.types.get('task') !== undefined`);
+  assert(task, 'no task type');
+  await ev(`(async () => { const f = app.vault.getFileByPath('Knowledge/Crlf.md'); return ${P}.actions.planConvert(f, ${P}.schemas.pack.types.get('task')).then(p => ${P}.actions.applyConversion(p)); })()`);
+  text = await read('Knowledge/Crlf.md');
+  assert(text.includes('type: task') && !lone(text), `a conversion broke the line endings: ${JSON.stringify(text.slice(0, 160))}`);
+  await ev(`${P}.watcher.enabled = true; 0`);
+});
+
 // ---------------------------------------------------------------- summary
 await check('no dialog is left open at the end', async () => {
   eq(await strayModals(), 0, 'open dialogs');
