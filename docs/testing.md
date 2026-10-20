@@ -19,7 +19,7 @@ Tests never get weakened to pass; a failing test is a bug in code or a recorded 
 | Typecheck | `npm run typecheck` |
 | Lint (ESLint with Obsidian rules + stylelint) | `npm run lint` |
 | Production build | `npm run build` |
-| Build the dev vault | `npm run vault:create` |
+| Build the hand-test vault (`dev/testvault`: starter schema, built plugin, examples, a `Problems/` folder with one note per finding, `START HERE.md`; run `npm run build` first) | `npm run vault:create` (optional argument: another folder) |
 | Launch isolated Obsidian | `npm run debug:launch` (add `-- --release` semantics: files come from the repo root) |
 | Drive it | `npm run debug -- eval "<js>"`, `reload`, `console`, `screenshot [file]`, `status`, `stop` |
 | Real-app checks | `npm run e2e` (builds, launches an isolated Obsidian, runs every check, stops; `-- --keep` leaves it running, `-- --only <text>` filters) |

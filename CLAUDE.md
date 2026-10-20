@@ -31,7 +31,7 @@ dev/            scratch vaults (git-ignored)    .tools/   project-local Node (gi
 | Lint (ESLint + stylelint) | `npm run lint` |
 | Build (production) | `npm run build` |
 | Dev watch (set `VAULT_SCHEMA_DEV_DIR` to copy output into a vault's plugin folder) | `npm run dev` |
-| Create test vault | `npm run vault:create` |
+| Create the hand-test vault in `dev/testvault` (build first) | `npm run vault:create` |
 | Real-app checks (builds, launches an isolated Obsidian, runs every check, stops) | `npm run e2e` (`-- --keep` leaves it running, `-- --only <text>` filters; needs Obsidian installed) |
 | Performance sanity on a synthetic vault | `node scripts/perf.mjs 3000` |
 | Launch isolated Obsidian | `npm run debug:launch` |
