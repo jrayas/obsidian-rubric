@@ -1,0 +1,38 @@
+{
+  "name": "vault-schema",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Schema-driven properties, validation and migration for Obsidian notes.",
+  "type": "module",
+  "license": "0BSD",
+  "scripts": {
+    "dev": "node esbuild.config.mjs",
+    "build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
+    "typecheck": "tsc -noEmit -skipLibCheck",
+    "lint": "eslint . && stylelint --max-warnings 0 styles.css",
+    "lint:css": "stylelint --max-warnings 0 styles.css",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "version": "node version-bump.mjs && git add manifest.json versions.json",
+    "vault:create": "node scripts/create-test-vault.mjs",
+    "debug:launch": "node scripts/debug-launch.mjs",
+    "debug": "node scripts/debug.mjs"
+  },
+  "devDependencies": {
+    "@eslint/js": "9.39.4",
+    "@eslint/json": "0.14.0",
+    "@types/node": "22.20.5",
+    "esbuild": "0.28.2",
+    "eslint": "9.39.4",
+    "eslint-plugin-obsidianmd": "0.4.2",
+    "globals": "17.13.0",
+    "jiti": "2.7.0",
+    "obsidian": "1.14.4",
+    "stylelint": "17.16.0",
+    "stylelint-no-unsupported-browser-features": "8.1.2",
+    "typescript": "5.9.3",
+    "typescript-eslint": "8.71.2",
+    "vitest": "5.0.5",
+    "yaml": "2.9.1"
+  }
+}

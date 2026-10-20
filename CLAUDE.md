@@ -1,0 +1,54 @@
+# Vault Schema (Obsidian plugin)
+
+An Obsidian **desktop** plugin (macOS and Windows) that reads note schemas from YAML files in a vault folder (`_schema` by default) and uses them for property autocomplete, option pickers, validation, readable IDs, timestamps and schema migration. The single source of truth is `Vault Schema Plugin Specification for Claude Code.md` in the project root.
+
+## Start of every session
+
+1. Read `docs/README.md` (index) and `tracking/current.md` (where things stand).
+2. **Load the available skills before writing or testing code**: `obsidian-plugin-dev` (conventions, lint, API rules) and `obsidian-cdp-debugging` (driving a real Obsidian). Summary in `docs/skills-summary.md`.
+3. Keep `docs/` and `tracking/` updated as part of every task (progress ticked with date and time, `current.md` overwritten at task start and end, `log.md` appended, `docs/decisions.md` for any assumption).
+
+## Folder structure
+
+```
+src/core/       pure TypeScript rules (no `obsidian` import) – unit tested
+src/obsidian/   adapters to Obsidian (vault, UI, Properties area)
+src/main.ts     plugin entry
+schema-pack/    starter schema pack (YAML) + REFERENCE.md; embedded into main.js
+tests/          Vitest tests and helpers
+scripts/        cross-platform Node scripts (debug harness, vault builder, log helper)
+docs/           all documentation        tracking/   live project state
+dev/            scratch vaults (git-ignored)    .tools/   project-local Node (git-ignored)
+```
+
+## Commands (same on macOS and Windows; they are npm scripts)
+
+| Task | Command |
+| --- | --- |
+| Install | `npm install` |
+| Test | `npm test` |
+| Typecheck | `npm run typecheck` |
+| Lint (ESLint + stylelint) | `npm run lint` |
+| Build (production) | `npm run build` |
+| Dev watch (set `VAULT_SCHEMA_DEV_DIR` to copy output into a vault's plugin folder) | `npm run dev` |
+| Create test vault | `npm run vault:create` |
+| Launch isolated Obsidian | `npm run debug:launch` |
+| Drive it | `npm run debug -- eval "<js>"` / `reload` / `console` / `screenshot [file]` / `stop` |
+| Log a line | `node scripts/log.mjs "message"` |
+
+If Node is not installed: this repo may carry a project-local Node in `.tools/node` (macOS/Linux, Apple silicon).
+- bash/zsh: `export PATH="$PWD/.tools/node/bin:$PATH"`
+- PowerShell: install Node 22+ or unzip a Windows Node build to `.tools\node` and run `$env:Path = "$PWD\.tools\node;$env:Path"`
+
+Set an environment variable: bash/zsh `export NAME=value`; PowerShell `$env:NAME = "value"`. Obsidian binary override: `OBSIDIAN_BIN`.
+
+## Conventions
+
+- Rules live in `src/core` and must not import `obsidian`. Anything touching Obsidian internals is only in `src/obsidian/properties-layer.ts`.
+- Behaviour comes from the schema files, never hard-coded type names, status values or tags.
+- Notes are changed only through the write queue; only `modified` is stamped silently; never delete data (use `archived_fields`); never move files; never write `breadcrumb`.
+- Paths: `path.join` in Node scripts; vault paths use `/` and `normalizePath` in Obsidian code. Keep each file's line endings.
+- Obsidian lint rules apply: no `innerHTML`, no inline static styles (CSS classes in `styles.css`, prefix `vschema-`), no `console.log`, no global `app`, sentence-case UI text, no default hotkeys, no API newer than `minAppVersion` (1.13.7) without a `requireApiVersion` guard.
+- British English in docs and UI text.
+- Do not weaken tests to pass. If the spec and real Obsidian behaviour disagree, record it in `docs/decisions.md`, choose the most sensible option and continue.
+- Commit after each task with a clear message; do not touch files outside the project folder; do not touch the user's own Obsidian (the harness uses an isolated profile in `dev/scratch`).

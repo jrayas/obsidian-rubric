@@ -1,0 +1,7 @@
+node_modules/
+.tools/
+dev/
+main.js
+*.map
+.DS_Store
+coverage/
