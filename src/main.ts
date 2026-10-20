@@ -4,6 +4,7 @@ import { STARTER_PACK } from './pack';
 import { SchemaService } from './obsidian/schema-service';
 import { confirm } from './obsidian/modals';
 import { NoteService } from './obsidian/note-service';
+import { AutoSync } from './obsidian/auto-sync';
 import { ChangeWatcher } from './obsidian/change-watcher';
 import { openCreateNote } from './obsidian/create-note';
 import { IdService } from './obsidian/id-service';
@@ -32,6 +33,7 @@ export default class VaultSchemaPlugin extends Plugin {
   layer!: PropertiesLayer;
   ids!: IdService;
   known!: KnownIndex;
+  autoSync!: AutoSync;
   actions!: NoteActions;
   vocabulary!: VocabularyStore;
   private stamper!: ModifiedStamper;
@@ -53,9 +55,14 @@ export default class VaultSchemaPlugin extends Plugin {
     this.actions = new NoteActions(this);
     this.vocabulary = new VocabularyStore(this.app, this.schemas);
     this.known = new KnownIndex(this);
+    this.autoSync = new AutoSync(this);
     this.stamper = new ModifiedStamper(this);
     this.watcher = new ChangeWatcher(this);
     this.notes.applyType = (file, type) => this.applyType(file, type);
+    this.notes.fillNew = async (file, type, action) => {
+      const done = await this.actions.complete(file, type, { silent: action === 'fill' });
+      if (done) await this.autoSync.afterFill(file);
+    };
     this.addSettingTab(new VaultSchemaSettingTab(this.app, this));
     this.registerEditorSuggest(new SchemaValueSuggest(this));
 
@@ -117,6 +124,7 @@ export default class VaultSchemaPlugin extends Plugin {
         this.notes.start();
         this.stamper.start();
         this.known.start();
+        this.autoSync.start();
         this.watcher.start();
         this.syncLayer();
       });

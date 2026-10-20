@@ -39,7 +39,11 @@ const P = `app.plugins.plugins['${PLUGIN_ID}']`;
 
 const keyEvent = (type, key, code, vk, extra = {}) =>
   client.send('Input.dispatchKeyEvent', { type, key, code, windowsVirtualKeyCode: vk, nativeVirtualKeyCode: vk, ...extra });
-const altDown = () => keyEvent('rawKeyDown', 'Alt', 'AltLeft', 18, { modifiers: 1 });
+// Park the pointer in a corner first: a real pointer resting over the list would (correctly) keep it open on release.
+const altDown = async () => {
+  await client.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: 2, y: 2 });
+  await keyEvent('rawKeyDown', 'Alt', 'AltLeft', 18, { modifiers: 1 });
+};
 const altUp = () => keyEvent('keyUp', 'Alt', 'AltLeft', 18, { modifiers: 0 });
 const press = async (key, code, vk) => {
   await keyEvent('keyDown', key, code, vk);
@@ -89,6 +93,7 @@ const write = (path, text) => ev(`app.vault.adapter.write(${JSON.stringify(path)
 const fmLines = async (path) => (await read(path)).split('---')[1].split('\n');
 
 // ---------------------------------------------------------------- Phase 1: schema foundation
+await ev(`${P}.settings.onCreate = 'nothing'; 0`); // the older checks seed many bare notes; the new automation is tested in Phase 7
 await check('P1 plugin loads with no console errors and reports no schema folder yet', async () => {
   eq(await ev(`!!${P}`), true, 'plugin loaded');
   eq(await ev(`${P}.schemas.status.problems.map(p => p.code)`), ['folder-missing'], 'problems');
@@ -391,6 +396,7 @@ await check('P3 the ▾ button opens the same list and is a labelled button', as
 
 await check('P3 clicking into another property closes an open list', async () => {
   await focusValue('status');
+  await waitFor(() => ev(`!!document.querySelector('.metadata-property[data-property-key="status"] .vschema-chevron')`), 'the ▾ button');
   await ev(`document.querySelector('.metadata-property[data-property-key="status"] .vschema-chevron').click(); 0`);
   await waitFor(() => popover(), 'the list');
   await ev(`(() => { const t = document.querySelector('.metadata-property[data-property-key="description"] .metadata-property-value [contenteditable="true"], .metadata-property[data-property-key="description"] .metadata-property-value input'); t.focus(); return 0; })()`);
@@ -1168,6 +1174,180 @@ await check('P6 a note with Windows line endings keeps them through a pick, a st
   text = await read('Knowledge/Crlf.md');
   assert(text.includes('type: task') && !lone(text), `a conversion broke the line endings: ${JSON.stringify(text.slice(0, 160))}`);
   await ev(`${P}.watcher.enabled = true; 0`);
+});
+
+// ---------------------------------------------------------------- Phase 7: creation, rename and prompt settings
+const setS = (obj) => ev(`Object.assign(${P}.settings, ${JSON.stringify(obj)}); 0`);
+const noteKeys = async (path) => (await fmLines(path)).filter((l) => /^[a-z_]+:/.test(l)).map((l) => l.split(':')[0]);
+await closeStrayModals();
+await setS({ onCreate: 'fill', createDelayMs: 1500, syncName: true, breadcrumbFromFolder: false, promptScope: 'open', promptTags: true, promptStatus: true, promptTypeChange: true });
+await ev(`app.vault.createFolder('Knowledge/Physics').catch(() => {}).then(() => 0)`);
+
+await check('P7 fill automatically: a new note in a mapped folder gets every property with no dialog', async () => {
+  await ev(`app.vault.create('Knowledge/Auto1.md', '').then(() => 0)`);
+  await waitFor(async () => (await read('Knowledge/Auto1.md')).includes('id: KB-'), 'the properties', 8000);
+  const f = await fm('Knowledge/Auto1.md');
+  eq([f.type, f.schema, f.name, f.status, f.kind, f.language], ['kb', '2', 'Auto1', 'draft', 'concept', 'en-GB'], 'values');
+  assert(new RegExp(`^KB-${YEAR}-\\d{4}$`).test(f.id), `ID: ${f.id}`);
+  eq(f.created, f.modified, 'created equals modified');
+  eq((await noteKeys('Knowledge/Auto1.md')).slice(0, 5), ['type', 'schema', 'id', 'name', 'status'], 'schema order');
+  eq((await noteKeys('Knowledge/Auto1.md')).slice(-2), ['created', 'modified'], 'created and modified last');
+  assert(!(await read('Knowledge/Auto1.md')).includes('breadcrumb'), 'breadcrumb written although the setting is off');
+  eq(await strayModals(), 0, 'a dialog appeared');
+});
+
+await check('P7 a template-style note keeps everything it already has; only missing properties are added', async () => {
+  await write('Knowledge/Auto2.md', '---\nstatus: review\ntags:\n  - idea\nmy_field: keep me\n---\nbody text\nsecond line\n');
+  await waitFor(async () => (await read('Knowledge/Auto2.md')).includes('id: KB-'), 'the properties', 8000);
+  const text = await read('Knowledge/Auto2.md');
+  const f = await fm('Knowledge/Auto2.md');
+  eq([f.status, f.my_field, f.type, f.kind, f.name], ['review', 'keep me', 'kb', 'concept', 'Auto2'], 'values');
+  assert(text.includes('  - idea') && text.endsWith('---\nbody text\nsecond line\n'), 'template values or the body changed');
+});
+
+await check('P7 no ID is given to a note that already has one, to excluded folders, or to a note left alone by "Do nothing"', async () => {
+  const withId = '---\ntype: kb\nid: KB-2026-0990\nname: HasId\nstatus: draft\ncreated: 2026-10-20T14:32\nmodified: 2026-10-20T14:32\n---\nbody\n';
+  await write('Knowledge/HasId.md', withId);
+  await ev(`app.vault.create('Templates/TplBare.md', '').then(() => 0)`);
+  await sleep(4000);
+  eq(await read('Knowledge/HasId.md'), withId, 'a note with an ID changed');
+  eq(await read('Templates/TplBare.md'), '', 'an excluded note changed');
+  await setS({ onCreate: 'nothing' });
+  await ev(`app.vault.create('Knowledge/Auto3.md', '').then(() => 0)`);
+  await sleep(4000);
+  eq(await read('Knowledge/Auto3.md'), '', 'Do nothing wrote to the note');
+  eq(await strayModals(), 0, 'a dialog appeared');
+});
+
+await check('P7 ask: a preview first; Not now writes nothing; Add properties writes exactly what was shown', async () => {
+  await setS({ onCreate: 'ask' });
+  await ev(`app.vault.create('Knowledge/Auto4.md', '').then(() => 0)`);
+  await waitModal('Add kb properties');
+  eq(await read('Knowledge/Auto4.md'), '', 'written before approval');
+  await clickButton('Not now');
+  await sleep(2500);
+  eq(await read('Knowledge/Auto4.md'), '', 'Not now wrote to the note');
+  await ev(`app.vault.create('Knowledge/Auto5.md', '').then(() => 0)`);
+  const m = await waitModal('Add kb properties');
+  const shownId = /\+ id: (KB-\d{4}-\d{4})/.exec(m.pre.join('\n'))[1];
+  await clickButton('Add properties');
+  await waitFor(async () => (await read('Knowledge/Auto5.md')).includes('id: KB-'), 'the properties');
+  eq((await fm('Knowledge/Auto5.md')).id, shownId, 'the ID shown is the ID written');
+});
+
+await check('P7 the wait before filling is adjustable', async () => {
+  await setS({ onCreate: 'fill', createDelayMs: 4000 });
+  await ev(`app.vault.create('Knowledge/Auto6.md', '').then(() => 0)`);
+  await sleep(2500);
+  eq(await read('Knowledge/Auto6.md'), '', 'filled before the wait ended');
+  await waitFor(async () => (await read('Knowledge/Auto6.md')).includes('id: KB-'), 'the properties after the wait', 8000);
+  await setS({ createDelayMs: 1500 });
+});
+
+await check('P7 rename: name follows the file name when it was filled by the plugin, never when you wrote it, and not with the setting off', async () => {
+  await ev(`app.vault.create('Knowledge/Untitled.md', '').then(() => 0)`);
+  await waitFor(async () => (await read('Knowledge/Untitled.md')).includes('id: KB-'), 'the fill', 8000);
+  eq((await fm('Knowledge/Untitled.md')).name, 'Untitled', 'name at creation');
+  const modifiedBefore = (await fm('Knowledge/Untitled.md')).modified;
+  await ev(`app.fileManager.renameFile(app.vault.getFileByPath('Knowledge/Untitled.md'), 'Knowledge/Renamed One.md').then(() => 0)`);
+  await waitFor(async () => (await fm('Knowledge/Renamed One.md')).name === 'Renamed One', 'name to follow the rename', 6000);
+  await sleep(3000);
+  eq((await fm('Knowledge/Renamed One.md')).modified, modifiedBefore, 'a rename changed modified');
+  eq((await read('Knowledge/Renamed One.md')).includes('Untitled'), false, 'old name left behind');
+  // a name the user wrote
+  await write('Knowledge/Renamed One.md', (await read('Knowledge/Renamed One.md')).replace('name: Renamed One', 'name: My Own Title'));
+  await sleep(1500);
+  await ev(`app.fileManager.renameFile(app.vault.getFileByPath('Knowledge/Renamed One.md'), 'Knowledge/Renamed Two.md').then(() => 0)`);
+  await sleep(2500);
+  eq((await fm('Knowledge/Renamed Two.md')).name, 'My Own Title', 'a name the user wrote was overwritten');
+  // setting off
+  await setS({ syncName: false });
+  await write('Knowledge/Renamed Two.md', (await read('Knowledge/Renamed Two.md')).replace('name: My Own Title', 'name: Renamed Two'));
+  await sleep(1500);
+  await ev(`app.fileManager.renameFile(app.vault.getFileByPath('Knowledge/Renamed Two.md'), 'Knowledge/Renamed Three.md').then(() => 0)`);
+  await sleep(2500);
+  eq((await fm('Knowledge/Renamed Three.md')).name, 'Renamed Two', 'name followed with the setting off');
+  await setS({ syncName: true });
+});
+
+await check('P7 move and rename together: name and breadcrumb follow, the conversion is offered, modified is untouched', async () => {
+  await setS({ breadcrumbFromFolder: true });
+  await ev(`app.vault.create('Knowledge/Physics/Untitled 2.md', '').then(() => 0)`);
+  await waitFor(async () => (await read('Knowledge/Physics/Untitled 2.md')).includes('breadcrumb:'), 'the fill with breadcrumb', 8000);
+  eq((await fm('Knowledge/Physics/Untitled 2.md')).breadcrumb, 'Knowledge/Physics', 'breadcrumb at creation');
+  const keys = await noteKeys('Knowledge/Physics/Untitled 2.md');
+  assert(keys.indexOf('breadcrumb') < keys.indexOf('created'), `breadcrumb in schema order: ${keys}`);
+  const modifiedBefore = (await fm('Knowledge/Physics/Untitled 2.md')).modified;
+  await ev(`app.workspace.getLeaf(false).openFile(app.vault.getFileByPath('Knowledge/Physics/Untitled 2.md')).then(() => 0)`);
+  await sleep(800);
+  await ev(`app.fileManager.renameFile(app.vault.getFileByPath('Knowledge/Physics/Untitled 2.md'), 'Tasks/Moved And Renamed.md').then(() => 0)`);
+  await waitFor(async () => (await fm('Tasks/Moved And Renamed.md')).breadcrumb === 'Tasks', 'breadcrumb to follow the folder', 6000);
+  eq((await fm('Tasks/Moved And Renamed.md')).name, 'Moved And Renamed', 'name');
+  const m = await waitModal('Convert “Moved And Renamed” from kb to task');
+  assert(m.text.includes('Kept in archived_fields'), 'preview');
+  await clickButton('Not now');
+  await sleep(500);
+  eq((await fm('Tasks/Moved And Renamed.md')).type, 'kb', 'declined conversion wrote');
+  await sleep(3000);
+  eq((await fm('Tasks/Moved And Renamed.md')).modified, modifiedBefore, 'modified changed by move + rename');
+  // setting off: the breadcrumb is left to the breadcrumb plugin
+  await setS({ breadcrumbFromFolder: false });
+  await ev(`app.fileManager.renameFile(app.vault.getFileByPath('Tasks/Moved And Renamed.md'), 'Knowledge/Back Again.md').then(() => 0)`);
+  await sleep(3000);
+  eq((await fm('Knowledge/Back Again.md')).breadcrumb, 'Tasks', 'breadcrumb written with the setting off');
+  await closeStrayModals();
+});
+
+await check('P7 prompt scope and toggles: open notes only by default; every note on request; each prompt can be switched off', async () => {
+  await setS({ onCreate: 'nothing' });
+  await write('Knowledge/Scope1.md', '---\ntype: kb\nschema: 2\nid: KB-2026-0991\nname: Scope1\nstatus: draft\ntags:\n  - idea\ncreated: 2026-10-20T14:32\nmodified: 2026-10-20T14:32\n---\nbody\n');
+  await sleep(1500);
+  await ev(`app.workspace.getLeaf(false).openFile(app.vault.getFileByPath('Knowledge/Wave.md')).then(() => 0)`);
+  await sleep(800);
+  // not open, default scope: no prompt
+  await write('Knowledge/Scope1.md', (await read('Knowledge/Scope1.md')).replace('  - idea', '  - idea\n  - sop'));
+  await sleep(4500);
+  eq(await strayModals(), 0, 'prompted for a note that is not open');
+  // every note
+  await setS({ promptScope: 'all' });
+  await write('Knowledge/Scope1.md', (await read('Knowledge/Scope1.md')).replace('body', 'body 2'));
+  await waitModal('Replace tag synonyms');
+  await clickButton('Not now');
+  await sleep(500);
+  // each prompt can be turned off
+  await setS({ promptTags: false });
+  await write('Knowledge/Scope1.md', (await read('Knowledge/Scope1.md')).replace('body 2', 'body 3').replace('  - sop', '  - sop\n  - sop-two'));
+  await sleep(4500);
+  eq(await strayModals(), 0, 'prompted with tag prompts off');
+  await write('Knowledge/Scope1.md', (await read('Knowledge/Scope1.md')).replace('  - sop-two\n', '').replace('  - sop\n', ''));
+  await sleep(1500);
+  await setS({ promptTags: true, promptStatus: false });
+  await write('Knowledge/Scope1.md', (await read('Knowledge/Scope1.md')).replace('status: draft', 'status: live'));
+  await sleep(4500);
+  eq(await strayModals(), 0, 'prompted for status with the status prompt off');
+  await setS({ promptStatus: true, promptScope: 'open', promptTypeChange: false });
+  await ev(`app.workspace.getLeaf(false).openFile(app.vault.getFileByPath('Knowledge/Scope1.md')).then(() => 0)`);
+  await sleep(800);
+  await write('Knowledge/Scope1.md', (await read('Knowledge/Scope1.md')).replace('type: kb', 'type: task'));
+  await sleep(4500);
+  assert(!(await modalInfo())?.title?.includes('Convert'), 'a conversion was offered with that prompt off');
+  await closeStrayModals();
+  await setS({ promptTypeChange: true });
+});
+
+await check('P7 the new settings appear on the settings page', async () => {
+  await ev(`app.setting.open(); app.setting.openTabById('${PLUGIN_ID}'); 0`);
+  const settings = await connect(await waitFor(() => pickTarget('settings'), 'the settings window'));
+  await sleep(1200);
+  const names = await evaluate(settings, `[...document.querySelectorAll('.setting-item-name')].map(e => e.textContent)`);
+  for (const n of ['When a note is created in a mapped folder', 'Wait before filling a new note (milliseconds)', 'Keep the name property in step with the file name', 'Set breadcrumb from the folder', 'Ask about changes in', 'Ask about tag synonyms and unknown tags', 'Ask about an invalid status', 'Ask when the type changes'])
+    assert(names.includes(n), `missing setting "${n}"`);
+  await evaluate(settings, `(() => { const row = [...document.querySelectorAll('.setting-item')].find(r => r.querySelector('.setting-item-name')?.textContent === 'When a note is created in a mapped folder'); const s = row.querySelector('select'); s.value = 'fill'; s.dispatchEvent(new Event('change', { bubbles: true })); return 0; })()`);
+  await sleep(500);
+  eq(await ev(`${P}.settings.onCreate`), 'fill', 'the dropdown did not change the setting');
+  settings.close();
+  await ev(`app.setting.close(); 0`);
+  await setS({ onCreate: 'nothing' });
 });
 
 // ---------------------------------------------------------------- summary

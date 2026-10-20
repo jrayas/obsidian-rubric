@@ -2,7 +2,7 @@ import { TFile, getFrontMatterInfo, parseYaml } from 'obsidian';
 import type { App, Plugin } from 'obsidian';
 import { matchNote } from '../core/matcher';
 import type { MatchResult } from '../core/matcher';
-import { folderKey, shouldAskWhichSchema } from '../core/prompt-policy';
+import { createAction, folderKey, shouldAskWhichSchema } from '../core/prompt-policy';
 import type { NoteEvent } from '../core/prompt-policy';
 import { checkScope } from '../core/scope';
 import type { ScopeVerdict } from '../core/scope';
@@ -29,6 +29,8 @@ export class NoteService {
   private readonly pending = new Set<string>();
   /** Set in Phase 4: write `type` into a note when the user picks a schema without remembering the folder. */
   applyType: ((file: TFile, type: string) => Promise<void>) | null = null;
+  /** Set in main: fill or offer to fill a new note that matched a schema. */
+  fillNew: ((file: TFile, type: ResolvedType, action: 'fill' | 'ask') => Promise<void>) | null = null;
 
   constructor(
     private readonly app: App,
@@ -91,7 +93,7 @@ export class NoteService {
     window.setTimeout(() => {
       this.pending.delete(file.path);
       void this.maybePrompt(file, event);
-    }, 700);
+    }, Math.max(700, this.getSettings().createDelayMs));
   }
 
   private async maybePrompt(file: TFile, event: NoteEvent): Promise<void> {
@@ -100,6 +102,18 @@ export class NoteService {
     const ctx = this.context(file, (await this.readFrontmatter(file)) ?? {});
     if (!ctx.match) return;
     const settings = this.getSettings();
+    const fm0 = ctx.frontmatter;
+    if (ctx.match.kind === 'matched' && ctx.type) {
+      const action = createAction({
+        match: ctx.match,
+        event,
+        hasId: typeof fm0?.id === 'string' && fm0.id !== '',
+        ageMs: Date.now() - file.stat.ctime,
+        setting: settings.onCreate,
+      });
+      if (action !== 'none' && this.fillNew) await this.fillNew(file, ctx.type, action);
+      return;
+    }
     const skipped = new Set([...settings.skippedFolders.map(folderKey), ...this.askedThisSession]);
     const fm = ctx.frontmatter;
     const ask = shouldAskWhichSchema({

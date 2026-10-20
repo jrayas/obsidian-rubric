@@ -94,6 +94,7 @@ export class ChangeWatcher {
 
   /** The note is open in a pane: the user is working on it. */
   private isBeingEdited(file: TFile): boolean {
+    if (this.plugin.settings.promptScope === 'all') return true;
     const { workspace } = this.plugin.app;
     if (workspace.getActiveFile()?.path === file.path) return true;
     return workspace.getLeavesOfType('markdown').some((l) => (l.view as { file?: TFile | null }).file?.path === file.path);
@@ -118,7 +119,7 @@ export class ChangeWatcher {
     const crumb = typeof fm.breadcrumb === 'string' ? fm.breadcrumb : '';
     const typeNow = typeof fm.type === 'string' ? (pack.types.get(fm.type) ?? null) : null;
     const moved = Date.now() - (this.renamedAt.get(file.path) ?? 0) < RENAME_WINDOW_MS;
-    if (typeNow && crumb && crumb !== prevCrumb && moved && plugin.notes.context(file).verdict.managed) {
+    if (plugin.settings.promptTypeChange && typeNow && crumb && crumb !== prevCrumb && moved && plugin.notes.context(file).verdict.managed) {
       const hit = matchNote(pack, { path: 'x.md', frontmatter: { breadcrumb: crumb } }, { mode: 'auto', noMatch: 'unmanaged' });
       const to = hit.kind === 'matched' ? pack.types.get(hit.type) : undefined;
       if (to && to.name !== typeNow.name && !this.dismissed.has(`convert:${file.path}:${typeNow.name}>${to.name}`)) {
@@ -134,7 +135,7 @@ export class ChangeWatcher {
     const type = typeNow;
 
     // the `type` property changed to another schema
-    if (type && prevType && prevType !== type.name) {
+    if (plugin.settings.promptTypeChange && type && prevType && prevType !== type.name) {
       const from = pack.types.get(prevType);
       const key = `convert:${file.path}:${prevType}>${type.name}`;
       if (from && !this.dismissed.has(key)) {
@@ -144,8 +145,8 @@ export class ChangeWatcher {
     }
 
     if (!ctx.type) return;
-    await this.checkTags(file, ctx.type, fm);
-    await this.checkStatus(file, ctx.type, fm);
+    if (plugin.settings.promptTags) await this.checkTags(file, ctx.type, fm);
+    if (plugin.settings.promptStatus) await this.checkStatus(file, ctx.type, fm);
   }
 
   private scheduleFlush(): void {

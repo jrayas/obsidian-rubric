@@ -1,6 +1,6 @@
 # Current
 
-**Updated:** 2026-10-21 01:44 — **Project complete.** Every item in `docs/plan.md` is done (see `tracking/progress.md`), all tests pass and the build succeeds.
+**Updated (automation settings added):** 2026-10-21 01:44 — **Project complete.** Every item in `docs/plan.md` is done (see `tracking/progress.md`), all tests pass and the build succeeds.
 
 ## Final summary
 
@@ -30,3 +30,14 @@ An Obsidian desktop plugin, **Vault Schema** (`vault-schema`, version 0.1.0, min
 
 ### Where to start
 `docs/README.md` (index), `docs/user-guide.md`, `docs/release-checklist.md`, `CLAUDE.md`.
+
+## Update: automation settings (requested after the first handover)
+
+Added and tested (decisions D-48 to D-52, user guide section "New notes, renames and moves"):
+- **When a note is created in a mapped folder**: Ask with a preview (default) / Fill automatically / Do nothing, with an adjustable wait for templates.
+- **Keep  in step with the file name** (on): follows a rename only when  was empty or filled by the plugin.
+- **Set breadcrumb from the folder** (off): for people not using a breadcrumb plugin.
+- **Ask about changes in** open notes / every note, and separate switches for tag, status and type-change prompts.
+- 265 unit tests and 76 real-app checks pass (stable over repeated runs).
+
+**Please look at:** while testing I found that notes created through Obsidian in  were being moved into an  folder and given , even with this plugin disabled. Your Obsidian lists that vault as open. It is not this plugin; it is most likely your own breadcrumb setup acting on a vault your Obsidian has open. The test scripts now use a scratch vault in the system temp folder.

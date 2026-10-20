@@ -57,9 +57,22 @@ Settings (*Settings → Vault Schema*): the hold key, the delay (default 330 ms)
 
 In Source mode, the same suggestions appear after `key: ` and inside lists under a key.
 
+## New notes, renames and moves (Automation settings)
+
+| Setting | What it does | Default |
+| --- | --- | --- |
+| When a note is created in a mapped folder | **Fill automatically** adds `type`, `schema`, `id`, `name`, `status`, `created`, `modified` and the defaults; **Ask with a preview** shows them first; **Do nothing** leaves the note alone. Only new notes without an `id` are touched; notes that look like sync arrivals, notes with an ID and excluded folders are skipped | Ask with a preview |
+| Wait before filling a new note | Time to let a template finish first. Only missing properties are added; template values and the body are never changed | 1500 ms |
+| Keep the name property in step with the file name | After a rename, `name` follows the file name, but only if it was empty or filled by the plugin | On |
+| Set breadcrumb from the folder | Writes the real folder path to `breadcrumb` when a note is created or moved. Only for people who do not use a breadcrumb plugin | Off |
+| Ask about changes in | Open notes only, or every note (may ask about notes that arrived through sync) | Open notes only |
+| Ask about tag synonyms / an invalid status / when the type changes | Each prompt can be switched off | On |
+
+Moving or renaming a note never changes `modified`. A move that changes the first breadcrumb segment to another schema still offers the conversion preview.
+
 ## Automatic changes
 
-Only one thing is written without asking: `modified`. Everything else shows what it will do and waits.
+By default only one thing is written without asking: `modified`. Everything else shows what it will do and waits. The settings above can switch on silent filling of new notes, `name` following renames, and `breadcrumb` following the folder.
 
 | It asks when… | What you see |
 | --- | --- |

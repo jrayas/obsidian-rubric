@@ -87,7 +87,7 @@ export class NoteActions {
   }
 
   /** Give a note everything its type needs (type, schema, ID, created, modified, defaults), after a preview. */
-  async complete(file: TFile, type: ResolvedType): Promise<boolean> {
+  async complete(file: TFile, type: ResolvedType, options: { silent?: boolean } = {}): Promise<boolean> {
     const { plugin } = this;
     const loaded = await this.load(file);
     if (!loaded) return false;
@@ -103,11 +103,13 @@ export class NoteActions {
       },
     });
     if (Object.keys(plan.added).length === 0) {
-      new Notice(`“${file.basename}” already has everything a ${type.name} needs.`);
+      if (!options.silent) new Notice(`“${file.basename}” already has everything a ${type.name} needs.`);
       return false;
     }
     const dry = editFrontmatter(loaded.text, plan.apply, { order: (k) => desiredOrder(k, type), forceOrder: true });
-    const ok = await preview(plugin.app, {
+    const ok = options.silent
+      ? true
+      : await preview(plugin.app, {
       title: `Add ${type.name} properties to “${file.basename}”?`,
       lead: 'Existing values are not changed.',
       sections: [{ heading: 'Added', lines: describeChanges(dry.changes) }],
@@ -120,7 +122,7 @@ export class NoteActions {
     const outcome = await plugin.queue.editExact(file, loaded.text, { mutate: plan.apply, forceOrder: true });
     if (outcome.error) {
       for (const id of allocated) plugin.ids.release(id);
-      new Notice(outcome.error);
+      if (!options.silent) new Notice(outcome.error);
       return false;
     }
     return true;

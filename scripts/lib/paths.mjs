@@ -1,10 +1,13 @@
+import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { existsSync } from 'node:fs';
 
 export const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 export const DEV = join(ROOT, 'dev');
-export const SCRATCH = join(DEV, 'scratch');
+// The scratch vault and profile live in the system temp folder, not inside the project: a vault inside the project can end
+// up registered in someone's everyday Obsidian, whose plugins then act on the test notes. Override with VAULT_SCHEMA_SCRATCH.
+export const SCRATCH = process.env.VAULT_SCHEMA_SCRATCH ? resolve(process.env.VAULT_SCHEMA_SCRATCH) : join(tmpdir(), 'vault-schema-scratch');
 export const PLUGIN_ID = 'vault-schema';
 
 export function obsidianBinary() {

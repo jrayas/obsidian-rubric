@@ -38,3 +38,23 @@ export function shouldAskWhichSchema(facts: PromptFacts): boolean {
   if (!looksLocal(facts)) return false;
   return !facts.skippedFolders.has(folderKey(facts.match.folder));
 }
+
+export type CreateAction = 'fill' | 'ask' | 'none';
+
+/**
+ * What to do with a note that has just appeared in a folder that maps to a schema.
+ * Only notes that look created or moved on this device and have no `id` yet are touched, so a note that
+ * arrived through sync, or one that is already complete, is left alone.
+ */
+export function createAction(o: {
+  match: MatchResult;
+  event: NoteEvent;
+  hasId: boolean;
+  ageMs: number;
+  setting: 'fill' | 'ask' | 'nothing';
+}): CreateAction {
+  if (o.match.kind !== 'matched' || o.setting === 'nothing') return 'none';
+  if (o.event !== 'create' && o.event !== 'rename') return 'none';
+  if (!looksLocal({ event: o.event, hasId: o.hasId, ageMs: o.ageMs })) return 'none';
+  return o.setting;
+}

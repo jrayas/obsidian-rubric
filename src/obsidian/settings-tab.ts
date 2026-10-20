@@ -225,7 +225,35 @@ export class VaultSchemaSettingTab extends PluginSettingTab {
             desc: 'Wait for a burst of changes to settle, then process them once.',
             control: { type: 'toggle', key: 'batchMode' },
           },
-          { name: 'Everything else always asks first', desc: 'Not changeable. Only the modified time is ever written without asking.' },
+          {
+            name: 'When a note is created in a mapped folder',
+            desc: 'Fill automatically adds the schema properties (ID, created, defaults) without asking. Ask shows a preview first. Only new notes without an ID are touched; notes that arrive through sync and excluded folders are left alone.',
+            control: { type: 'dropdown', key: 'onCreate', options: { ask: 'Ask with a preview', fill: 'Fill automatically', nothing: 'Do nothing' } },
+          },
+          {
+            name: 'Wait before filling a new note (milliseconds)',
+            desc: 'Gives a template time to finish first. Only missing properties are added; nothing a template wrote is changed.',
+            visible: () => this.plugin.settings.onCreate !== 'nothing',
+            control: { type: 'number', key: 'createDelayMs', min: 700, max: 30000, step: 100 },
+          },
+          {
+            name: 'Keep the name property in step with the file name',
+            desc: 'After a rename, name follows the file name only if it was empty or filled by this plugin. A name you wrote is never overwritten.',
+            control: { type: 'toggle', key: 'syncName' },
+          },
+          {
+            name: 'Set breadcrumb from the folder',
+            desc: 'Writes the real folder path to breadcrumb when a note is created or moved. Turn on only if you do not use a breadcrumb plugin, because two writers will fight.',
+            control: { type: 'toggle', key: 'breadcrumbFromFolder' },
+          },
+          {
+            name: 'Ask about changes in',
+            desc: 'Notes you have open (default), or every note. Notes that arrive through sync can look like edits, so "every note" may ask about them.',
+            control: { type: 'dropdown', key: 'promptScope', options: { open: 'Open notes only', all: 'Every note' } },
+          },
+          { name: 'Ask about tag synonyms and unknown tags', control: { type: 'toggle', key: 'promptTags' } },
+          { name: 'Ask about an invalid status', control: { type: 'toggle', key: 'promptStatus' } },
+          { name: 'Ask when the type changes', control: { type: 'toggle', key: 'promptTypeChange' } },
         ],
       },
       {

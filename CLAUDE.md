@@ -64,3 +64,5 @@ Set an environment variable: bash/zsh `export NAME=value`; PowerShell `$env:NAME
 - The real-app suite is the source of truth for UI behaviour (hold, latch, autocomplete, prompts). Run it after any change to `src/obsidian/`. Synthetic CDP key events need `nativeVirtualKeyCode`; a programmatic `focus()` does not place a caret (select the contents before `Input.insertText`).
 - Prompts run one at a time. A prompt left open in a test blocks every later one.
 - Windows, Obsidian 1.13.7, the real breadcrumb plugin and real sync cannot be tested on the macOS dev machine; see `docs/release-checklist.md` for the manual steps.
+- The e2e/debug scripts keep their scratch vault in the system temp folder (`VAULT_SCHEMA_SCRATCH` overrides). A scratch vault inside the project was once acted on by something outside the plugin (notes moved to `Inbox`, `breadcrumb: ""` added, even with the plugin disabled) because the developer's own Obsidian had it registered. If notes move unexpectedly, suspect another Obsidian with the vault open, not this plugin.
+- Park the synthetic pointer before hold tests: a real pointer over the list keeps it open on release (correct behaviour).
