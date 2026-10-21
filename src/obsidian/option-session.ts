@@ -82,6 +82,14 @@ export class OptionSession {
     return items.sort((a, b) => a.label.localeCompare(b.label));
   }
 
+  /** The property's stored value as text (empty when it has none), as the field would display it. */
+  async currentText(): Promise<string> {
+    const fm = await this.currentFrontmatter();
+    const v = fm[this.key];
+    if (v === undefined || v === null || Array.isArray(v)) return '';
+    return typeof v === 'string' ? v : JSON.stringify(v);
+  }
+
   /** Save a pick through the write queue and return the refreshed list. */
   async pick(value: OptionValue): Promise<OptionList | null> {
     const loaded = await this.load();

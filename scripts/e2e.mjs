@@ -1357,6 +1357,70 @@ await check('P7 the new settings appear on the settings page', async () => {
   await setS({ onCreate: 'nothing' });
 });
 
+// ---------------------------------------------------------------- what the row shows after a pick
+const shownValue = (k) => ev(`document.querySelector('.metadata-property[data-property-key="${k}"] .metadata-property-value').textContent`);
+await check('P9 a pick made while the field has focus is shown in the row and is not put back when focus leaves', async () => {
+  await ev(`${P}.watcher.enabled = false; 0`);
+  await openNote('Knowledge/Wave.md');
+  await sleep(800);
+  const cur = (await fm('Knowledge/Wave.md')).status;
+  const target = cur === 'review' ? 'published' : 'review';
+  await focusValue('status');
+  await altDown();
+  await sleep(600);
+  await ev(`[...document.querySelectorAll('.vschema-option')].find(o => o.textContent.trim() === ${JSON.stringify(target)}).click(); 0`);
+  await waitFor(async () => (await fmLines('Knowledge/Wave.md')).includes(`status: ${target}`), 'the file to change');
+  await waitFor(async () => (await shownValue('status')) === target, `the row to show ${target}`, 4000);
+  await altUp();
+  await sleep(400);
+  await ev(`document.activeElement.blur(); 0`);
+  await sleep(1500);
+  eq((await fm('Knowledge/Wave.md')).status, target, 'file after leaving the field (the pick was put back)');
+  eq(await shownValue('status'), target, 'row after leaving the field');
+});
+
+await check('P9 the same holds for a multi-choice list, a typed autocomplete, and a pick from the ▾ list', async () => {
+  await sleep(800);
+  // multi-choice
+  await focusValue('tags');
+  await altDown();
+  await sleep(600);
+  await ev(`[...document.querySelectorAll('.vschema-option')].find(o => o.textContent.trim() === 'health').click(); 0`);
+  await waitFor(async () => (await fmLines('Knowledge/Wave.md')).includes('  - health'), 'the tag to be saved');
+  await waitFor(async () => /health/.test(await shownValue('tags')), 'the pill to appear', 4000);
+  await altUp();
+  await sleep(400);
+  await ev(`document.activeElement.blur(); 0`);
+  await sleep(1500);
+  assert((await fmLines('Knowledge/Wave.md')).includes('  - health'), 'the tag was put back');
+  assert(/health/.test(await shownValue('tags')), 'the pill disappeared after leaving the field');
+  // typed autocomplete, picked by a real click on the suggestion
+  await sleep(800);
+  await focusValue('status');
+  await client.send('Input.insertText', { text: 'out' });
+  await waitFor(() => popover(), 'the suggestions');
+  const pt = await ev(`(() => { const o = [...document.querySelectorAll('.vschema-option')].find(x => /outdated/.test(x.textContent)); const r = o.getBoundingClientRect(); return { x: r.left + 40, y: r.top + r.height / 2 }; })()`);
+  await client.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: pt.x, y: pt.y });
+  await client.send('Input.dispatchMouseEvent', { type: 'mousePressed', x: pt.x, y: pt.y, button: 'left', clickCount: 1 });
+  await client.send('Input.dispatchMouseEvent', { type: 'mouseReleased', x: pt.x, y: pt.y, button: 'left', clickCount: 1 });
+  await waitFor(async () => (await fmLines('Knowledge/Wave.md')).includes('status: outdated'), 'the typed pick to save');
+  await waitFor(async () => (await shownValue('status')) === 'outdated', 'the row to show outdated', 4000);
+  await sleep(1200);
+  eq((await fm('Knowledge/Wave.md')).status, 'outdated', 'file after the typed pick (the fragment was committed over it)');
+  // a pick from the ▾ list
+  await sleep(800);
+  await focusValue('status');
+  await waitFor(() => ev(`!!document.querySelector('.metadata-property[data-property-key="status"] .vschema-chevron')`), 'the ▾ button');
+  await ev(`document.querySelector('.metadata-property[data-property-key="status"] .vschema-chevron').click(); 0`);
+  await waitFor(() => popover(), 'the latched list');
+  await ev(`[...document.querySelectorAll('.vschema-option')].find(o => o.textContent.trim() === 'archived').click(); 0`);
+  await waitFor(async () => (await shownValue('status')) === 'archived', 'the row to show archived', 4000);
+  await escape();
+  await sleep(1200);
+  eq((await fm('Knowledge/Wave.md')).status, 'archived', 'file after the ▾ pick');
+  await ev(`${P}.watcher.enabled = true; 0`);
+});
+
 // ---------------------------------------------------------------- Option key robustness
 await ev(`${P}.layer.releaseSafety = true; 0`);
 await check('P8 a lost key release never leaves the list stuck: any event without the Option flag, or the window losing focus, closes it', async () => {

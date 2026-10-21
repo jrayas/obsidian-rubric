@@ -382,8 +382,6 @@ class FieldController {
   private observer: MutationObserver | null = null;
   private destroyed = false;
   private auto: { pop: HTMLElement; view: OptionListView; session: OptionSession } | null = null;
-  /** The element the user is typing in (the autocomplete fragment lives there). */
-  private typing: HTMLElement | null = null;
   private autoToken = 0;
   private state: HoldState = 'closed';
   private timer: number | null = null;
@@ -623,6 +621,7 @@ class FieldController {
           loaded.list,
           {
             onPick: async (v) => {
+              await this.settleField(session, loaded.list.mode);
               const next = await session.pick(v);
               // A list kept open only so you could click: once a single choice is made, it is done.
               if (this.state === 'sticky' && loaded.list.mode === 'single') this.input({ type: 'clickElsewhere' });
@@ -711,7 +710,6 @@ class FieldController {
     if (!this.hasList || this.state !== 'closed') return;
     const text = this.typedText(e);
     if (text === null) return;
-    if (e.target instanceof HTMLElement) this.typing = e.target;
     const query = text.trim();
     if (!query) {
       this.closeAuto();
@@ -738,9 +736,8 @@ class FieldController {
       loaded.list,
       {
         onPick: async (v) => {
-          const next = await session.pick(v);
-          this.afterAutoPick(v, loaded.list.mode);
-          return next;
+          await this.settleField(session, loaded.list.mode);
+          return session.pick(v);
         },
       },
       { filterable: false, label: this.key },
@@ -751,22 +748,18 @@ class FieldController {
   }
 
   /**
-   * The typed fragment ("dr") is still in the field after a pick saved "draft". Left alone, Obsidian would commit
-   * the fragment when the field loses focus and overwrite the pick. Replace it with the picked value (single choice,
-   * then leave the field as Enter does) or clear it (multi choice, where the pick was added to the list).
+   * Before a pick is saved, let go of the field. Obsidian does not redraw a field that has focus when the file
+   * changes behind it, and when focus later leaves it commits what the field still shows, which would put the old
+   * value (or a typed fragment like "dr") back over the pick. So: reset the field to the stored value, which makes
+   * that commit a no-op, and blur it; the row is then redrawn from the file once the pick is written.
    */
-  private afterAutoPick(value: unknown, mode: 'single' | 'multi'): void {
-    const el = this.typing;
-    this.typing = null;
-    if (!el?.isConnected) return;
-    if (mode === 'multi') {
-      el.textContent = '';
-      return;
-    }
-    const text = String(value);
-    if (el.instanceOf(HTMLInputElement) || el.instanceOf(HTMLTextAreaElement)) el.value = text;
-    else el.textContent = text;
-    el.blur();
+  private async settleField(session: OptionSession, mode: 'single' | 'multi'): Promise<void> {
+    const active = this.doc.activeElement;
+    if (!(active instanceof HTMLElement) || !this.row.contains(active) || !active.closest('.metadata-property-value')) return;
+    const text = mode === 'multi' ? '' : await session.currentText();
+    if (active.instanceOf(HTMLInputElement) || active.instanceOf(HTMLTextAreaElement)) active.value = text;
+    else if (active.isContentEditable) active.textContent = text;
+    active.blur();
   }
 
   private closeAuto(): void {
