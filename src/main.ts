@@ -21,12 +21,12 @@ import { openVaultCheck } from './obsidian/vault-check-view';
 import { VocabularyStore } from './obsidian/vocabulary-store';
 import { WriteQueue } from './obsidian/write-queue';
 import { askSchemaChoice } from './obsidian/choice-modals';
-import { VaultSchemaSettingTab } from './obsidian/settings-tab';
+import { RubricSettingTab } from './obsidian/settings-tab';
 import { DEFAULT_SETTINGS, mergeSettings } from './settings';
-import type { VaultSchemaSettings } from './settings';
+import type { RubricSettings } from './settings';
 
-export default class VaultSchemaPlugin extends Plugin {
-  settings: VaultSchemaSettings = { ...DEFAULT_SETTINGS };
+export default class RubricPlugin extends Plugin {
+  settings: RubricSettings = { ...DEFAULT_SETTINGS };
   schemas!: SchemaService;
   registry!: RegistryStore;
   notes!: NoteService;
@@ -66,7 +66,7 @@ export default class VaultSchemaPlugin extends Plugin {
       const done = await this.actions.complete(file, type, { silent: action === 'fill' });
       if (done) await this.autoSync.afterFill(file);
     };
-    this.addSettingTab(new VaultSchemaSettingTab(this.app, this));
+    this.addSettingTab(new RubricSettingTab(this.app, this));
     this.registerEditorSuggest(new SchemaValueSuggest(this));
 
     this.addCommand({
@@ -143,7 +143,7 @@ export default class VaultSchemaPlugin extends Plugin {
   }
 
   /** Called by the settings page after a setting that needs a side effect changes. */
-  async onSettingChanged(key: keyof VaultSchemaSettings): Promise<void> {
+  async onSettingChanged(key: keyof RubricSettings): Promise<void> {
     await this.saveSettings();
     if (key === 'commandsOnly') this.syncLayer();
     if (key === 'writePreviews' && this.settings.writePreviews) void this.previews.sync();

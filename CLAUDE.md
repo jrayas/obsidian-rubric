@@ -1,4 +1,4 @@
-# Vault Schema (Obsidian plugin)
+# Rubric (Obsidian plugin)
 
 An Obsidian **desktop** plugin (macOS and Windows) that reads note schemas from YAML files in a vault folder (`_schema` by default) and uses them for property autocomplete, option pickers, validation, readable IDs, timestamps and schema migration. The single source of truth is `Vault Schema Plugin Specification for Claude Code.md` in the project root.
 
@@ -30,7 +30,7 @@ dev/            scratch vaults (git-ignored)    .tools/   project-local Node (gi
 | Typecheck | `npm run typecheck` |
 | Lint (ESLint + stylelint) | `npm run lint` |
 | Build (production) | `npm run build` |
-| Dev watch (set `VAULT_SCHEMA_DEV_DIR` to copy output into a vault's plugin folder) | `npm run dev` |
+| Dev watch (set `RUBRIC_DEV_DIR` to copy output into a vault's plugin folder) | `npm run dev` |
 | Create the hand-test vault in `dev/testvault` (build first) | `npm run vault:create` |
 | Real-app checks (builds, launches an isolated Obsidian, runs every check, stops) | `npm run e2e` (`-- --keep` leaves it running, `-- --only <text>` filters; needs Obsidian installed) |
 | Performance sanity on a synthetic vault | `node scripts/perf.mjs 3000` |
@@ -50,7 +50,7 @@ Set an environment variable: bash/zsh `export NAME=value`; PowerShell `$env:NAME
 - Behaviour comes from the schema files, never hard-coded type names, status values or tags.
 - Notes are changed only through the write queue; only `modified` is stamped silently; never delete data (use `archived_fields`); never move files; never write `breadcrumb`.
 - Paths: `path.join` in Node scripts; vault paths use `/` and `normalizePath` in Obsidian code. Keep each file's line endings.
-- Obsidian lint rules apply: no `innerHTML`, no inline static styles (CSS classes in `styles.css`, prefix `vschema-`), no `console.log`, no global `app`, sentence-case UI text, no default hotkeys, no API newer than `minAppVersion` (1.13.7) without a `requireApiVersion` guard.
+- Obsidian lint rules apply: no `innerHTML`, no inline static styles (CSS classes in `styles.css`, prefix `rubric-`), no `console.log`, no global `app`, sentence-case UI text, no default hotkeys, no API newer than `minAppVersion` (1.13.7) without a `requireApiVersion` guard.
 - British English in docs and UI text.
 - Do not weaken tests to pass. If the spec and real Obsidian behaviour disagree, record it in `docs/decisions.md`, choose the most sensible option and continue.
 - Commit after each task with a clear message; do not touch files outside the project folder; do not touch the user's own Obsidian (the harness uses an isolated profile in `dev/scratch`).
@@ -64,7 +64,7 @@ Set an environment variable: bash/zsh `export NAME=value`; PowerShell `$env:NAME
 - The real-app suite is the source of truth for UI behaviour (hold, latch, autocomplete, prompts). Run it after any change to `src/obsidian/`. Synthetic CDP key events need `nativeVirtualKeyCode`; a programmatic `focus()` does not place a caret (select the contents before `Input.insertText`).
 - Prompts run one at a time. A prompt left open in a test blocks every later one.
 - Windows, Obsidian 1.13.7, the real breadcrumb plugin and real sync cannot be tested on the macOS dev machine; see `docs/release-checklist.md` for the manual steps.
-- The e2e/debug scripts keep their scratch vault in the system temp folder (`VAULT_SCHEMA_SCRATCH` overrides). A scratch vault inside the project was once acted on by something outside the plugin (notes moved to `Inbox`, `breadcrumb: ""` added, even with the plugin disabled) because the developer's own Obsidian had it registered. If notes move unexpectedly, suspect another Obsidian with the vault open, not this plugin.
+- The e2e/debug scripts keep their scratch vault in the system temp folder (`RUBRIC_SCRATCH` overrides). A scratch vault inside the project was once acted on by something outside the plugin (notes moved to `Inbox`, `breadcrumb: ""` added, even with the plugin disabled) because the developer's own Obsidian had it registered. If notes move unexpectedly, suspect another Obsidian with the vault open, not this plugin.
 - Park the synthetic pointer before hold tests: a real pointer over the list keeps it open on release (correct behaviour).
 - **Check what the UI shows, not only the file.** A pick that changes the file can still look unchanged (and be reverted on blur) because Obsidian does not redraw a focused Properties field. Real-app checks for the Properties area must assert the displayed text and that it survives leaving the field; click with real `Input.dispatchMouseEvent` presses when hit-testing matters, not `element.click()`.
 - Never call `Page.bringToFront` in the suite and do not run GUI checks while the developer is testing by hand: it steals their keyboard and a real pointer disturbs the synthetic Option key.

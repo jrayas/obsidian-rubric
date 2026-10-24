@@ -4,9 +4,9 @@ import { detectSchemaFolder, isInSchemaFolder } from '../core/folder-detect';
 import type { FolderDetection } from '../core/folder-detect';
 import { loadSchemaPack } from '../core/schema-loader';
 import type { Problem, SchemaPack } from '../core/schema-types';
-import type { VaultSchemaSettings } from '../settings';
+import type { RubricSettings } from '../settings';
 import { PREVIEW_FOLDER } from '../core/schema-preview';
-import { VaultSchemaSource, folderSignature, listRootFolders } from './vault-source';
+import { RubricSource, folderSignature, listRootFolders } from './vault-source';
 
 export interface SchemaStatus {
   detection: FolderDetection;
@@ -43,7 +43,7 @@ export class SchemaService {
   constructor(
     private readonly app: App,
     private readonly plugin: Plugin,
-    private readonly getSettings: () => VaultSchemaSettings,
+    private readonly getSettings: () => RubricSettings,
   ) {}
 
   /** Subscribe to pack/status changes. Returns an unsubscribe function. */
@@ -136,7 +136,7 @@ export class SchemaService {
       return;
     }
 
-    const source = new VaultSchemaSource(this.app, detection.folder);
+    const source = new RubricSource(this.app, detection.folder);
     const result = await loadSchemaPack(source, { pluginVersion: this.plugin.manifest.version });
     problems.push(...result.problems);
     if (result.pack) {

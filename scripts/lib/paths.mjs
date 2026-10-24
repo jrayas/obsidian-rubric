@@ -6,9 +6,9 @@ import { existsSync } from 'node:fs';
 export const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 export const DEV = join(ROOT, 'dev');
 // The scratch vault and profile live in the system temp folder, not inside the project: a vault inside the project can end
-// up registered in someone's everyday Obsidian, whose plugins then act on the test notes. Override with VAULT_SCHEMA_SCRATCH.
-export const SCRATCH = process.env.VAULT_SCHEMA_SCRATCH ? resolve(process.env.VAULT_SCHEMA_SCRATCH) : join(tmpdir(), 'vault-schema-scratch');
-export const PLUGIN_ID = 'vault-schema';
+// up registered in someone's everyday Obsidian, whose plugins then act on the test notes. Override with RUBRIC_SCRATCH.
+export const SCRATCH = process.env.RUBRIC_SCRATCH ? resolve(process.env.RUBRIC_SCRATCH) : join(tmpdir(), 'rubric-scratch');
+export const PLUGIN_ID = 'rubric';
 
 export function obsidianBinary() {
   if (process.env.OBSIDIAN_BIN) return process.env.OBSIDIAN_BIN;

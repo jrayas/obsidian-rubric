@@ -1,5 +1,5 @@
 {
-  "name": "vault-schema",
+  "name": "rubric",
   "version": "0.1.0",
   "private": true,
   "description": "Schema-driven properties, validation and migration for Obsidian notes.",
@@ -39,11 +39,11 @@
   "author": "Joan Anthirayas",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/jrayas/obsidian-vault-schema.git"
+    "url": "git+https://github.com/jrayas/obsidian-rubric.git"
   },
-  "homepage": "https://github.com/jrayas/obsidian-vault-schema#readme",
+  "homepage": "https://github.com/jrayas/obsidian-rubric#readme",
   "bugs": {
-    "url": "https://github.com/jrayas/obsidian-vault-schema/issues"
+    "url": "https://github.com/jrayas/obsidian-rubric/issues"
   },
   "keywords": [
     "obsidian",

@@ -2,7 +2,7 @@ import { Modal, Notice, Setting, normalizePath } from 'obsidian';
 import { newNoteFrontmatter } from '../core/create';
 import { checkFileName } from '../core/fs-names';
 import { editFrontmatter } from '../core/frontmatter';
-import type VaultSchemaPlugin from '../main';
+import type RubricPlugin from '../main';
 
 /** "Create note from schema": pick a type, a name and a folder; the note is created with an ID and every default. */
 export class CreateNoteModal extends Modal {
@@ -12,7 +12,7 @@ export class CreateNoteModal extends Modal {
   private errorEl: HTMLElement | null = null;
   private folderSetting: Setting | null = null;
 
-  constructor(private readonly plugin: VaultSchemaPlugin) {
+  constructor(private readonly plugin: RubricPlugin) {
     super(plugin.app);
     this.type = plugin.schemas.pack?.typeNames[0] ?? '';
   }
@@ -49,7 +49,7 @@ export class CreateNoteModal extends Modal {
     });
     this.folderSetting = new Setting(this.contentEl).setName('Folder');
     this.renderFolder();
-    this.errorEl = this.contentEl.createDiv({ cls: 'vschema-error', attr: { role: 'alert' } });
+    this.errorEl = this.contentEl.createDiv({ cls: 'rubric-error', attr: { role: 'alert' } });
     new Setting(this.contentEl)
       .addButton((b) => b.setButtonText('Create').setCta().onClick(() => void this.submit()))
       .addButton((b) => b.setButtonText('Cancel').onClick(() => this.close()));
@@ -113,7 +113,7 @@ export class CreateNoteModal extends Modal {
   }
 }
 
-export function openCreateNote(plugin: VaultSchemaPlugin): void {
+export function openCreateNote(plugin: RubricPlugin): void {
   if (!plugin.schemas.pack) {
     new Notice('No schemas are loaded yet.');
     return;

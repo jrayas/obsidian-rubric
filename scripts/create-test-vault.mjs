@@ -142,13 +142,13 @@ put('Knowledge/Problems/Needs a type change.md', kb('KB-2026-0111', 'Needs a typ
 put('Templates/Knowledge note.md', '---\nstatus: review\ntags: []\n---\n## Summary\n\n## Details\n\n## Sources\n');
 
 // ---- start here --------------------------------------------------------------------------------------------
-put('START HERE.md', `# Vault Schema test vault
+put('START HERE.md', `# Rubric test vault
 
-This vault has the **Vault Schema** plugin installed with the starter schema in \`_schema/\`. New notes in a mapped
-folder fill themselves (the setting is *Settings → Vault Schema → Automation → When a note is created in a mapped folder*).
+This vault has the **Rubric** plugin installed with the starter schema in \`_schema/\`. New notes in a mapped
+folder fill themselves (the setting is *Settings → Rubric → Automation → When a note is created in a mapped folder*).
 
 ## First
-1. Settings → Community plugins → turn off restricted mode, then enable **Vault Schema** if it is not on already.
+1. Settings → Community plugins → turn off restricted mode, then enable **Rubric** if it is not on already.
 2. Open \`Knowledge/Physics/Wave-Particle Duality.md\`.
 
 ## Try these

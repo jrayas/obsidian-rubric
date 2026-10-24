@@ -4,17 +4,17 @@ import { DEFAULT_SCHEMA_FOLDER, HIDDEN_SCHEMA_FOLDER, isInSchemaFolder } from '.
 import { nameKey } from '../core/normalise';
 import type { MatchingMode, ScopeMode } from '../core/schema-types';
 import { FolderPickerModal, askSchemaChoice, editMapping } from './choice-modals';
-import type { VaultSchemaSettings } from '../settings';
-import type VaultSchemaPlugin from '../main';
+import type { RubricSettings } from '../settings';
+import type RubricPlugin from '../main';
 
 type FolderChoice = typeof DEFAULT_SCHEMA_FOLDER | typeof HIDDEN_SCHEMA_FOLDER | 'custom';
 
-export class VaultSchemaSettingTab extends PluginSettingTab {
+export class RubricSettingTab extends PluginSettingTab {
   /** True once the user picked "Custom folder" in the dropdown, until a name is typed. */
   private customPicked = false;
   private unsubscribe: (() => void) | null = null;
 
-  constructor(app: App, private readonly plugin: VaultSchemaPlugin) {
+  constructor(app: App, private readonly plugin: RubricPlugin) {
     super(app, plugin);
   }
 
@@ -41,7 +41,7 @@ export class VaultSchemaSettingTab extends PluginSettingTab {
       case 'scopeMode':
         return schemas.pack?.scope.mode ?? 'exclude';
       default:
-        return this.plugin.settings[key as keyof VaultSchemaSettings];
+        return this.plugin.settings[key as keyof RubricSettings];
     }
   }
 
@@ -61,7 +61,7 @@ export class VaultSchemaSettingTab extends PluginSettingTab {
     if (key === 'scopeMode') return plugin.registry.setScopeMode(value as ScopeMode);
     (plugin.settings as unknown as Record<string, unknown>)[key] = value;
     if (key === 'schemaFolder') return this.persistAndReload();
-    return plugin.onSettingChanged(key as keyof VaultSchemaSettings);
+    return plugin.onSettingChanged(key as keyof RubricSettings);
   }
 
   private async persistAndReload(): Promise<void> {

@@ -7,7 +7,7 @@ import type { Frontmatter } from '../core/frontmatter';
 import { describeChanges } from '../core/preview';
 import type { KeyChange } from '../core/frontmatter';
 import type { ResolvedType } from '../core/schema-types';
-import type VaultSchemaPlugin from '../main';
+import type RubricPlugin from '../main';
 import { preview } from './preview-modal';
 
 export interface PlannedConversion {
@@ -22,7 +22,7 @@ export interface PlannedConversion {
 
 /** Previewed, approved changes to one note: convert its type, complete it with the properties its type needs. */
 export class NoteActions {
-  constructor(private readonly plugin: VaultSchemaPlugin) {}
+  constructor(private readonly plugin: RubricPlugin) {}
 
   private async load(file: TFile): Promise<{ text: string; fm: Frontmatter } | null> {
     const text = await this.plugin.app.vault.read(file);

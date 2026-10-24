@@ -1,5 +1,5 @@
 // Minimal Chrome DevTools Protocol client (Node 22+: global fetch and WebSocket).
-export const PORT = Number(process.env.VAULT_SCHEMA_CDP_PORT ?? 9222);
+export const PORT = Number(process.env.RUBRIC_CDP_PORT ?? 9222);
 
 export async function listTargets() {
   const res = await fetch(`http://127.0.0.1:${PORT}/json`);

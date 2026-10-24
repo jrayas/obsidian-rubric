@@ -1,6 +1,6 @@
 # User guide
 
-For someone installing and using Vault Schema. (Developers: start at [README.md](README.md).)
+For someone installing and using Rubric. (Developers: start at [README.md](README.md).)
 
 ## Requirements and why
 
@@ -11,8 +11,8 @@ For someone installing and using Vault Schema. (Developers: start at [README.md]
 
 ## Install
 
-1. Copy `main.js`, `manifest.json` and `styles.css` into `<vault>/.obsidian/plugins/vault-schema/`.
-2. Settings → Community plugins → enable **Vault Schema** (turn off restricted mode if asked).
+1. Copy `main.js`, `manifest.json` and `styles.css` into `<vault>/.obsidian/plugins/rubric/`.
+2. Settings → Community plugins → enable **Rubric** (turn off restricted mode if asked).
 3. Run **Install starter schema pack** from the command palette. It lists the files it will create, asks, and never overwrites.
 
 ## The schema folder
@@ -55,7 +55,7 @@ If the pointer is on the list when you let go of Option, the list stays so you c
 
 Typing a symbol with Option held (for example Option+G on a Mac) does not open the list: another key pressed during the hold cancels it.
 
-Settings (*Settings → Vault Schema*): the hold key, the delay (default 330 ms), whether the list always hides on release, whether the focus hint shows, and **Commands only**, which turns all of this off while keeping the commands and the picker window.
+Settings (*Settings → Rubric*): the hold key, the delay (default 330 ms), whether the list always hides on release, whether the focus hint shows, and **Commands only**, which turns all of this off while keeping the commands and the picker window.
 
 In Source mode, the same suggestions appear after `key: ` and inside lists under a key.
 

@@ -1,6 +1,6 @@
 import { normalizePath } from 'obsidian';
 import { PREVIEW_FOLDER, PREVIEW_MARKER, renderAllPreviews } from '../core/schema-preview';
-import type VaultSchemaPlugin from '../main';
+import type RubricPlugin from '../main';
 
 /**
  * Keeps `<schema folder>/preview/<type>.yaml` in step with the loaded schema. The files are generated and read-only
@@ -12,7 +12,7 @@ export class PreviewWriter {
   private running = false;
   private again = false;
 
-  constructor(private readonly plugin: VaultSchemaPlugin) {}
+  constructor(private readonly plugin: RubricPlugin) {}
 
   /** Ask for a refresh soon (several schema changes in a row make one refresh). */
   schedule(): void {
@@ -40,7 +40,7 @@ export class PreviewWriter {
         await this.write();
       } while (this.again);
     } catch (e) {
-      console.debug('[vault-schema] could not write the property previews:', e);
+      console.debug('[rubric] could not write the property previews:', e);
     } finally {
       this.running = false;
     }

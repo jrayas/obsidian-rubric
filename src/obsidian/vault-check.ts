@@ -1,7 +1,7 @@
 import { Notice } from 'obsidian';
 import { applyFixToText, runVaultCheck } from '../core/note-check';
 import type { Finding, Fix, NoteInput, VaultReport } from '../core/note-check';
-import type VaultSchemaPlugin from '../main';
+import type RubricPlugin from '../main';
 
 export interface Progress {
   done: number;
@@ -12,7 +12,7 @@ const yieldToUi = () => new Promise<void>((r) => window.setTimeout(r, 0));
 
 /** Runs the vault check and applies approved fixes. The scan changes nothing. */
 export class VaultCheckService {
-  constructor(private readonly plugin: VaultSchemaPlugin) {}
+  constructor(private readonly plugin: RubricPlugin) {}
 
   /** Scan every managed note and run the eleven checks. Reads files; writes nothing. */
   async run(onProgress?: (p: Progress) => void): Promise<VaultReport> {

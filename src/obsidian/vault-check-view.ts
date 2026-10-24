@@ -1,6 +1,6 @@
 import { Modal, Notice, Setting } from 'obsidian';
 import type { Finding, Fix, GlobalFinding, VaultReport } from '../core/note-check';
-import type VaultSchemaPlugin from '../main';
+import type RubricPlugin from '../main';
 import { confirm } from './modals';
 import { VaultCheckService } from './vault-check';
 
@@ -13,19 +13,19 @@ export class VaultCheckModal extends Modal {
   private bodyEl!: HTMLElement;
   private progressEl!: HTMLElement;
 
-  constructor(private readonly plugin: VaultSchemaPlugin) {
+  constructor(private readonly plugin: RubricPlugin) {
     super(plugin.app);
     this.service = new VaultCheckService(plugin);
   }
 
   onOpen(): void {
     this.setTitle('Vault check');
-    this.modalEl.addClass('mod-vschema-check');
+    this.modalEl.addClass('mod-rubric-check');
     const { contentEl } = this;
-    this.summaryEl = contentEl.createDiv({ cls: 'vschema-check-summary', attr: { role: 'status' } });
-    this.progressEl = contentEl.createDiv({ cls: 'vschema-progress' });
+    this.summaryEl = contentEl.createDiv({ cls: 'rubric-check-summary', attr: { role: 'status' } });
+    this.progressEl = contentEl.createDiv({ cls: 'rubric-progress' });
     new Setting(contentEl).addButton((b) => b.setButtonText('Run again').onClick(() => void this.run()));
-    this.bodyEl = contentEl.createDiv({ cls: 'vschema-check-body' });
+    this.bodyEl = contentEl.createDiv({ cls: 'rubric-check-body' });
     void this.run();
   }
 
@@ -67,7 +67,7 @@ export class VaultCheckModal extends Modal {
     );
 
     if (globals > 0) {
-      const sec = this.bodyEl.createDiv({ cls: 'vschema-section' });
+      const sec = this.bodyEl.createDiv({ cls: 'rubric-section' });
       sec.createEl('h4', { text: 'Schema and folders' });
       for (const g of r.globalFindings) this.renderGlobal(sec, g);
     }
@@ -77,9 +77,9 @@ export class VaultCheckModal extends Modal {
     const byPath = new Map<string, Finding[]>();
     for (const f of r.findings) byPath.set(f.path, [...(byPath.get(f.path) ?? []), f]);
     for (const [path, list] of byPath) {
-      const sec = this.bodyEl.createDiv({ cls: 'vschema-section' });
+      const sec = this.bodyEl.createDiv({ cls: 'rubric-section' });
       const title = sec.createEl('h4');
-      const link = title.createEl('a', { text: list[0]?.basename ?? path, cls: 'vschema-note-link', attr: { href: '#' } });
+      const link = title.createEl('a', { text: list[0]?.basename ?? path, cls: 'rubric-note-link', attr: { href: '#' } });
       link.addEventListener('click', (e) => {
         e.preventDefault();
         const file = this.plugin.app.vault.getFileByPath(path);
@@ -87,26 +87,26 @@ export class VaultCheckModal extends Modal {
       });
       for (const f of list) this.renderFinding(sec, f);
     }
-    if (r.findings.length === 0 && globals === 0) this.bodyEl.createEl('p', { text: 'Nothing to fix.', cls: 'vschema-empty' });
+    if (r.findings.length === 0 && globals === 0) this.bodyEl.createEl('p', { text: 'Nothing to fix.', cls: 'rubric-empty' });
   }
 
   private renderGlobal(parent: HTMLElement, g: GlobalFinding): void {
-    const row = parent.createDiv({ cls: 'vschema-finding' });
-    row.createSpan({ cls: `vschema-sev is-${g.severity}`, text: g.severity === 'problem' ? 'Problem' : 'Warning' });
+    const row = parent.createDiv({ cls: 'rubric-finding' });
+    row.createSpan({ cls: `rubric-sev is-${g.severity}`, text: g.severity === 'problem' ? 'Problem' : 'Warning' });
     const where = g.file ? ` (${g.line ? `${g.file}:${g.line}` : g.file})` : '';
-    row.createSpan({ cls: 'vschema-finding-msg', text: ` ${g.message}${where}` });
+    row.createSpan({ cls: 'rubric-finding-msg', text: ` ${g.message}${where}` });
   }
 
   private renderFinding(parent: HTMLElement, f: Finding): void {
-    const row = parent.createDiv({ cls: 'vschema-finding', attr: { 'data-code': f.code } });
-    row.createSpan({ cls: `vschema-sev is-${f.severity}`, text: f.severity === 'problem' ? 'Problem' : 'Warning' });
-    row.createSpan({ cls: 'vschema-finding-msg', text: ` ${f.message}` });
+    const row = parent.createDiv({ cls: 'rubric-finding', attr: { 'data-code': f.code } });
+    row.createSpan({ cls: `rubric-sev is-${f.severity}`, text: f.severity === 'problem' ? 'Problem' : 'Warning' });
+    row.createSpan({ cls: 'rubric-finding-msg', text: ` ${f.message}` });
     const only = f.fixes.length === 1 ? f.fixes[0] : undefined;
-    if (only && only.diff.length > 1) row.createEl('pre', { cls: 'vschema-preview', text: only.diff.join('\n') });
+    if (only && only.diff.length > 1) row.createEl('pre', { cls: 'rubric-preview', text: only.diff.join('\n') });
     if (f.fixes.length > 0) {
-      const buttons = row.createDiv({ cls: 'vschema-fixes' });
+      const buttons = row.createDiv({ cls: 'rubric-fixes' });
       for (const fix of f.fixes) {
-        const btn = buttons.createEl('button', { text: fix.label, cls: 'vschema-fix', attr: { title: fix.diff.join('\n') } });
+        const btn = buttons.createEl('button', { text: fix.label, cls: 'rubric-fix', attr: { title: fix.diff.join('\n') } });
         btn.addEventListener('click', () => void this.applyOne(f, fix, row, btn));
       }
     }
@@ -116,7 +116,7 @@ export class VaultCheckModal extends Modal {
     btn.disabled = true;
     const err = await this.service.apply(f, fix);
     if (err) {
-      row.createDiv({ cls: 'vschema-error', text: err, attr: { role: 'alert' } });
+      row.createDiv({ cls: 'rubric-error', text: err, attr: { role: 'alert' } });
       return;
     }
     if (this.report) this.report.findings = this.report.findings.filter((x) => x !== f);
@@ -166,7 +166,7 @@ export class VaultCheckModal extends Modal {
   }
 }
 
-export function openVaultCheck(plugin: VaultSchemaPlugin): void {
+export function openVaultCheck(plugin: RubricPlugin): void {
   if (!plugin.schemas.pack) {
     new Notice('No schemas are loaded yet.');
     return;

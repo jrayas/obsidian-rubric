@@ -16,7 +16,7 @@ import type { App, TFile } from 'obsidian';
 import { holdStep, isModifierHeld } from '../core/hold-state';
 import type { HoldEffect, HoldInput, HoldState } from '../core/hold-state';
 import { isLocked, lockNote, optionsFor } from '../core/options';
-import type VaultSchemaPlugin from '../main';
+import type RubricPlugin from '../main';
 import type { HoldKey } from '../settings';
 import { OptionListView } from './option-list';
 import { OptionSession } from './option-session';
@@ -52,7 +52,7 @@ export function detectPropertiesLayer(app: App): string | null {
   if (typeof mtm.getTypeInfo !== 'function') return 'getTypeInfo is missing';
   if (typeof mtm.registeredTypeWidgets !== 'object' || mtm.registeredTypeWidgets === null) return 'registeredTypeWidgets is missing';
   try {
-    const probe = mtm.getTypeInfo.call(mtm as TypeManagerLike, 'vschema-probe', 'x') as TypeInfo | undefined;
+    const probe = mtm.getTypeInfo.call(mtm as TypeManagerLike, 'rubric-probe', 'x') as TypeInfo | undefined;
     if (typeof probe?.inferred?.render !== 'function') return 'widgets have no render function';
   } catch (e) {
     return `getTypeInfo threw: ${e instanceof Error ? e.message : String(e)}`;
@@ -76,7 +76,7 @@ export class PropertiesLayer {
   private cacheRestore: (() => void) | null = null;
   private eventsRegistered = false;
 
-  constructor(private readonly plugin: VaultSchemaPlugin) {}
+  constructor(private readonly plugin: RubricPlugin) {}
 
   get installed(): boolean {
     return this.active;
@@ -88,7 +88,7 @@ export class PropertiesLayer {
     const problem = detectPropertiesLayer(this.plugin.app);
     if (problem) {
       this.plugin.notifyOnce('layer-unavailable', 'Properties area features are unavailable in this Obsidian version. The commands and the picker window still work.');
-      console.debug('[vault-schema] properties layer unavailable:', problem);
+      console.debug('[rubric] properties layer unavailable:', problem);
       return false;
     }
     const mtm = (this.plugin.app as unknown as { metadataTypeManager: TypeManagerLike }).metadataTypeManager;
@@ -162,7 +162,7 @@ export class PropertiesLayer {
       return layerMuted('tags') ? {} : origTags.call(this);
     };
     const layerMuted = (key: string): boolean => {
-      const row = activeDocument.activeElement?.closest<HTMLElement>('.metadata-property.vschema-has-list');
+      const row = activeDocument.activeElement?.closest<HTMLElement>('.metadata-property.rubric-has-list');
       return row?.dataset.propertyKey?.toLowerCase() === key.toLowerCase();
     };
     cache.getFrontmatterPropertyValuesForKey = patchedValues;
@@ -201,7 +201,7 @@ export class PropertiesLayer {
   private fail(e: unknown): void {
     if (this.failed) return;
     this.failed = true;
-    console.error('[vault-schema] properties layer error, switching it off:', e);
+    console.error('[rubric] properties layer error, switching it off:', e);
     new Notice('Properties area features were switched off after an error. The commands and the picker window still work.');
     this.uninstall();
   }
@@ -392,7 +392,7 @@ class FieldController {
   private openToken = 0;
 
   constructor(
-    private readonly plugin: VaultSchemaPlugin,
+    private readonly plugin: RubricPlugin,
     private readonly layer: PropertiesLayer,
     readonly file: TFile,
     readonly key: string,
@@ -402,8 +402,8 @@ class FieldController {
   refresh(locked: boolean, hasList: boolean): void {
     this.locked = locked;
     this.hasList = hasList;
-    this.row.toggleClass('vschema-locked', locked);
-    this.row.toggleClass('vschema-has-list', hasList);
+    this.row.toggleClass('rubric-locked', locked);
+    this.row.toggleClass('rubric-has-list', hasList);
     if (hasList) this.ensureButton();
     else {
       this.button?.remove();
@@ -429,7 +429,7 @@ class FieldController {
     this.hasList = hasList;
     if (this.row !== row) {
       this.rowAbort?.abort();
-      this.row?.removeClass('vschema-field', 'vschema-locked', 'vschema-has-list');
+      this.row?.removeClass('rubric-field', 'rubric-locked', 'rubric-has-list');
       this.row = row;
       const rowAbort = new AbortController();
       this.rowAbort = rowAbort;
@@ -455,9 +455,9 @@ class FieldController {
       row.ownerDocument.addEventListener('keydown', (e) => this.releaseIfNotHeld(e), { signal: this.abort.signal, capture: true });
       row.ownerDocument.defaultView?.addEventListener('blur', () => this.releaseNow(), { signal: this.abort.signal });
     }
-    row.addClass('vschema-field');
-    row.toggleClass('vschema-locked', locked);
-    row.toggleClass('vschema-has-list', hasList);
+    row.addClass('rubric-field');
+    row.toggleClass('rubric-locked', locked);
+    row.toggleClass('rubric-has-list', hasList);
     this.ensureButton();
     // Obsidian can rebuild the value without calling render again (after a save, for example). Re-add the button then.
     this.observer?.disconnect();
@@ -484,7 +484,7 @@ class FieldController {
     this.observer?.disconnect();
     this.closeAuto();
     this.button?.remove();
-    this.row?.removeClass('vschema-field', 'vschema-locked', 'vschema-has-list');
+    this.row?.removeClass('rubric-field', 'rubric-locked', 'rubric-has-list');
     this.abort.abort();
     if (this.layer.openField === this) this.layer.openField = null;
   }
@@ -611,7 +611,7 @@ class FieldController {
       if (token !== this.openToken || this.state === 'closed' || this.state === 'pending') return;
       this.removePopoverEl();
       this.hideHint();
-      const pop = this.doc.body.createDiv({ cls: 'vschema-popover', attr: { role: 'dialog', 'aria-label': `Options for ${this.key}` } });
+      const pop = this.doc.body.createDiv({ cls: 'rubric-popover', attr: { role: 'dialog', 'aria-label': `Options for ${this.key}` } });
       this.popover = pop;
       this.layer.openField = this;
       this.position(pop);
@@ -632,7 +632,7 @@ class FieldController {
         );
         if (latched) view.focus();
       } else {
-        pop.createDiv({ cls: 'vschema-lock-note', text: loaded.kind === 'locked' ? loaded.note : loaded.message });
+        pop.createDiv({ cls: 'rubric-lock-note', text: loaded.kind === 'locked' ? loaded.note : loaded.message });
       }
       // A list kept open because the pointer was on it goes away when the pointer leaves it.
       if (this.state === 'sticky') pop.addEventListener('mouseleave', () => this.input({ type: 'clickElsewhere' }), { once: true });
@@ -643,9 +643,9 @@ class FieldController {
   private position(pop: HTMLElement): void {
     const rect = this.valueEl.getBoundingClientRect();
     pop.setCssProps({
-      '--vschema-left': `${Math.round(rect.left)}px`,
-      '--vschema-top': `${Math.round(rect.bottom + 2)}px`,
-      '--vschema-min-width': `${Math.round(rect.width)}px`,
+      '--rubric-left': `${Math.round(rect.left)}px`,
+      '--rubric-top': `${Math.round(rect.bottom + 2)}px`,
+      '--rubric-min-width': `${Math.round(rect.width)}px`,
     });
   }
 
@@ -729,7 +729,7 @@ class FieldController {
     const loaded = await session.load();
     if (token !== this.autoToken || loaded.kind !== 'ready' || this.state !== 'closed') return;
     this.hideHint();
-    const pop = this.doc.body.createDiv({ cls: 'vschema-popover vschema-autocomplete', attr: { role: 'listbox', 'aria-label': `Suggestions for ${this.key}` } });
+    const pop = this.doc.body.createDiv({ cls: 'rubric-popover rubric-autocomplete', attr: { role: 'listbox', 'aria-label': `Suggestions for ${this.key}` } });
     this.position(pop);
     const view = new OptionListView(
       pop,
@@ -773,7 +773,7 @@ class FieldController {
   private addButton(): void {
     const host = this.row.querySelector<HTMLElement>('.metadata-property-value') ?? this.valueEl;
     const btn = host.createEl('button', {
-      cls: 'vschema-chevron clickable-icon',
+      cls: 'rubric-chevron clickable-icon',
       attr: {
         type: 'button',
         'aria-label': `Show all options for ${this.key}`,
@@ -791,7 +791,7 @@ class FieldController {
   private showHint(): void {
     if (!this.plugin.settings.showHint || !this.hasList || this.state !== 'closed' || this.hint) return;
     const hint = this.doc.body.createDiv({
-      cls: 'vschema-hint',
+      cls: 'rubric-hint',
       text: `Hold ${HOLD_LABEL[this.holdKey()] ?? this.holdKey()} for all options`,
       attr: { role: 'status' },
     });

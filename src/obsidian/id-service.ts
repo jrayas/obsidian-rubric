@@ -1,6 +1,6 @@
 import type { App } from 'obsidian';
 import { nextId } from '../core/ids';
-import type { VaultSchemaSettings } from '../settings';
+import type { RubricSettings } from '../settings';
 
 /**
  * Allocates readable IDs. There is no counter file: the next number is worked out from the notes
@@ -13,7 +13,7 @@ export class IdService {
 
   constructor(
     private readonly app: App,
-    private readonly getSettings: () => VaultSchemaSettings,
+    private readonly getSettings: () => RubricSettings,
   ) {}
 
   /** Every ID in the vault right now. */

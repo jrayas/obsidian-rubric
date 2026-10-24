@@ -68,7 +68,7 @@ describe('locked properties never open a list (rule: locked)', () => {
 
   it('breadcrumb names the breadcrumb plugin; the others name this plugin', () => {
     expect(lockNote('breadcrumb', prop('kb', 'breadcrumb'))).toContain('breadcrumb plugin');
-    expect(lockNote('id', prop('kb', 'id'))).toContain('Vault Schema');
+    expect(lockNote('id', prop('kb', 'id'))).toContain('Rubric');
   });
 
   it('a normal property has no lock note', () => {

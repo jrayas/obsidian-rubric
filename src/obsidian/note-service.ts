@@ -8,7 +8,7 @@ import type { NoteEvent } from '../core/prompt-policy';
 import { checkScope } from '../core/scope';
 import type { ScopeVerdict } from '../core/scope';
 import type { ResolvedType } from '../core/schema-types';
-import type { VaultSchemaSettings } from '../settings';
+import type { RubricSettings } from '../settings';
 import { askSchemaChoice } from './choice-modals';
 import type { RegistryStore } from './registry-store';
 import type { SchemaService } from './schema-service';
@@ -42,7 +42,7 @@ export class NoteService {
     private readonly plugin: Plugin,
     private readonly schemas: SchemaService,
     private readonly registry: RegistryStore,
-    private readonly getSettings: () => VaultSchemaSettings,
+    private readonly getSettings: () => RubricSettings,
     private readonly saveSettings: () => Promise<void>,
   ) {}
 

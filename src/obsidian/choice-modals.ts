@@ -42,10 +42,10 @@ export class SchemaChoiceModal extends Modal {
     const { contentEl, opts } = this;
     this.setTitle(opts.title);
     contentEl.createEl('p', { text: opts.lead });
-    const list = contentEl.createDiv({ cls: 'vschema-choice-list', attr: { role: 'radiogroup' } });
+    const list = contentEl.createDiv({ cls: 'rubric-choice-list', attr: { role: 'radiogroup' } });
     const add = (value: string | null, label: string) => {
-      const row = list.createEl('label', { cls: 'vschema-choice' });
-      const input = row.createEl('input', { type: 'radio', attr: { name: 'vschema-choice' } });
+      const row = list.createEl('label', { cls: 'rubric-choice' });
+      const input = row.createEl('input', { type: 'radio', attr: { name: 'rubric-choice' } });
       row.createSpan({ text: label });
       input.addEventListener('change', () => {
         this.choice = value;

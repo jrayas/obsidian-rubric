@@ -32,8 +32,8 @@ export function lockNote(name: string, def: PropertyDef | undefined): string | n
   if (def?.managedBy === 'external' || name === 'breadcrumb') {
     return 'Written by your breadcrumb plugin. This plugin only reads it.';
   }
-  if (name === ARCHIVED_FIELDS) return 'Kept by Vault Schema: values from an earlier type. Never deleted.';
-  return 'Set automatically by Vault Schema and locked.';
+  if (name === ARCHIVED_FIELDS) return 'Kept by Rubric: values from an earlier type. Never deleted.';
+  return 'Set automatically by Rubric and locked.';
 }
 
 function currentList(current: unknown): string[] {

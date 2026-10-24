@@ -3,7 +3,7 @@ import { checkTags } from '../core/tags';
 import { matchNote } from '../core/matcher';
 import { validateValue } from '../core/validate';
 import type { PropertyDef, ResolvedType } from '../core/schema-types';
-import type VaultSchemaPlugin from '../main';
+import type RubricPlugin from '../main';
 import { confirm } from './modals';
 import type { PlannedConversion } from './note-actions';
 import { chooseValue, preview } from './preview-modal';
@@ -32,7 +32,7 @@ export class ChangeWatcher {
   /** Switch the prompts off (used by the real-app test suite so unrelated checks are not interrupted). */
   enabled = true;
 
-  constructor(private readonly plugin: VaultSchemaPlugin) {}
+  constructor(private readonly plugin: RubricPlugin) {}
 
   start(): void {
     const { metadataCache, vault } = this.plugin.app;

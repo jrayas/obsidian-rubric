@@ -3,7 +3,7 @@ export type NoMatchBehaviour = 'ask' | 'unmanaged';
 export type OnCreate = 'fill' | 'ask' | 'nothing';
 export type PromptScope = 'open' | 'all';
 
-export interface VaultSchemaSettings {
+export interface RubricSettings {
   /** `_schema` (default), `.schema`, or a custom root folder name. */
   schemaFolder: string;
   noMatch: NoMatchBehaviour;
@@ -38,7 +38,7 @@ export interface VaultSchemaSettings {
   index: Record<string, { id?: string; created?: string }>;
 }
 
-export const DEFAULT_SETTINGS: VaultSchemaSettings = {
+export const DEFAULT_SETTINGS: RubricSettings = {
   schemaFolder: '_schema',
   noMatch: 'ask',
   writePreviews: true,
@@ -64,12 +64,12 @@ export const DEFAULT_SETTINGS: VaultSchemaSettings = {
 };
 
 /** Merge stored data over the defaults, ignoring unknown keys and wrong types. */
-export function mergeSettings(stored: unknown): VaultSchemaSettings {
-  const out: VaultSchemaSettings = { ...DEFAULT_SETTINGS, skippedFolders: [], retiredIds: [], index: {} };
+export function mergeSettings(stored: unknown): RubricSettings {
+  const out: RubricSettings = { ...DEFAULT_SETTINGS, skippedFolders: [], retiredIds: [], index: {} };
   if (typeof stored !== 'object' || stored === null) return out;
   const s = stored as Record<string, unknown>;
   const rec = out as unknown as Record<string, unknown>;
-  for (const key of Object.keys(DEFAULT_SETTINGS) as (keyof VaultSchemaSettings)[]) {
+  for (const key of Object.keys(DEFAULT_SETTINGS) as (keyof RubricSettings)[]) {
     const v = s[key];
     if (v === undefined) continue;
     const def = DEFAULT_SETTINGS[key];

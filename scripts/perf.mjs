@@ -49,8 +49,8 @@ const mem1 = await ev(`process.getProcessMemoryInfo().then(m => m.private)`);
 // full vault check through the window
 const check = await ev(`(async () => {
   const t = performance.now(); app.commands.executeCommandById('${PLUGIN_ID}:check-vault');
-  await new Promise(r => { const w = () => { const s = activeDocument.querySelector('.vschema-check-summary'); if (s && !/Scanning/.test(s.textContent)) r(0); else setTimeout(w, 100); }; w(); });
-  return { ms: Math.round(performance.now() - t), summary: activeDocument.querySelector('.vschema-check-summary').textContent };
+  await new Promise(r => { const w = () => { const s = activeDocument.querySelector('.rubric-check-summary'); if (s && !/Scanning/.test(s.textContent)) r(0); else setTimeout(w, 100); }; w(); });
+  return { ms: Math.round(performance.now() - t), summary: activeDocument.querySelector('.rubric-check-summary').textContent };
 })()`);
 const long2 = await ev('window.__long');
 const mem2 = await ev(`process.getProcessMemoryInfo().then(m => m.private)`);

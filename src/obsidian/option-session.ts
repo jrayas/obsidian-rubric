@@ -5,7 +5,7 @@ import { isNewerThanSchema, newerSchemaMessage } from '../core/migrate';
 import { applyPick, lockNote, optionsFor } from '../core/options';
 import type { OptionItem, OptionList, OptionValue } from '../core/options';
 import type { PropertyDef, ResolvedType } from '../core/schema-types';
-import type VaultSchemaPlugin from '../main';
+import type RubricPlugin from '../main';
 
 export type SessionLoad =
   | { kind: 'ready'; def: PropertyDef; type: ResolvedType; list: OptionList }
@@ -27,7 +27,7 @@ function linkName(value: unknown): string {
  */
 export class OptionSession {
   constructor(
-    private readonly plugin: VaultSchemaPlugin,
+    private readonly plugin: RubricPlugin,
     readonly file: TFile,
     readonly key: string,
   ) {}

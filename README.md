@@ -1,4 +1,4 @@
-# Vault Schema
+# Rubric
 
 An Obsidian **desktop** plugin (macOS and Windows) that reads note schemas from plain YAML files in your vault and uses them for property autocomplete, option pickers, validation, readable IDs, timestamps and schema migration.
 
@@ -19,8 +19,8 @@ It is described as **governance-ready**, not as a compliance system: locks are a
 
 ## Install
 
-1. Download `main.js`, `manifest.json` and `styles.css` from the latest [release](https://github.com/jrayas/obsidian-vault-schema/releases) (or build them: see Development).
-2. Copy them to `<your vault>/.obsidian/plugins/vault-schema/` and enable **Vault Schema** in *Settings → Community plugins*.
+1. Download `main.js`, `manifest.json` and `styles.css` from the latest [release](https://github.com/jrayas/obsidian-rubric/releases) (or build them: see Development).
+2. Copy them to `<your vault>/.obsidian/plugins/rubric/` and enable **Rubric** in *Settings → Community plugins*.
 3. Run the command **Install starter schema pack** to create `_schema/` with the starter types (it never overwrites existing files).
 
 Requires Obsidian **1.13.7 or later** (desktop only). See [docs/user-guide.md](docs/user-guide.md) for details.

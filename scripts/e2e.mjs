@@ -91,7 +91,7 @@ async function closeStrayModals() {
 }
 const clickButton = (text) =>
   ev(`(() => { const b = [...activeDocument.querySelectorAll('.modal button')].find(x => x.textContent === ${JSON.stringify(text)}); b?.click(); return !!b; })()`);
-const choiceShown = () => ev(`activeDocument.querySelectorAll('.vschema-choice-list').length`);
+const choiceShown = () => ev(`activeDocument.querySelectorAll('.rubric-choice-list').length`);
 const read = (path) => ev(`app.vault.adapter.read(${JSON.stringify(path)})`);
 const write = (path, text) => ev(`app.vault.adapter.write(${JSON.stringify(path)}, ${JSON.stringify(text)}).then(() => 0)`);
 const fmLines = async (path) => (await read(path)).split('---')[1].split('\n');
@@ -163,8 +163,8 @@ await check('P2 a new note in an unknown folder asks which schema; Apply with re
   await waitFor(() => choiceShown(), 'the schema prompt', 5000);
   const title = await ev(`[...activeDocument.querySelectorAll('.modal')].pop().querySelector('.modal-title').textContent`);
   eq(title, 'No schema for Inbox/', 'prompt title');
-  eq(await ev(`[...activeDocument.querySelectorAll('.vschema-choice')].length`), 9, 'choices (8 types + leave unmanaged)');
-  await ev(`[...activeDocument.querySelectorAll('.vschema-choice input')][1].click(); 0`);
+  eq(await ev(`[...activeDocument.querySelectorAll('.rubric-choice')].length`), 9, 'choices (8 types + leave unmanaged)');
+  await ev(`[...activeDocument.querySelectorAll('.rubric-choice input')][1].click(); 0`);
   await sleep(100);
   await clickButton('Apply');
   await waitFor(() => read('_schema/registry/folders.yaml').then((t) => /Inbox: kb/.test(t)), 'mapping to be written');
@@ -238,17 +238,17 @@ const openNote = async (path) => {
 const focusValue = (k) =>
   ev(`(() => { const r = document.querySelector('.metadata-property[data-property-key="${k}"]'); const t = r.querySelector('.metadata-property-value .multi-select-input') ?? r.querySelector('.metadata-property-value [contenteditable="true"], .metadata-property-value input'); t.focus(); if (t.isContentEditable) getSelection().selectAllChildren(t); return document.activeElement.className; })()`);
 const popover = () =>
-  ev(`(() => { const p = document.querySelector('.vschema-popover'); return p ? { options: [...p.querySelectorAll('.vschema-option-label')].map(e => e.textContent), checked: [...p.querySelectorAll('.vschema-option.is-checked .vschema-option-label')].map(e => e.textContent), note: p.querySelector('.vschema-lock-note')?.textContent ?? null, filter: !!p.querySelector('.vschema-filter'), auto: p.classList.contains('vschema-autocomplete'), notes: [...p.querySelectorAll('.vschema-option-note')].map(e => e.textContent) } : null; })()`);
+  ev(`(() => { const p = document.querySelector('.rubric-popover'); return p ? { options: [...p.querySelectorAll('.rubric-option-label')].map(e => e.textContent), checked: [...p.querySelectorAll('.rubric-option.is-checked .rubric-option-label')].map(e => e.textContent), note: p.querySelector('.rubric-lock-note')?.textContent ?? null, filter: !!p.querySelector('.rubric-filter'), auto: p.classList.contains('rubric-autocomplete'), notes: [...p.querySelectorAll('.rubric-option-note')].map(e => e.textContent) } : null; })()`);
 
 await check('P3 schema notes get a ▾ button on option fields and a lock on locked ones; other notes are untouched', async () => {
   await openNote('Knowledge/Wave.md');
-  const rows = await ev(`[...document.querySelectorAll('.metadata-property')].map(r => r.dataset.propertyKey + (r.querySelector('.vschema-chevron') ? ':chevron' : '') + (r.classList.contains('vschema-locked') ? ':locked' : ''))`);
+  const rows = await ev(`[...document.querySelectorAll('.metadata-property')].map(r => r.dataset.propertyKey + (r.querySelector('.rubric-chevron') ? ':chevron' : '') + (r.classList.contains('rubric-locked') ? ':locked' : ''))`);
   for (const want of ['status:chevron', 'tags:chevron', 'language:chevron', 'kind:chevron', 'id:locked', 'schema:locked', 'breadcrumb:locked', 'created:locked', 'modified:locked', 'name', 'description'])
     assert(rows.includes(want), `row ${want} missing in ${rows}`);
   await openNote('Templates/Plain.md');
-  eq(await ev(`[...document.querySelectorAll('.vschema-chevron, .vschema-locked')].map(e => e.closest('.metadata-property')?.dataset.propertyKey + ' in ' + (e.closest('.workspace-leaf-content')?.dataset.type ?? '?') + ' file=' + document.querySelector('.workspace-leaf.mod-active .view-header-title')?.textContent)`), [], 'decorations on an excluded note');
+  eq(await ev(`[...document.querySelectorAll('.rubric-chevron, .rubric-locked')].map(e => e.closest('.metadata-property')?.dataset.propertyKey + ' in ' + (e.closest('.workspace-leaf-content')?.dataset.type ?? '?') + ' file=' + document.querySelector('.workspace-leaf.mod-active .view-header-title')?.textContent)`), [], 'decorations on an excluded note');
   await openNote('Tasks/Review.md');
-  eq(await ev(`[...document.querySelectorAll('.metadata-property')].filter(r => r.querySelector('.vschema-chevron')).map(r => r.dataset.propertyKey)`), ['type', 'status', 'priority'], 'task option fields');
+  eq(await ev(`[...document.querySelectorAll('.metadata-property')].filter(r => r.querySelector('.rubric-chevron')).map(r => r.dataset.propertyKey)`), ['type', 'status', 'priority'], 'task option fields');
 });
 
 await check('P3 hold shows the list only after the delay and hides on release', async () => {
@@ -282,7 +282,7 @@ await check('P3 a pick while holding saves at once and keeps the list until rele
   await focusValue('status');
   await altDown();
   await sleep(600);
-  await ev(`[...document.querySelectorAll('.vschema-option')].find(o => o.textContent.includes('review')).click(); 0`);
+  await ev(`[...document.querySelectorAll('.rubric-option')].find(o => o.textContent.includes('review')).click(); 0`);
   await waitFor(async () => (await fmLines('Knowledge/Wave.md')).includes('status: review'), 'the file to change');
   await sleep(500);
   const p = await popover();
@@ -300,7 +300,7 @@ await check('P3 the release rule: pointer over the list keeps it until Escape', 
   await focusValue('status');
   await altDown();
   await sleep(600);
-  const box = await ev(`(() => { const r = document.querySelector('.vschema-popover').getBoundingClientRect(); return { x: r.left + 20, y: r.top + 20 }; })()`);
+  const box = await ev(`(() => { const r = document.querySelector('.rubric-popover').getBoundingClientRect(); return { x: r.left + 20, y: r.top + 20 }; })()`);
   await client.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: box.x, y: box.y, modifiers: 1 });
   await sleep(300);
   await altUp();
@@ -316,7 +316,7 @@ await check('P3 "always hide on release" setting hides even over the list', asyn
   await focusValue('status');
   await altDown();
   await sleep(600);
-  const box = await ev(`(() => { const r = document.querySelector('.vschema-popover').getBoundingClientRect(); return { x: r.left + 20, y: r.top + 20 }; })()`);
+  const box = await ev(`(() => { const r = document.querySelector('.rubric-popover').getBoundingClientRect(); return { x: r.left + 20, y: r.top + 20 }; })()`);
   await client.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: box.x, y: box.y, modifiers: 1 });
   await sleep(300);
   await altUp();
@@ -327,10 +327,10 @@ await check('P3 "always hide on release" setting hides even over the list', asyn
 
 await check('P3 locked properties ignore the hold and say who manages them', async () => {
   for (const [key, text] of [
-    ['id', 'Vault Schema'],
-    ['schema', 'Vault Schema'],
-    ['created', 'Vault Schema'],
-    ['modified', 'Vault Schema'],
+    ['id', 'Rubric'],
+    ['schema', 'Rubric'],
+    ['created', 'Rubric'],
+    ['modified', 'Rubric'],
     ['breadcrumb', 'breadcrumb plugin'],
   ]) {
     await focusValue(key);
@@ -351,13 +351,13 @@ await check('P3 latched list: hotkey command opens it with a filter; Space ticks
   eq(p.filter, true, 'filter box');
   eq(p.checked, ['procedure'], 'ticked (sop resolved to procedure)');
   // filter by synonym
-  await ev(`(() => { const f = document.querySelector('.vschema-filter'); f.value = 'sop'; f.dispatchEvent(new Event('input')); return 0; })()`);
+  await ev(`(() => { const f = document.querySelector('.rubric-filter'); f.value = 'sop'; f.dispatchEvent(new Event('input')); return 0; })()`);
   await sleep(200);
   eq((await popover()).options, ['procedure'], 'filtered by synonym');
-  await ev(`(() => { const f = document.querySelector('.vschema-filter'); f.value = ''; f.dispatchEvent(new Event('input')); return 0; })()`);
+  await ev(`(() => { const f = document.querySelector('.rubric-filter'); f.value = ''; f.dispatchEvent(new Event('input')); return 0; })()`);
   await sleep(100);
   // arrows + Space on the filter box
-  await ev(`(() => { const f = document.querySelector('.vschema-filter'); for (const k of ['ArrowDown', 'ArrowDown', ' ']) f.dispatchEvent(new KeyboardEvent('keydown', { key: k, bubbles: true })); return 0; })()`);
+  await ev(`(() => { const f = document.querySelector('.rubric-filter'); for (const k of ['ArrowDown', 'ArrowDown', ' ']) f.dispatchEvent(new KeyboardEvent('keydown', { key: k, bubbles: true })); return 0; })()`);
   await waitFor(async () => (await fmLines('Knowledge/Wave.md')).includes('  - quantum'), 'quantum to be saved');
   assert(await popover(), 'latched list closed after a save');
   eq((await popover()).checked, ['quantum', 'procedure'], 'ticks after save');
@@ -391,20 +391,20 @@ await check('P3 hold then the hotkey latches the list, and it survives release',
 });
 
 await check('P3 the ▾ button opens the same list and is a labelled button', async () => {
-  const aria = await ev(`document.querySelector('.metadata-property[data-property-key="status"] .vschema-chevron').getAttribute('aria-label')`);
+  const aria = await ev(`document.querySelector('.metadata-property[data-property-key="status"] .rubric-chevron').getAttribute('aria-label')`);
   eq(aria, 'Show all options for status', 'aria-label');
-  eq(await ev(`document.querySelector('.metadata-property[data-property-key="status"] .vschema-chevron').tagName`), 'BUTTON', 'element');
-  await ev(`document.querySelector('.metadata-property[data-property-key="status"] .vschema-chevron').click(); 0`);
+  eq(await ev(`document.querySelector('.metadata-property[data-property-key="status"] .rubric-chevron').tagName`), 'BUTTON', 'element');
+  await ev(`document.querySelector('.metadata-property[data-property-key="status"] .rubric-chevron').click(); 0`);
   await waitFor(() => popover(), 'the list');
-  eq(await ev(`document.querySelector('.metadata-property[data-property-key="status"] .vschema-chevron').getAttribute('aria-expanded')`), 'true', 'aria-expanded');
+  eq(await ev(`document.querySelector('.metadata-property[data-property-key="status"] .rubric-chevron').getAttribute('aria-expanded')`), 'true', 'aria-expanded');
   await escape();
   await sleep(300);
 });
 
 await check('P3 clicking into another property closes an open list', async () => {
   await focusValue('status');
-  await waitFor(() => ev(`!!document.querySelector('.metadata-property[data-property-key="status"] .vschema-chevron')`), 'the ▾ button');
-  await ev(`document.querySelector('.metadata-property[data-property-key="status"] .vschema-chevron').click(); 0`);
+  await waitFor(() => ev(`!!document.querySelector('.metadata-property[data-property-key="status"] .rubric-chevron')`), 'the ▾ button');
+  await ev(`document.querySelector('.metadata-property[data-property-key="status"] .rubric-chevron').click(); 0`);
   await waitFor(() => popover(), 'the list');
   await ev(`(() => { const t = document.querySelector('.metadata-property[data-property-key="description"] .metadata-property-value [contenteditable="true"], .metadata-property[data-property-key="description"] .metadata-property-value input'); t.focus(); return 0; })()`);
   await sleep(400);
@@ -414,19 +414,19 @@ await check('P3 clicking into another property closes an open list', async () =>
 await check('P3 a short hint appears when a field with options is focused (and the setting turns it off)', async () => {
   await focusValue('description');
   await sleep(300);
-  eq(await ev(`document.querySelectorAll('.vschema-hint').length`), 0, 'hint on a field without options');
+  eq(await ev(`document.querySelectorAll('.rubric-hint').length`), 0, 'hint on a field without options');
   await ev(`document.activeElement.blur(); 0`);
   await focusValue('status');
-  await waitFor(() => ev(`document.querySelector('.vschema-hint')?.textContent`), 'the hint');
-  eq(await ev(`document.querySelector('.vschema-hint').textContent`), 'Hold Option for all options', 'hint text on Mac');
-  eq(await ev(`document.querySelector('.vschema-hint').getAttribute('role')`), 'status', 'hint role');
+  await waitFor(() => ev(`document.querySelector('.rubric-hint')?.textContent`), 'the hint');
+  eq(await ev(`document.querySelector('.rubric-hint').textContent`), 'Hold Option for all options', 'hint text on Mac');
+  eq(await ev(`document.querySelector('.rubric-hint').getAttribute('role')`), 'status', 'hint role');
   await ev(`document.activeElement.blur(); 0`);
   await sleep(300);
-  eq(await ev(`document.querySelectorAll('.vschema-hint').length`), 0, 'hint after leaving the field');
+  eq(await ev(`document.querySelectorAll('.rubric-hint').length`), 0, 'hint after leaving the field');
   await ev(`${P}.settings.showHint = false; 0`);
   await focusValue('status');
   await sleep(400);
-  eq(await ev(`document.querySelectorAll('.vschema-hint').length`), 0, 'hint with the setting off');
+  eq(await ev(`document.querySelectorAll('.rubric-hint').length`), 0, 'hint with the setting off');
   await ev(`document.activeElement.blur(); ${P}.settings.showHint = true; 0`);
 });
 
@@ -451,7 +451,7 @@ await check('P3 autocomplete resolves a synonym to its preferred term', async ()
   await focusValue('tags');
   await client.send('Input.insertText', { text: 'sop' });
   await waitFor(() => popover(), 'autocomplete').catch(async (e) => {
-    const d = await ev(`(() => { const p = ${P}; const fc = [...p.layer.fields.values()].find(x => x.key === 'tags'); const row = document.querySelector('.metadata-property[data-property-key="tags"]'); return JSON.stringify({ fc: !!fc, hasList: fc?.hasList, state: fc?.state, rowConnected: fc?.row.isConnected, sameRow: fc?.row === row, active: document.activeElement.className, typed: document.activeElement.textContent, pops: document.querySelectorAll('.vschema-popover').length, modals: document.querySelectorAll('.modal').length }); })()`);
+    const d = await ev(`(() => { const p = ${P}; const fc = [...p.layer.fields.values()].find(x => x.key === 'tags'); const row = document.querySelector('.metadata-property[data-property-key="tags"]'); return JSON.stringify({ fc: !!fc, hasList: fc?.hasList, state: fc?.state, rowConnected: fc?.row.isConnected, sameRow: fc?.row === row, active: document.activeElement.className, typed: document.activeElement.textContent, pops: document.querySelectorAll('.rubric-popover').length, modals: document.querySelectorAll('.modal').length }); })()`);
     throw new Error(e.message + ' ' + d);
   });
   const p = await popover();
@@ -466,16 +466,16 @@ await check('P3 autocomplete resolves a synonym to its preferred term', async ()
 await check('P3 commands-only switches the Properties features off; the picker window still works', async () => {
   await ev(`(async () => { ${P}.settings.commandsOnly = true; await ${P}.onSettingChanged('commandsOnly'); return 0; })()`);
   await sleep(1200);
-  eq(await ev(`document.querySelectorAll('.vschema-chevron').length`), 0, 'chevrons');
+  eq(await ev(`document.querySelectorAll('.rubric-chevron').length`), 0, 'chevrons');
   await openNote('Tasks/Review.md');
   await openNote('Knowledge/Wave.md');
-  eq(await ev(`document.querySelectorAll('.vschema-chevron, .vschema-locked').length`), 0, 'decorations after reopening');
+  eq(await ev(`document.querySelectorAll('.rubric-chevron, .rubric-locked').length`), 0, 'decorations after reopening');
   await focusValue('status');
   await ev(`app.commands.executeCommandById('${PLUGIN_ID}:show-all-options'); 0`);
-  await waitFor(() => ev(`!!activeDocument.querySelector('.modal .vschema-option-list')`), 'the picker window');
-  const options = await ev(`[...activeDocument.querySelectorAll('.modal .vschema-option-label')].map(e => e.textContent)`);
+  await waitFor(() => ev(`!!activeDocument.querySelector('.modal .rubric-option-list')`), 'the picker window');
+  const options = await ev(`[...activeDocument.querySelectorAll('.modal .rubric-option-label')].map(e => e.textContent)`);
   eq(options, ['draft', 'review', 'published', 'outdated', 'archived'], 'picker options');
-  await ev(`[...activeDocument.querySelectorAll('.modal .vschema-option')].find(o => o.textContent.includes('published')).click(); 0`);
+  await ev(`[...activeDocument.querySelectorAll('.modal .rubric-option')].find(o => o.textContent.includes('published')).click(); 0`);
   await waitFor(async () => (await fmLines('Knowledge/Wave.md')).includes('status: published'), 'picker pick to save');
   await closeStrayModals();
   await ev(`(async () => { ${P}.settings.commandsOnly = false; await ${P}.onSettingChanged('commandsOnly'); return 0; })()`);
@@ -488,8 +488,8 @@ await check('P3 a locked property in the picker window shows who manages it', as
   await openNote('Knowledge/Wave.md');
   await focusValue('id');
   await ev(`app.commands.executeCommandById('${PLUGIN_ID}:show-all-options'); 0`);
-  await waitFor(() => ev(`!!activeDocument.querySelector('.modal .vschema-lock-note')`), 'lock note');
-  assert((await ev(`activeDocument.querySelector('.modal .vschema-lock-note').textContent`)).includes('Vault Schema'), 'wrong note');
+  await waitFor(() => ev(`!!activeDocument.querySelector('.modal .rubric-lock-note')`), 'lock note');
+  assert((await ev(`activeDocument.querySelector('.modal .rubric-lock-note').textContent`)).includes('Rubric'), 'wrong note');
   await closeStrayModals();
   await ev(`(async () => { ${P}.settings.commandsOnly = false; await ${P}.onSettingChanged('commandsOnly'); return 0; })()`);
   await sleep(800);
@@ -544,7 +544,7 @@ await check('P4 create note from schema: ID, created, every default, schema orde
   eq([f.type, f.status, f.kind, f.name, f.schema], ['kb', 'draft', 'concept', 'Created One', '2'], 'values');
   eq(f.created, f.modified, 'created equals modified at creation');
   assert(minutesApart(f.created, await nowStamp()) <= 2, 'created is local time now');
-  eq(await ev(`activeDocument.querySelectorAll('.vschema-choice-list').length`), 0, 'no schema prompt for a note that already has an id');
+  eq(await ev(`activeDocument.querySelectorAll('.rubric-choice-list').length`), 0, 'no schema prompt for a note that already has an id');
 });
 
 await check('P4 an illegal file name is rejected on create (macOS and Windows characters)', async () => {
@@ -557,7 +557,7 @@ await check('P4 an illegal file name is rejected on create (macOS and Windows ch
     await sleep(100);
     await clickButton('Create');
     await sleep(200);
-    messages.push(await ev(`[...activeDocument.querySelectorAll('.modal')].pop().querySelector('.vschema-error').textContent`));
+    messages.push(await ev(`[...activeDocument.querySelectorAll('.modal')].pop().querySelector('.rubric-error').textContent`));
   }
   assert(messages.every((m) => m.length > 0), `each bad name needs a message: ${JSON.stringify(messages)}`);
   eq(await ev(`app.vault.getMarkdownFiles().filter(f => /^Knowledge\\/(a:b|what|CON|end)/.test(f.path)).length`), 0, 'files created');
@@ -737,7 +737,7 @@ await check('P4 the convert command works from the palette', async () => {
   await sleep(800);
   await ev(`app.commands.executeCommandById('${PLUGIN_ID}:convert-note-type'); 0`);
   await waitModal('Convert “Cmd”');
-  await ev(`[...activeDocument.querySelectorAll('.vschema-choice')].find(l => l.textContent === 'task').querySelector('input').click(); 0`);
+  await ev(`[...activeDocument.querySelectorAll('.rubric-choice')].find(l => l.textContent === 'task').querySelector('input').click(); 0`);
   await sleep(100);
   await clickButton('Preview');
   await waitModal('Convert “Cmd” from kb to task');
@@ -772,13 +772,13 @@ await check('P4 a one-off schema choice (remember off) adds the type’s propert
   await ev(`app.vault.createFolder('Loose').catch(() => {}).then(() => 0)`);
   await ev(`app.vault.create('Loose/Solo.md', '').then(() => 0)`);
   await waitFor(() => choiceShown(), 'the schema prompt', 6000);
-  await ev(`[...activeDocument.querySelectorAll('.vschema-choice')].find(l => l.textContent === 'task').querySelector('input').click(); 0`);
+  await ev(`[...activeDocument.querySelectorAll('.rubric-choice')].find(l => l.textContent === 'task').querySelector('input').click(); 0`);
   await ev(`(() => { const m = [...activeDocument.querySelectorAll('.modal')].pop(); const t = m.querySelector('.checkbox-container'); if (t.classList.contains('is-enabled')) t.click(); return 0; })()`);
   await sleep(200);
   await clickButton('Apply');
   const m = await waitModal('Add task properties');
   assert(m.pre.join('\n').includes('+ id: TK-'), `the preview should show the ID it will use: ${m.pre}`);
-  eq(await ev(`activeDocument.querySelectorAll('.vschema-choice-list').length`), 0, 'prompt still open');
+  eq(await ev(`activeDocument.querySelectorAll('.rubric-choice-list').length`), 0, 'prompt still open');
   assert((await read('Loose/Solo.md')) === '', 'written before approval');
   await clickButton('Add properties');
   await waitFor(async () => (await read('Loose/Solo.md')).includes('id: TK-'), 'the properties');
@@ -823,18 +823,18 @@ const seed = async () => {
 };
 const V5 = ['V5 NoId', 'V5 NoCreated', 'V5 BadStatus', 'V5 OldId', 'V5 DupA', 'V5 DupB', 'V5 Syn', 'V5 Unknown', 'V5 Body', 'V5 NameMismatch', 'V5 NoCrumb', 'V5 BadCrumb', 'V5 Domain', 'V5 Time', 'V5 Old1', 'V5 Old2', 'V5 Old3'];
 const hashAll = () => ev(`(async () => { const out = {}; for (const f of app.vault.getMarkdownFiles()) if (f.basename.startsWith('V5 ')) out[f.path] = await app.vault.adapter.read(f.path); return out; })()`);
-const report = () => ev(`(() => { const out = {}; const m = document.querySelector('.mod-vschema-check'); for (const sec of m.querySelectorAll('.vschema-section')) { const t = sec.querySelector('h4 a')?.textContent; if (!t) continue; out[t] = [...sec.querySelectorAll('.vschema-finding')].map(r => r.dataset.code); } return { summary: m.querySelector('.vschema-check-summary').textContent, notes: out, globals: [...m.querySelectorAll('.vschema-section')].filter(s => !s.querySelector('h4 a')).flatMap(s => [...s.querySelectorAll('.vschema-finding-msg')].map(e => e.textContent)) }; })()`);
+const report = () => ev(`(() => { const out = {}; const m = document.querySelector('.mod-rubric-check'); for (const sec of m.querySelectorAll('.rubric-section')) { const t = sec.querySelector('h4 a')?.textContent; if (!t) continue; out[t] = [...sec.querySelectorAll('.rubric-finding')].map(r => r.dataset.code); } return { summary: m.querySelector('.rubric-check-summary').textContent, notes: out, globals: [...m.querySelectorAll('.rubric-section')].filter(s => !s.querySelector('h4 a')).flatMap(s => [...s.querySelectorAll('.rubric-finding-msg')].map(e => e.textContent)) }; })()`);
 const openCheck = async () => {
   await closeStrayModals();
   await ev(`app.commands.executeCommandById('${PLUGIN_ID}:check-vault'); 0`);
-  await waitFor(() => ev(`!!document.querySelector('.mod-vschema-check')`), 'the report window');
-  await waitFor(() => ev(`!/Scanning/.test(document.querySelector('.vschema-check-summary').textContent)`), 'the scan to finish', 15000);
+  await waitFor(() => ev(`!!document.querySelector('.mod-rubric-check')`), 'the report window');
+  await waitFor(() => ev(`!/Scanning/.test(document.querySelector('.rubric-check-summary').textContent)`), 'the scan to finish', 15000);
   await sleep(300);
 };
 const clickFix = (note, code, label) =>
-  ev(`(() => { const m = document.querySelector('.mod-vschema-check'); const sec = [...m.querySelectorAll('.vschema-section')].find(s => s.querySelector('h4 a')?.textContent === ${JSON.stringify(note)}); if (!sec) throw new Error('no section for ${note}; have: ' + [...m.querySelectorAll('.vschema-section h4 a')].map(a => a.textContent).join(', ')); const row = [...sec.querySelectorAll('.vschema-finding')].find(r => r.dataset.code === ${JSON.stringify(code)}); if (!row) throw new Error('no ${code} for ${note}; have: ' + [...sec.querySelectorAll('.vschema-finding')].map(r => r.dataset.code)); const b = [...row.querySelectorAll('button')].find(x => x.textContent === ${JSON.stringify(label)}); if (!b) throw new Error('no button ${label}; have: ' + [...row.querySelectorAll('button')].map(x => x.textContent)); b.click(); return row.querySelector('.vschema-finding-msg').textContent; })()`);
+  ev(`(() => { const m = document.querySelector('.mod-rubric-check'); const sec = [...m.querySelectorAll('.rubric-section')].find(s => s.querySelector('h4 a')?.textContent === ${JSON.stringify(note)}); if (!sec) throw new Error('no section for ${note}; have: ' + [...m.querySelectorAll('.rubric-section h4 a')].map(a => a.textContent).join(', ')); const row = [...sec.querySelectorAll('.rubric-finding')].find(r => r.dataset.code === ${JSON.stringify(code)}); if (!row) throw new Error('no ${code} for ${note}; have: ' + [...sec.querySelectorAll('.rubric-finding')].map(r => r.dataset.code)); const b = [...row.querySelectorAll('button')].find(x => x.textContent === ${JSON.stringify(label)}); if (!b) throw new Error('no button ${label}; have: ' + [...row.querySelectorAll('button')].map(x => x.textContent)); b.click(); return row.querySelector('.rubric-finding-msg').textContent; })()`);
 const findingMsg = (note, code) =>
-  ev(`(() => { const m = document.querySelector('.mod-vschema-check'); const sec = [...m.querySelectorAll('.vschema-section')].find(s => s.querySelector('h4 a')?.textContent === ${JSON.stringify(note)}); if (!sec) return null; const row = [...sec.querySelectorAll('.vschema-finding')].find(r => r.dataset.code === ${JSON.stringify(code)}); return row ? { msg: row.querySelector('.vschema-finding-msg').textContent, pre: row.querySelector('pre')?.textContent ?? null, buttons: [...row.querySelectorAll('button')].map(b => b.textContent) } : null; })()`);
+  ev(`(() => { const m = document.querySelector('.mod-rubric-check'); const sec = [...m.querySelectorAll('.rubric-section')].find(s => s.querySelector('h4 a')?.textContent === ${JSON.stringify(note)}); if (!sec) return null; const row = [...sec.querySelectorAll('.rubric-finding')].find(r => r.dataset.code === ${JSON.stringify(code)}); return row ? { msg: row.querySelector('.rubric-finding-msg').textContent, pre: row.querySelector('pre')?.textContent ?? null, buttons: [...row.querySelectorAll('button')].map(b => b.textContent) } : null; })()`);
 const gone = (note, code) => waitFor(async () => !(await findingMsg(note, code)), `${note}/${code} to disappear`, 6000);
 
 await seed();
@@ -930,22 +930,22 @@ await check('P5 migration: exact diff shown, then flat properties, archived_fiel
 });
 
 await check('P5 migrate all notes of a type: one approval, progress, every note written from its own diff', async () => {
-  const label = await ev(`[...document.querySelectorAll('.mod-vschema-check .setting-item-name')].map(e => e.textContent).find(t => /^Migrate all kb notes/.test(t))`);
+  const label = await ev(`[...document.querySelectorAll('.mod-rubric-check .setting-item-name')].map(e => e.textContent).find(t => /^Migrate all kb notes/.test(t))`);
   assert(label, 'the batch button should offer both remaining kb notes');
-  await ev(`[...document.querySelectorAll('.mod-vschema-check .setting-item')].find(r => /^Migrate all kb notes/.test(r.querySelector('.setting-item-name').textContent)).querySelector('button').click(); 0`);
+  await ev(`[...document.querySelectorAll('.mod-rubric-check .setting-item')].find(r => /^Migrate all kb notes/.test(r.querySelector('.setting-item-name').textContent)).querySelector('button').click(); 0`);
   await waitModal('Migrate 2 kb notes');
   assert(!(await read('Knowledge/V5 Old2.md')).includes('schema: 2'), 'written before approval');
   await clickButton('Migrate');
   await waitFor(async () => (await fm('Knowledge/V5 Old3.md')).schema === '2' && (await fm('Knowledge/V5 Old2.md')).schema === '2', 'both notes to migrate', 10000);
   eq([(await fm('Knowledge/V5 Old2.md')).source_title, (await fm('Knowledge/V5 Old3.md')).source_title], ['Lectures 2', 'Lectures 3'], 'flattened');
-  const prog = await ev(`document.querySelector('.vschema-progress').textContent`);
+  const prog = await ev(`document.querySelector('.rubric-progress').textContent`);
   assert(/Migrated 2 of 2/.test(prog), `progress text: ${prog}`);
 });
 
 await check('P5 running the check again leaves no problem on the seeded notes (warnings without a fix remain)', async () => {
-  await ev(`[...document.querySelectorAll('.mod-vschema-check button')].find(b => b.textContent === 'Run again').click(); 0`);
+  await ev(`[...document.querySelectorAll('.mod-rubric-check button')].find(b => b.textContent === 'Run again').click(); 0`);
   await sleep(500);
-  await waitFor(() => ev(`!/Scanning/.test(document.querySelector('.vschema-check-summary').textContent)`), 'the rescan', 15000);
+  await waitFor(() => ev(`!/Scanning/.test(document.querySelector('.rubric-check-summary').textContent)`), 'the rescan', 15000);
   const r = await report();
   const left = Object.entries(r.notes).filter(([t]) => t.startsWith('V5 ')).map(([t, codes]) => `${t}: ${codes.join(',')}`);
   const expected = ['V5 NoCrumb: no-breadcrumb', 'V5 BadCrumb: breadcrumb-unmapped', 'V5 Time: created-after-modified', 'V5 Body: body-tag-unknown'];
@@ -971,9 +971,9 @@ await check('P5 schema problems are listed with file and line', async () => {
   try {
     await write('_schema/modules/review.yaml', orig.replace('default: 6-months', 'default: 9-months'));
     await waitFor(() => ev(`${P}.schemas.status.problems.some(p => p.code === 'bad-default')`), 'the schema reload');
-    await ev(`[...document.querySelectorAll('.mod-vschema-check button')].find(b => b.textContent === 'Run again').click(); 0`);
+    await ev(`[...document.querySelectorAll('.mod-rubric-check button')].find(b => b.textContent === 'Run again').click(); 0`);
     await sleep(500);
-    await waitFor(() => ev(`!/Scanning/.test(document.querySelector('.vschema-check-summary').textContent)`), 'the rescan', 15000);
+    await waitFor(() => ev(`!/Scanning/.test(document.querySelector('.rubric-check-summary').textContent)`), 'the rescan', 15000);
     const r = await report();
     assert(r.globals.some((g) => /9-months/.test(g) && /modules\/review\.yaml:\d+/.test(g)), `globals: ${JSON.stringify(r.globals)}`);
   } finally {
@@ -1037,7 +1037,7 @@ await check('P6 latched single-choice pick saves at once and keeps the list open
   await focusValue('status');
   await ev(`app.commands.executeCommandById('${PLUGIN_ID}:show-all-options'); 0`);
   await waitFor(() => popover(), 'the latched list');
-  await ev(`[...document.querySelectorAll('.vschema-option')].find(o => o.textContent.includes('outdated')).click(); 0`);
+  await ev(`[...document.querySelectorAll('.rubric-option')].find(o => o.textContent.includes('outdated')).click(); 0`);
   await waitFor(async () => (await fmLines('Knowledge/Wave.md')).includes('status: outdated'), 'the pick to save');
   await sleep(500);
   const p = await popover();
@@ -1063,7 +1063,7 @@ await check('P6 an Obsidian update that removes the widget layer: one notice, no
   await openNote('Knowledge/Wave.md');
   await focusValue('status');
   await ev(`app.commands.executeCommandById('${PLUGIN_ID}:show-all-options'); 0`);
-  await waitFor(() => ev(`!!activeDocument.querySelector('.modal .vschema-option-list')`), 'the picker window');
+  await waitFor(() => ev(`!!activeDocument.querySelector('.modal .rubric-option-list')`), 'the picker window');
   await closeStrayModals();
   await ev(`${P}.syncLayer(); 0`);
   await waitFor(() => ev(`${P}.layer.installed`), 'the layer to come back');
@@ -1081,7 +1081,7 @@ await check('P6 an error inside the layer switches it off once; the notes and na
   eq(consoleErrors.length - before, 1, 'logged errors (one, not repeated)');
   consoleErrors.splice(before); // that single error was the one this check provokes
   assert((await ev(`document.querySelectorAll('.metadata-property').length`)) > 5, 'the Properties area stopped rendering');
-  eq(await ev(`document.querySelectorAll('.vschema-chevron, .vschema-popover').length`), 0, 'controls left behind');
+  eq(await ev(`document.querySelectorAll('.rubric-chevron, .rubric-popover').length`), 0, 'controls left behind');
   await ev(`delete ${P}.layer.eligibility; ${P}.layer.failed = false; ${P}.syncLayer(); 0`);
   await waitFor(() => ev(`${P}.layer.installed`), 'the layer to come back');
 });
@@ -1089,14 +1089,14 @@ await check('P6 an error inside the layer switches it off once; the notes and na
 await check('P6 disabling the plugin removes every patch and control; enabling it restores them', async () => {
   await ev(`(async () => { await app.plugins.disablePlugin('${PLUGIN_ID}'); return 0; })()`);
   await sleep(800);
-  const state = await ev(`(() => { const m = app.metadataTypeManager; const info = m.getTypeInfo('status', 'x'); return { unpatched: info.inferred === m.registeredTypeWidgets.text, nativeValues: /iterateFileCache/.test(app.metadataCache.getFrontmatterPropertyValuesForKey.toString()), chevrons: document.querySelectorAll('.vschema-chevron, .vschema-popover, .vschema-hint').length, loaded: !!${P} }; })()`).catch(async () => ev(`(() => { const m = app.metadataTypeManager; const info = m.getTypeInfo('status', 'x'); return { unpatched: info.inferred === m.registeredTypeWidgets.text, nativeValues: /iterateFileCache/.test(app.metadataCache.getFrontmatterPropertyValuesForKey.toString()), chevrons: document.querySelectorAll('.vschema-chevron, .vschema-popover, .vschema-hint').length, loaded: false }; })()`));
+  const state = await ev(`(() => { const m = app.metadataTypeManager; const info = m.getTypeInfo('status', 'x'); return { unpatched: info.inferred === m.registeredTypeWidgets.text, nativeValues: /iterateFileCache/.test(app.metadataCache.getFrontmatterPropertyValuesForKey.toString()), chevrons: document.querySelectorAll('.rubric-chevron, .rubric-popover, .rubric-hint').length, loaded: !!${P} }; })()`).catch(async () => ev(`(() => { const m = app.metadataTypeManager; const info = m.getTypeInfo('status', 'x'); return { unpatched: info.inferred === m.registeredTypeWidgets.text, nativeValues: /iterateFileCache/.test(app.metadataCache.getFrontmatterPropertyValuesForKey.toString()), chevrons: document.querySelectorAll('.rubric-chevron, .rubric-popover, .rubric-hint').length, loaded: false }; })()`));
   eq([state.unpatched, state.nativeValues, state.chevrons], [true, true, 0], 'Obsidian internals after disabling');
   await ev(`(async () => { await app.plugins.enablePlugin('${PLUGIN_ID}'); return 0; })()`);
   await waitFor(() => ev(`!!${P}?.schemas?.pack`), 'the schemas to load again', 8000);
   await waitFor(() => ev(`${P}.layer.installed`), 'the layer to install again');
   await openNote('Tasks/Review.md');
   await openNote('Knowledge/Wave.md');
-  assert((await ev(`document.querySelectorAll('.vschema-chevron').length`)) > 0, 'no controls after enabling again');
+  assert((await ev(`document.querySelectorAll('.rubric-chevron').length`)) > 0, 'no controls after enabling again');
 });
 
 await check('P6 a change arriving through sync while a stamp is pending is accepted, not overwritten (sync conflict)', async () => {
@@ -1127,7 +1127,7 @@ await check('P6 a note written with a newer schema is read-only: nothing writes 
   await openNote('Knowledge/Future.md');
   await focusValue('status');
   await ev(`${P}.layer.toggleFocused(); 0`);
-  await ev(`document.querySelector('.metadata-property[data-property-key="status"] .vschema-chevron')?.click(); 0`);
+  await ev(`document.querySelector('.metadata-property[data-property-key="status"] .rubric-chevron')?.click(); 0`);
   await sleep(600);
   const p = await popover();
   assert(!p || (p.note ?? '').length > 0 || p.options.length === 0, 'the list must not offer picks for a read-only note');
@@ -1368,7 +1368,7 @@ await check('P9 a pick made while the field has focus is shown in the row and is
   await focusValue('status');
   await altDown();
   await sleep(600);
-  await ev(`[...document.querySelectorAll('.vschema-option')].find(o => o.textContent.trim() === ${JSON.stringify(target)}).click(); 0`);
+  await ev(`[...document.querySelectorAll('.rubric-option')].find(o => o.textContent.trim() === ${JSON.stringify(target)}).click(); 0`);
   await waitFor(async () => (await fmLines('Knowledge/Wave.md')).includes(`status: ${target}`), 'the file to change');
   await waitFor(async () => (await shownValue('status')) === target, `the row to show ${target}`, 4000);
   await altUp();
@@ -1385,7 +1385,7 @@ await check('P9 the same holds for a multi-choice list, a typed autocomplete, an
   await focusValue('tags');
   await altDown();
   await sleep(600);
-  await ev(`[...document.querySelectorAll('.vschema-option')].find(o => o.textContent.trim() === 'health').click(); 0`);
+  await ev(`[...document.querySelectorAll('.rubric-option')].find(o => o.textContent.trim() === 'health').click(); 0`);
   await waitFor(async () => (await fmLines('Knowledge/Wave.md')).includes('  - health'), 'the tag to be saved');
   await waitFor(async () => /health/.test(await shownValue('tags')), 'the pill to appear', 4000);
   await altUp();
@@ -1399,7 +1399,7 @@ await check('P9 the same holds for a multi-choice list, a typed autocomplete, an
   await focusValue('status');
   await client.send('Input.insertText', { text: 'out' });
   await waitFor(() => popover(), 'the suggestions');
-  const pt = await ev(`(() => { const o = [...document.querySelectorAll('.vschema-option')].find(x => /outdated/.test(x.textContent)); const r = o.getBoundingClientRect(); return { x: r.left + 40, y: r.top + r.height / 2 }; })()`);
+  const pt = await ev(`(() => { const o = [...document.querySelectorAll('.rubric-option')].find(x => /outdated/.test(x.textContent)); const r = o.getBoundingClientRect(); return { x: r.left + 40, y: r.top + r.height / 2 }; })()`);
   await client.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: pt.x, y: pt.y });
   await client.send('Input.dispatchMouseEvent', { type: 'mousePressed', x: pt.x, y: pt.y, button: 'left', clickCount: 1 });
   await client.send('Input.dispatchMouseEvent', { type: 'mouseReleased', x: pt.x, y: pt.y, button: 'left', clickCount: 1 });
@@ -1410,10 +1410,10 @@ await check('P9 the same holds for a multi-choice list, a typed autocomplete, an
   // a pick from the ▾ list
   await sleep(800);
   await focusValue('status');
-  await waitFor(() => ev(`!!document.querySelector('.metadata-property[data-property-key="status"] .vschema-chevron')`), 'the ▾ button');
-  await ev(`document.querySelector('.metadata-property[data-property-key="status"] .vschema-chevron').click(); 0`);
+  await waitFor(() => ev(`!!document.querySelector('.metadata-property[data-property-key="status"] .rubric-chevron')`), 'the ▾ button');
+  await ev(`document.querySelector('.metadata-property[data-property-key="status"] .rubric-chevron').click(); 0`);
   await waitFor(() => popover(), 'the latched list');
-  await ev(`[...document.querySelectorAll('.vschema-option')].find(o => o.textContent.trim() === 'archived').click(); 0`);
+  await ev(`[...document.querySelectorAll('.rubric-option')].find(o => o.textContent.trim() === 'archived').click(); 0`);
   await waitFor(async () => (await shownValue('status')) === 'archived', 'the row to show archived', 4000);
   await escape();
   await sleep(1200);
@@ -1508,7 +1508,7 @@ await check('P8 a lost key release never leaves the list stuck: any event withou
 
 await check('P8 a list kept open because the pointer was on it closes after a single pick, and when the pointer leaves', async () => {
   const overList = async () => {
-    const b = await ev(`(() => { const r = document.querySelector('.vschema-popover').getBoundingClientRect(); return { x: r.left + 30, y: r.top + 20 }; })()`);
+    const b = await ev(`(() => { const r = document.querySelector('.rubric-popover').getBoundingClientRect(); return { x: r.left + 30, y: r.top + 20 }; })()`);
     await client.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: b.x, y: b.y, modifiers: 1 });
     await sleep(250);
   };
@@ -1522,7 +1522,7 @@ await check('P8 a list kept open because the pointer was on it closes after a si
   await sleep(300);
   assert(await popover(), 'list should stay while the pointer is on it');
   // ...and a single choice closes it
-  await ev(`[...document.querySelectorAll('.vschema-option')].find(o => o.textContent.includes('review')).click(); 0`);
+  await ev(`[...document.querySelectorAll('.rubric-option')].find(o => o.textContent.includes('review')).click(); 0`);
   await waitFor(async () => (await fmLines('Knowledge/Wave.md')).includes('status: review'), 'the pick');
   await sleep(500);
   eq(await popover(), null, 'list after a single pick in a kept-open list');
@@ -1546,7 +1546,7 @@ await check('P8 a list kept open because the pointer was on it closes after a si
   await overList();
   await altUp();
   await sleep(300);
-  await ev(`[...document.querySelectorAll('.vschema-option')].find(o => o.textContent.includes('experiment')).click(); 0`);
+  await ev(`[...document.querySelectorAll('.rubric-option')].find(o => o.textContent.includes('experiment')).click(); 0`);
   await waitFor(async () => (await fmLines('Knowledge/Wave.md')).includes('  - experiment'), 'the tag pick');
   await sleep(500);
   assert(await popover(), 'a multi-choice list closed after a pick');
@@ -1567,7 +1567,7 @@ await check('P8 stress: 24 hold and release cycles, pointer away or on the list,
     await altDown();
     await sleep(quick ? 120 : 650);
     if (onList && !quick) {
-      const b = await ev(`(() => { const p = document.querySelector('.vschema-popover'); if (!p) return null; const r = p.getBoundingClientRect(); return { x: r.left + 30, y: r.top + 20 }; })()`);
+      const b = await ev(`(() => { const p = document.querySelector('.rubric-popover'); if (!p) return null; const r = p.getBoundingClientRect(); return { x: r.left + 30, y: r.top + 20 }; })()`);
       if (b) {
         await client.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: b.x, y: b.y, modifiers: 1 });
         await sleep(150);

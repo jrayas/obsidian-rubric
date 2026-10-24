@@ -1,42 +1,42 @@
-/* Vault Schema styles. Every class is prefixed vschema- to avoid collisions. */
+/* Rubric styles. Every class is prefixed rubric- to avoid collisions. */
 
-.vschema-choice-list {
+.rubric-choice-list {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(8rem, 1fr));
   gap: var(--size-4-2);
   margin: var(--size-4-3) 0;
 }
 
-.vschema-choice {
+.rubric-choice {
   display: flex;
   align-items: center;
   gap: var(--size-4-2);
   cursor: pointer;
 }
 
-.vschema-picker-lead {
+.rubric-picker-lead {
   color: var(--text-muted);
   margin-top: 0;
 }
 
-.vschema-lock-note {
+.rubric-lock-note {
   color: var(--text-muted);
   padding: var(--size-4-2);
 }
 
 /* The list of allowed values (picker window and Properties-area popover). */
-.vschema-options {
+.rubric-options {
   display: flex;
   flex-direction: column;
   gap: var(--size-4-2);
 }
 
-.vschema-option-list {
+.rubric-option-list {
   max-height: 16rem;
   overflow-y: auto;
 }
 
-.vschema-option {
+.rubric-option {
   display: flex;
   align-items: center;
   gap: var(--size-4-2);
@@ -45,34 +45,34 @@
   cursor: pointer;
 }
 
-.vschema-option:hover,
-.vschema-option.is-active {
+.rubric-option:hover,
+.rubric-option.is-active {
   background-color: var(--background-modifier-hover);
 }
 
-.vschema-check {
+.rubric-check {
   display: inline-flex;
   width: var(--icon-s);
   height: var(--icon-s);
   color: var(--interactive-accent);
 }
 
-.vschema-option-note,
-.vschema-option-empty {
+.rubric-option-note,
+.rubric-option-empty {
   color: var(--text-faint);
   font-size: var(--font-ui-smaller);
 }
 
-.vschema-popover,
-.vschema-hint {
+.rubric-popover,
+.rubric-hint {
   position: fixed;
-  left: var(--vschema-left);
-  top: var(--vschema-top);
-  min-width: var(--vschema-min-width);
+  left: var(--rubric-left);
+  top: var(--rubric-top);
+  min-width: var(--rubric-min-width);
   z-index: var(--layer-popover);
 }
 
-.vschema-popover {
+.rubric-popover {
   padding: var(--size-4-2);
   background-color: var(--background-primary);
   border: 1px solid var(--background-modifier-border);
@@ -80,7 +80,7 @@
   box-shadow: var(--shadow-s);
 }
 
-.vschema-hint {
+.rubric-hint {
   width: max-content;
   padding: var(--size-2-2) var(--size-4-2);
   background-color: var(--background-secondary);
@@ -91,20 +91,20 @@
   pointer-events: none;
 }
 
-.vschema-chevron {
+.rubric-chevron {
   margin-left: var(--size-4-1);
 }
 
-.vschema-locked .metadata-property-key {
+.rubric-locked .metadata-property-key {
   opacity: 0.85;
 }
 
-.vschema-preview-heading {
+.rubric-preview-heading {
   margin-bottom: var(--size-2-1);
   font-weight: var(--font-semibold);
 }
 
-.vschema-preview {
+.rubric-preview {
   margin-top: 0;
   padding: var(--size-4-2);
   overflow-x: auto;
@@ -113,59 +113,59 @@
   white-space: pre-wrap;
 }
 
-.vschema-error {
+.rubric-error {
   min-height: var(--size-4-4);
   color: var(--text-error);
   font-size: var(--font-ui-smaller);
 }
 
 /* Vault check report */
-.mod-vschema-check {
+.mod-rubric-check {
   width: min(52rem, 92vw);
 }
 
-.vschema-check-summary {
+.rubric-check-summary {
   font-weight: var(--font-semibold);
   margin-bottom: var(--size-4-2);
 }
 
-.vschema-progress {
+.rubric-progress {
   color: var(--text-muted);
   min-height: var(--size-4-4);
 }
 
-.vschema-check-body {
+.rubric-check-body {
   max-height: 60vh;
   overflow-y: auto;
 }
 
-.vschema-section {
+.rubric-section {
   margin-bottom: var(--size-4-3);
 }
 
-.vschema-section h4 {
+.rubric-section h4 {
   margin: var(--size-4-2) 0 var(--size-2-1);
 }
 
-.vschema-finding {
+.rubric-finding {
   padding: var(--size-2-2) 0;
   border-bottom: 1px solid var(--background-modifier-border);
 }
 
-.vschema-sev {
+.rubric-sev {
   font-size: var(--font-ui-smaller);
   font-weight: var(--font-semibold);
 }
 
-.vschema-sev.is-problem {
+.rubric-sev.is-problem {
   color: var(--text-error);
 }
 
-.vschema-sev.is-warning {
+.rubric-sev.is-warning {
   color: var(--text-warning);
 }
 
-.vschema-fixes {
+.rubric-fixes {
   display: flex;
   flex-wrap: wrap;
   gap: var(--size-2-2);

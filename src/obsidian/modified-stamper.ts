@@ -2,7 +2,7 @@ import { Notice, TFile } from 'obsidian';
 import { formatLocal, decideStamp, fingerprint } from '../core/timestamps';
 import type { NoteState } from '../core/timestamps';
 import { readFrontmatter } from '../core/frontmatter';
-import type VaultSchemaPlugin from '../main';
+import type RubricPlugin from '../main';
 
 /** Quiet period after the last change before `modified` is stamped. */
 export const STAMP_DELAY_MS = 1500;
@@ -20,7 +20,7 @@ export class ModifiedStamper {
   private finished = 0;
   private progress: Notice | null = null;
 
-  constructor(private readonly plugin: VaultSchemaPlugin) {}
+  constructor(private readonly plugin: RubricPlugin) {}
 
   /** Register events and take a baseline of every managed note. Call from onLayoutReady. */
   start(): void {

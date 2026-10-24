@@ -4,7 +4,7 @@ import { stringify } from 'yaml';
 import { filterOptions, optionsFor } from '../core/options';
 import type { OptionList, OptionValue } from '../core/options';
 import type { PropertyDef } from '../core/schema-types';
-import type VaultSchemaPlugin from '../main';
+import type RubricPlugin from '../main';
 
 interface Suggestion {
   value: OptionValue;
@@ -24,7 +24,7 @@ interface Pending {
 export class SchemaValueSuggest extends EditorSuggest<Suggestion> {
   private pending: Pending | null = null;
 
-  constructor(private readonly plugin: VaultSchemaPlugin) {
+  constructor(private readonly plugin: RubricPlugin) {
     super(plugin.app);
   }
 
@@ -87,7 +87,7 @@ export class SchemaValueSuggest extends EditorSuggest<Suggestion> {
 
   renderSuggestion(s: Suggestion, el: HTMLElement): void {
     el.createSpan({ text: s.label });
-    if (s.viaSynonym) el.createSpan({ cls: 'vschema-option-note', text: ` matches ${s.viaSynonym}` });
+    if (s.viaSynonym) el.createSpan({ cls: 'rubric-option-note', text: ` matches ${s.viaSynonym}` });
   }
 
   selectSuggestion(s: Suggestion): void {

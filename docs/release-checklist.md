@@ -41,6 +41,6 @@ From the spec's test plan. Mark with the Obsidian version and platform.
 
 ## Install test in a clean vault
 
-- [ ] Create a new vault; copy only `main.js`, `manifest.json`, `styles.css` into `.obsidian/plugins/vault-schema/`.
+- [ ] Create a new vault; copy only `main.js`, `manifest.json`, `styles.css` into `.obsidian/plugins/rubric/`.
 - [ ] Enable the plugin, run **Install starter schema pack**, create a note from a schema, hold Option on its status.
 - [ ] Repeat with the breadcrumb plugin installed, and with it absent.

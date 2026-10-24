@@ -32,11 +32,11 @@ export class OptionListView {
     private readonly handlers: OptionListHandlers,
     private readonly settings: OptionListSettings,
   ) {
-    this.el = parent.createDiv({ cls: 'vschema-options' });
+    this.el = parent.createDiv({ cls: 'rubric-options' });
     if (settings.filterable) {
       this.filterEl = this.el.createEl('input', {
         type: 'text',
-        cls: 'vschema-filter',
+        cls: 'rubric-filter',
         attr: { placeholder: 'Type to filter', 'aria-label': `Filter ${settings.label}` },
       });
       this.filterEl.addEventListener('input', () => {
@@ -46,7 +46,7 @@ export class OptionListView {
       this.filterEl.addEventListener('keydown', (e) => this.onKey(e));
     }
     this.listEl = this.el.createDiv({
-      cls: 'vschema-option-list',
+      cls: 'rubric-option-list',
       attr: { role: 'listbox', 'aria-label': settings.label, ...(list.mode === 'multi' ? { 'aria-multiselectable': 'true' } : {}) },
     });
     this.render();
@@ -90,20 +90,20 @@ export class OptionListView {
     if (this.active >= this.visible.length) this.active = Math.max(0, this.visible.length - 1);
     this.listEl.empty();
     if (this.visible.length === 0) {
-      this.listEl.createDiv({ cls: 'vschema-option-empty', text: this.list.items.length === 0 ? 'Nothing to choose from.' : 'No match.' });
+      this.listEl.createDiv({ cls: 'rubric-option-empty', text: this.list.items.length === 0 ? 'Nothing to choose from.' : 'No match.' });
       return;
     }
     this.visible.forEach((v, i) => {
       const row = this.listEl.createDiv({
-        cls: 'vschema-option',
+        cls: 'rubric-option',
         attr: { role: 'option', 'aria-selected': String(v.item.checked) },
       });
       row.toggleClass('is-active', i === this.active);
       row.toggleClass('is-checked', v.item.checked);
-      const mark = row.createSpan({ cls: 'vschema-check' });
+      const mark = row.createSpan({ cls: 'rubric-check' });
       if (v.item.checked) setIcon(mark, 'check');
-      row.createSpan({ cls: 'vschema-option-label', text: v.item.label });
-      if (v.viaSynonym) row.createSpan({ cls: 'vschema-option-note', text: `matches ${v.viaSynonym}` });
+      row.createSpan({ cls: 'rubric-option-label', text: v.item.label });
+      if (v.viaSynonym) row.createSpan({ cls: 'rubric-option-note', text: `matches ${v.viaSynonym}` });
       // mousedown keeps focus where it was (the property field) while the list handles the click
       row.addEventListener('mousedown', (e) => e.preventDefault());
       row.addEventListener('click', () => void this.pick(v.item.value));

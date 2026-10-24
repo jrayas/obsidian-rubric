@@ -33,8 +33,8 @@ export class PreviewModal extends Modal {
     if (opts.lead) contentEl.createEl('p', { text: opts.lead });
     for (const section of opts.sections) {
       if (section.lines.length === 0) continue;
-      contentEl.createEl('p', { cls: 'vschema-preview-heading', text: section.heading });
-      const pre = contentEl.createEl('pre', { cls: 'vschema-preview' });
+      contentEl.createEl('p', { cls: 'rubric-preview-heading', text: section.heading });
+      const pre = contentEl.createEl('pre', { cls: 'rubric-preview' });
       pre.setText(section.lines.join('\n'));
     }
     new Setting(contentEl)

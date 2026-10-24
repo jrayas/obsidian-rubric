@@ -7,7 +7,7 @@ import { join } from 'node:path';
 const prod = process.argv[2] === 'production';
 
 // In watch mode, copy the three release files into a dev vault's plugin folder.
-const devPluginDir = process.env.VAULT_SCHEMA_DEV_DIR;
+const devPluginDir = process.env.RUBRIC_DEV_DIR;
 
 const copyPlugin = {
   name: 'copy-to-dev-vault',

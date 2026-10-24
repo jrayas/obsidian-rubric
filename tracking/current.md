@@ -5,7 +5,7 @@
 ## Final summary
 
 ### What was built
-An Obsidian desktop plugin, **Vault Schema** (`vault-schema`, version 0.1.0, minimum Obsidian 1.13.7, desktop only), in TypeScript with a pure rules core (`src/core`) and thin Obsidian adapters (`src/obsidian`). It does everything in the spec's first-version list:
+An Obsidian desktop plugin, **Rubric** (`rubric`, version 0.1.0, minimum Obsidian 1.13.7, desktop only), in TypeScript with a pure rules core (`src/core`) and thin Obsidian adapters (`src/obsidian`). It does everything in the spec's first-version list:
 
 - Schema folder (`_schema`, `.schema` or custom, hidden folders read by polling), a starter pack of eight types / six modules / a tags vocabulary, validation with file and line, last-good-copy and hot reload.
 - Matching (type, breadcrumb, folder, ask; three modes), scope, folder mapping written back with comments kept, the no-match prompt, a declarative settings page.

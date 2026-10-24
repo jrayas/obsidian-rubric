@@ -1,5 +1,5 @@
 import { TFile } from 'obsidian';
-import type VaultSchemaPlugin from '../main';
+import type RubricPlugin from '../main';
 
 /**
  * The small local index of known IDs and first-seen creation times (check 9). A note's `id` and `created` are
@@ -9,7 +9,7 @@ import type VaultSchemaPlugin from '../main';
 export class KnownIndex {
   private saveTimer: number | null = null;
 
-  constructor(private readonly plugin: VaultSchemaPlugin) {}
+  constructor(private readonly plugin: RubricPlugin) {}
 
   private get entries() {
     return this.plugin.settings.index;

@@ -1,13 +1,13 @@
 import { Modal } from 'obsidian';
 import type { TFile } from 'obsidian';
-import type VaultSchemaPlugin from '../main';
+import type RubricPlugin from '../main';
 import { OptionListView } from './option-list';
 import { OptionSession } from './option-session';
 
 /** The small picker window: the primary path, which needs no Properties-area hook. */
 export class OptionPickerModal extends Modal {
   constructor(
-    private readonly plugin: VaultSchemaPlugin,
+    private readonly plugin: RubricPlugin,
     private readonly file: TFile,
     private readonly key: string,
   ) {
@@ -20,7 +20,7 @@ export class OptionPickerModal extends Modal {
     this.setTitle(this.key);
     const { contentEl } = this;
     if (loaded.kind === 'locked') {
-      contentEl.createEl('p', { text: loaded.note, cls: 'vschema-lock-note' });
+      contentEl.createEl('p', { text: loaded.note, cls: 'rubric-lock-note' });
       return;
     }
     if (loaded.kind === 'unavailable') {
@@ -28,7 +28,7 @@ export class OptionPickerModal extends Modal {
       return;
     }
     contentEl.createEl('p', {
-      cls: 'vschema-picker-lead',
+      cls: 'rubric-picker-lead',
       text: `${loaded.type.name} · ${loaded.list.mode === 'multi' ? 'tick several; each change saves at once' : 'pick one; it saves at once'}`,
     });
     const view = new OptionListView(contentEl, loaded.list, { onPick: (v) => session.pick(v) }, { filterable: true, label: this.key });

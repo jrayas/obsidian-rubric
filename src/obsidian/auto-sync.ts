@@ -2,7 +2,7 @@ import { TFile } from 'obsidian';
 import { readFrontmatter } from '../core/frontmatter';
 import type { Frontmatter } from '../core/frontmatter';
 import { baseName, breadcrumbFromPath, nameAfterRename } from '../core/name-sync';
-import type VaultSchemaPlugin from '../main';
+import type RubricPlugin from '../main';
 
 const SETTLE_MS = 400;
 
@@ -13,7 +13,7 @@ const SETTLE_MS = 400;
  * Neither renames or moves a file.
  */
 export class AutoSync {
-  constructor(private readonly plugin: VaultSchemaPlugin) {}
+  constructor(private readonly plugin: RubricPlugin) {}
 
   start(): void {
     this.plugin.registerEvent(

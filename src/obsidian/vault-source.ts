@@ -3,7 +3,7 @@ import type { App } from 'obsidian';
 import type { SchemaFileSource } from '../core/schema-types';
 
 /** Reads schema files straight through the adapter, so a hidden folder (.schema) works. */
-export class VaultSchemaSource implements SchemaFileSource {
+export class RubricSource implements SchemaFileSource {
   constructor(
     private readonly app: App,
     private readonly folder: string,
