@@ -8,7 +8,7 @@ aliases: []
 description: A short test exercise.
 tags: []
 domain: pcb
-section: pcb-core
+section: "   pcb-core"
 level: beginner
 order: 30
 track: []

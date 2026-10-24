@@ -14,7 +14,7 @@ An Obsidian **desktop** plugin (macOS and Windows) that reads note schemas from 
 src/core/       pure TypeScript rules (no `obsidian` import) – unit tested
 src/obsidian/   adapters to Obsidian (vault, UI, Properties area)
 src/main.ts     plugin entry
-schema-pack/    starter schema pack (YAML) + REFERENCE.md; embedded into main.js
+schema-pack/    starter schema pack (YAML) + REFERENCE.md; copied into a vault by hand (not embedded)
 tests/          Vitest tests and helpers
 scripts/        cross-platform Node scripts (debug harness, vault builder, log helper)
 docs/           all documentation        tracking/   live project state

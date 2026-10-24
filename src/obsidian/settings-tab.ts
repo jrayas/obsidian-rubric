@@ -151,8 +151,6 @@ export class RubricSettingTab extends PluginSettingTab {
             control: { type: 'toggle', key: 'writePreviews' },
           },
           { name: 'Reload schemas', desc: 'Read the schema files again now.', action: () => void plugin.schemas.reload('manual') },
-          { name: 'Open schema folder', desc: 'Show the folder in your file manager.', action: () => plugin.openSchemaFolder() },
-          { name: 'Install starter schema pack', desc: 'Create the starter files that are missing. Never overwrites.', action: () => void plugin.installStarterPack() },
         ],
       },
       {

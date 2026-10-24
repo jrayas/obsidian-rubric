@@ -3,7 +3,7 @@
 ## Shape
 
 ```
- schema-pack/ (YAML, source of the starter pack)
+ schema-pack/ (YAML starter schema, copied into a vault by hand)
         │ embedded as text at build time
         ▼
  ┌────────────────────────── src/core (pure TypeScript, no `obsidian` import) ──────────────────────────┐
@@ -68,14 +68,13 @@ See `schema-pack/REFERENCE.md` (shipped to users too). Short version:
 | One file touches internals (`properties-layer.ts`) | The spec requires the undocumented part to sit behind one switch. Every internal access is feature-detected, failure triggers one notice and commands-only mode |
 | Fingerprints and an own-write ledger | Obsidian gives no event source (U7). Content comparison is the fallback the spec names |
 | Hold/latch as a state machine | The rules (delay, cancel on other key, pointer rule, Escape order) are easy to get subtly wrong; a pure machine can be tested exhaustively |
-| Starter pack embedded as text | Releases ship only three files (skill rule 1) |
 | Declarative settings | `minAppVersion >= 1.13.0` so `display()` is not used |
 
 ## Files the plugin writes
 
 - Notes: only through `write-queue`, only `modified` silently; everything else after approval.
 - `registry/folders.yaml` and `registry/scope.yaml` (comments preserved) from the settings page and the no-match prompt.
-- The starter pack, only by the explicit "Install starter schema pack" command and never overwriting a file.
+- `preview/<type>.yaml` (generated, read-only), and a term added to a vocabulary file when you click *Add to vocabulary*. The plugin installs no schema: users copy `schema-pack/` into the schema folder themselves (D-68).
 - `data.json` (plugin settings, remembered "not now" folders, the local index of known IDs and first-seen creation times).
 
 ## Platform notes
