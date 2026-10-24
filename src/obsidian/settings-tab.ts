@@ -237,7 +237,7 @@ export class VaultSchemaSettingTab extends PluginSettingTab {
           },
           {
             name: 'Wait before filling a new note (milliseconds)',
-            desc: 'Gives Obsidian's Templates plugin (or another plugin) time to finish first. Only missing properties are added; nothing already written is changed.',
+            desc: 'Gives Obsidian’s Templates plugin (or another plugin) time to finish first. Only missing properties are added; nothing already written is changed.',
             visible: () => this.plugin.settings.onCreate !== 'nothing',
             control: { type: 'number', key: 'createDelayMs', min: 700, max: 30000, step: 100 },
           },
