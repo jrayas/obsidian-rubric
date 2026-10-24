@@ -1,0 +1,11 @@
+module: review
+description: When the note should be looked at again.
+properties:
+  review_cycle:
+    type: enum
+    values: [none, 1-month, 3-months, 6-months, yearly]
+    default: 6-months
+  review_last:
+    type: date
+  review_next:
+    type: date

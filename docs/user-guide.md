@@ -76,7 +76,7 @@ A new note is not filled while you are still typing its title. Type the name and
 
 ## The property preview (`_schema/preview/`)
 
-For each type the plugin writes a read-only file, for example `_schema/preview/kb.yaml`, showing exactly what a new note of that type starts with: the properties in order, their starting values, and after each one a comment saying what is allowed (for example the status values). Properties that are not written until used are listed below as comments. The files are generated from the schema and rewritten whenever the schema changes, so they never go stale; nothing is read back from them, so editing one has no effect (change the schema files instead). The folder is ignored by the schema reload. Turn it off with **Write property previews to the schema folder**.
+For each type the plugin writes a read-only file, for example `_schema/preview/kb.yaml`, showing exactly what a new note of that type starts with: the properties in order, their starting values, and after each one a comment saying what is allowed (for example the status values). Properties that are not written until used are listed below as comments. Where a **domain** changes a type, a second file, `_schema/preview/kb/pcb.yaml`, shows how a new note of that type starts in that domain, with a line saying what the domain adds, removes and changes. The files are generated from the schema and rewritten whenever the schema changes, so they never go stale; files for a type or domain that no longer exists are removed. Nothing is read back from them, so editing one has no effect (change the schema files instead). The folder is ignored by the schema reload. Turn it off with **Write property previews to the schema folder**.
 
 ## New notes, renames and moves (Automation settings)
 
@@ -107,13 +107,13 @@ These questions are asked for notes you have open. Obsidian cannot tell a change
 
 ## IDs
 
-`PREFIX-YYYY-NNNN`: NT note, KB kb, PR project, EX exercise, JR journal, PE person, RS resource, TK task, LS lesson. The year comes from `created` and never changes; the number counts per type per year and restarts each January. IDs are locked and immutable. A converted note keeps its old ID.
+`PREFIX-YYYY-NNNN`: NT note, KB kb, RS resource, PR project, TK task, EX exercise, SC scenario, EG example, JR journal, PE person, WK workout. The year comes from `created` and never changes; the number counts per type per year and restarts each January. IDs are locked and immutable. A converted note keeps its old ID.
 
 Two notes with the same ID (for example created offline on two devices): the vault check keeps the ID on the older note and offers the newer one the next free number, with a preview. A renumbered ID is never given out again.
 
 ### The unique ID (types with a domain)
 
-A type that uses the `curriculum` module also has `unique_id`: `TYPE-DOMAIN-YEAR-NNNN`, for example `LS-MA-2026-0001` (a lesson in maths). It is separate from `id`, which stays the one global identity and never changes. The unique ID is a readable label with its own counter per type, domain and year, so "the 42nd maths lesson this year" is easy to see. Each domain's two-letter prefix is declared next to the `domain` values in the schema (`prefixes: { maths: MA }`); a domain with no prefix gets no unique ID.
+A type that uses the `curriculum` module also has `unique_id`: `TYPE-DOMAIN-YEAR-NNNN`, for example `KB-MA-2026-0001` (a knowledge note in maths). It is separate from `id`, which stays the one global identity and never changes. The unique ID is a readable label with its own counter per type, domain and year, so "the 42nd maths lesson this year" is easy to see. Each domain's two-letter prefix is declared next to the `domain` values in the schema (`prefixes: { maths: MA }`); a domain with no prefix gets no unique ID.
 
 - New notes get one when they are created or filled, from the note's domain.
 - When a note's **domain** changes (or its **type**, in a conversion), the plugin offers to issue it again, with a preview. The old value is kept in `archived_fields` and never handed out again. Turn the question off with **Ask when the domain changes**.

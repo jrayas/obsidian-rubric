@@ -15,7 +15,7 @@ src/core/       pure TypeScript rules (no `obsidian` import) – unit tested
 src/obsidian/   adapters to Obsidian (vault, UI, Properties area)
 src/main.ts     plugin entry
 schema-pack/    starter schema pack (YAML) + REFERENCE.md; embedded into main.js
-tests/          Vitest tests and helpers
+tests/          Vitest tests and helpers; tests/fixtures/rule-pack is a frozen pack the rule tests use, tests/fixtures/domain-vault is the domain-override fixture
 scripts/        cross-platform Node scripts (debug harness, vault builder, log helper)
 docs/           all documentation        tracking/   live project state
 dev/            scratch vaults (git-ignored)    .tools/   project-local Node (git-ignored)

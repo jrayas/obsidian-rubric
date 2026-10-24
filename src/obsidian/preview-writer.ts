@@ -56,19 +56,34 @@ export class PreviewWriter {
     const adapter = plugin.app.vault.adapter;
     const dir = normalizePath(`${schemas.folder}/${PREVIEW_FOLDER}`);
     const files = renderAllPreviews(pack);
-    if (!(await adapter.exists(dir))) await adapter.mkdir(dir);
+    const ensureDir = async (d: string): Promise<void> => {
+      if (!(await adapter.exists(d))) await adapter.mkdir(d);
+    };
+    await ensureDir(dir);
     for (const [name, text] of files) {
       const path = normalizePath(`${dir}/${name}`);
+      const parent = path.split('/').slice(0, -1).join('/');
+      if (parent !== dir) await ensureDir(parent);
       const current = (await adapter.exists(path)) ? await adapter.read(path) : null;
       if (current !== text) await adapter.write(path, text);
     }
-    // A type that no longer exists: remove only files this plugin generated.
+    await this.removeStale(dir, dir, files);
+  }
+
+  /** A type or domain that no longer exists: remove only files this plugin generated, and folders left empty. */
+  private async removeStale(root: string, dir: string, files: Map<string, string>): Promise<void> {
+    const adapter = this.plugin.app.vault.adapter;
     const listed = await adapter.list(dir);
     for (const f of listed.files) {
-      const name = f.split('/').pop() ?? '';
-      if (files.has(name) || !name.endsWith('.yaml')) continue;
+      const rel = f.slice(root.length + 1);
+      if (files.has(rel) || !rel.endsWith('.yaml')) continue;
       const text = await adapter.read(f);
       if (text.startsWith(PREVIEW_MARKER)) await adapter.remove(f);
+    }
+    for (const sub of listed.folders) {
+      await this.removeStale(root, sub, files);
+      const left = await adapter.list(sub);
+      if (left.files.length === 0 && left.folders.length === 0) await adapter.rmdir(sub, false);
     }
   }
 }

@@ -1,0 +1,34 @@
+type: task
+description: A task. A milestone is a task whose `project` link points to the project.
+uses: [base, findability, relations]
+overrides:
+  status:
+    values: [todo, doing, waiting, done, cancelled]
+    default: todo
+properties:
+  priority:
+    type: integer
+    min: 1
+    max: 5
+    default: 3
+  project:
+    type: link
+    target: project
+  context:
+    type: string
+  effort:
+    type: string
+  scheduled:
+    type: date
+  due:
+    type: date
+  completed:
+    type: date
+  depends_on:
+    type: list
+    items: link
+    default: []
+  recurrence_rule:
+    type: string
+  recurrence_until:
+    type: date

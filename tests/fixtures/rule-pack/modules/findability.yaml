@@ -1,0 +1,25 @@
+module: findability
+description: Help find the note again.
+properties:
+  aliases:
+    type: list
+    items: string
+    default: []
+  description:
+    type: string
+    description: One line, shown in search.
+  keywords:
+    type: list
+    items: string
+    description: Free text, not controlled.
+  tags:
+    type: list
+    items: term
+    vocabulary: tags
+    strict: true
+    normalise: true
+    description: Controlled tags. Synonyms are replaced by the preferred term.
+  language:
+    type: enum
+    values: [en-GB, en-US, fr, de, es]
+    default: en-GB

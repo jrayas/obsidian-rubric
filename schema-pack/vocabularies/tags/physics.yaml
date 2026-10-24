@@ -1,0 +1,10 @@
+# Example: tags for the physics domain, added to the default tags. A term that is already a default term or synonym is an error.
+domain: physics
+terms:
+  mechanics: {}
+  optics: {}
+  thermodynamics:
+    synonyms: [thermo]
+  electromagnetism:
+    synonyms: [em-theory]
+  units: {}

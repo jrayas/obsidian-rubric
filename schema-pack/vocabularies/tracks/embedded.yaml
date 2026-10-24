@@ -1,0 +1,5 @@
+# Example: learning paths for the embedded domain. Every term starts with "embedded-".
+domain: embedded
+terms:
+  embedded-first-firmware: {}
+  embedded-real-time: {}

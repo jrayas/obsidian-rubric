@@ -1,0 +1,8 @@
+# Example: what a kb note is in pcb design. Practical kinds, and the standards it refers to.
+domain: pcb
+override:
+  kind:
+    values: [how-to, troubleshooting, checklist, concept, reference, case-study]
+    default: concept
+add:
+  standards: {type: list, items: string}

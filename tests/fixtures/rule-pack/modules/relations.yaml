@@ -1,0 +1,16 @@
+module: relations
+description: Links to other notes.
+properties:
+  parent:
+    type: link
+    description: Index or hub note.
+  related:
+    type: list
+    items: link
+    default: []
+  supersedes:
+    type: list
+    items: link
+    default: []
+  superseded_by:
+    type: link

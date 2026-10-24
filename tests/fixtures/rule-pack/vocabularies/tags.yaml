@@ -1,0 +1,20 @@
+# Controlled tags. Key = preferred term; synonyms are replaced by it.
+vocabulary: tags
+terms:
+  idea: {}
+  theory: {}
+  quantum:
+    synonyms: [quantum-mechanics, qm]
+  experiment:
+    synonyms: [experiments]
+  how-to:
+    synonyms: [howto, guide]
+  reference: {}
+  policy: {}
+  procedure:
+    synonyms: [sop, standard-operating-procedure]
+  meeting: {}
+  health: {}
+  finance: {}
+  learning:
+    synonyms: [study]

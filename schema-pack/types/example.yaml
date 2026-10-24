@@ -1,0 +1,20 @@
+type: example
+description: A worked example applying a concept to concrete numbers or a concrete case.
+uses: [base, findability, relations, review, pathways, curriculum, verification]
+overrides:
+  status:
+    values: [draft, review, published, outdated, archived]
+    default: draft
+properties:
+  demonstrates:
+    type: link
+    target: kb
+    description: The concept note this example illustrates.
+  difficulty:
+    type: enum
+    values: [beginner, intermediate, advanced, senior]
+    default: beginner
+  confidence:
+    type: enum
+    values: [low, medium, high]
+    default: medium

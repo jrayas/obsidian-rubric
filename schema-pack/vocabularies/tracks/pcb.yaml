@@ -1,0 +1,7 @@
+# Example: learning paths for the pcb domain. Every term starts with "pcb-".
+domain: pcb
+terms:
+  pcb-first-board:
+    synonyms: [pcb-beginner-path]
+  pcb-high-speed: {}
+  pcb-manufacturing: {}

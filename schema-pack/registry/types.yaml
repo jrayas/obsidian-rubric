@@ -1,30 +1,33 @@
-# Registry of note types. The plugin never writes this file.
+# The registry: which modules, vocabularies and types exist. The plugin never writes this file.
 format: 1                  # version of this schema language (not of your notes)
 min_plugin_version: 0.1.0  # oldest plugin that understands this pack
+pack_version: 1            # version of this starter pack, so an update can say what is new
 
 modules:
   base: modules/base.yaml
   findability: modules/findability.yaml
-  taxonomy: modules/taxonomy.yaml
   relations: modules/relations.yaml
-  provenance: modules/provenance.yaml
   review: modules/review.yaml
-  curriculum: modules/curriculum.yaml
+  provenance: modules/provenance.yaml
   verification: modules/verification.yaml
+  pathways: modules/pathways.yaml
+  curriculum: modules/curriculum.yaml
 
 vocabularies:
   tags: vocabularies/tags.yaml
   tracks: vocabularies/tracks.yaml
 
-# prefix: letters used in readable IDs (PREFIX-YYYY-NNNN)
+# prefix: two capital letters used in readable IDs (PREFIX-YYYY-NNNN)
 # version: the `schema` number written into notes of this type
 types:
   note:     { file: types/note.yaml,     prefix: NT, version: 2 }
   kb:       { file: types/kb.yaml,       prefix: KB, version: 2 }
+  resource: { file: types/resource.yaml, prefix: RS, version: 2 }
   project:  { file: types/project.yaml,  prefix: PR, version: 2 }
-  exercise: { file: types/exercise.yaml, prefix: EX, version: 2 }
+  task:     { file: types/task.yaml,     prefix: TK, version: 2 }
+  exercise: { file: types/exercise.yaml, prefix: EX, version: 1 }
+  scenario: { file: types/scenario.yaml, prefix: SC, version: 1 }
+  example:  { file: types/example.yaml,  prefix: EG, version: 1 }
   journal:  { file: types/journal.yaml,  prefix: JR, version: 2 }
   person:   { file: types/person.yaml,   prefix: PE, version: 2 }
-  resource: { file: types/resource.yaml, prefix: RS, version: 2 }
-  task:     { file: types/task.yaml,     prefix: TK, version: 2 }
-  lesson:   { file: types/lesson.yaml,   prefix: LS, version: 1 }
+  workout:  { file: types/workout.yaml,  prefix: WK, version: 1 }

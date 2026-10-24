@@ -1,6 +1,6 @@
 type: kb
-description: A knowledge-base note.
-uses: [base, findability, taxonomy, relations, provenance, review]
+description: A knowledge-base note, placed in a domain and a reading path.
+uses: [base, findability, relations, provenance, review, pathways, curriculum, verification]
 overrides:
   status:
     values: [draft, review, published, outdated, archived]
@@ -8,7 +8,7 @@ overrides:
 properties:
   kind:
     type: enum
-    values: [concept, how-to, reference, troubleshooting, faq]
+    values: [concept, how-to, reference, troubleshooting, faq, checklist, glossary, case-study, index]
     default: concept
   audience:
     type: enum

@@ -1,6 +1,6 @@
 # Example: the maths domain's own sections, added to the default list. Every one starts with "maths-".
 domain: maths
-sections: [maths-foundations, maths-algebra, maths-analysis]
+sections: [maths-foundations, maths-algebra, maths-analysis, maths-statistics]
 override:
   section:
     default: maths-foundations

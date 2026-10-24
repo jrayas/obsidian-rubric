@@ -1,0 +1,6 @@
+# Example: the decisions a pcb scenario is about.
+domain: pcb
+override:
+  decision_type:
+    values: [diagnosis, trade-off, sourcing, design-choice, review]
+    default: diagnosis

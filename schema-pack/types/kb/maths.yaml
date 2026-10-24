@@ -1,0 +1,9 @@
+# Example: what a kb note is in maths. Its own kinds, an added link list, and no audience.
+domain: maths
+override:
+  kind:
+    values: [definition, theorem, proof, example, concept]
+    default: definition
+add:
+  prerequisite_theorems: {type: list, items: link, target: kb}
+remove: [audience]

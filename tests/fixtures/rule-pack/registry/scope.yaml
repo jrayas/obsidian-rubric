@@ -1,0 +1,7 @@
+# Which notes are managed. The schema folder is always excluded and not listed.
+mode: exclude              # exclude (everything except the list) | include-only
+exclude:
+  - Templates
+  - Archive
+  - Attachments
+include: []                # used only when mode is include-only

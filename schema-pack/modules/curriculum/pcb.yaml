@@ -1,0 +1,6 @@
+# Example: the pcb domain's own sections, added to the default list. Every one starts with "pcb-".
+domain: pcb
+sections: [pcb-foundations, pcb-layout-routing, pcb-power-thermal, pcb-high-speed, pcb-manufacturing, pcb-reference]
+override:
+  section:
+    default: pcb-foundations

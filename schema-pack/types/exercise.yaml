@@ -1,33 +1,31 @@
 type: exercise
-description: An exercise or movement.
-uses: [base, findability, taxonomy, relations]
+description: A question to attempt, with a hidden hint and a hidden answer.
+uses: [base, findability, relations, review, pathways, curriculum, verification]
 overrides:
   status:
-    values: [draft, tested, reliable, archived]
+    values: [draft, review, published, outdated, archived]
     default: draft
 properties:
-  category:
+  difficulty:
     type: enum
-    values: [mobility, strength, stability, cardio, skill]
-    default: mobility
-  kind:
+    values: [beginner, intermediate, advanced, senior]
+    default: beginner
+    required: true
+  time_minutes:
+    type: integer
+    min: 1
+    default: 10
+    required: true
+  tests:
+    type: list
+    items: link
+    target: kb
+    description: The concept notes this question checks.
+  answer_verified:
+    type: boolean
+    default: false
+    description: True only after a person has checked the hidden answer.
+  confidence:
     type: enum
-    values: [find-it, drill, stretch, lift, flow]
-  measure:
-    type: enum
-    values: [time, reps, distance, load, quality]
-  equipment:
-    type: list
-    items: string
-  muscles_primary:
-    type: list
-    items: string
-  muscles_secondary:
-    type: list
-    items: string
-  technique:
-    type: link
-    allow_heading: true
-  mistakes:
-    type: link
-    allow_heading: true
+    values: [low, medium, high]
+    default: medium

@@ -32,7 +32,7 @@ If `node` is not installed, use the project-local one: macOS/Linux `export PATH=
 
 | File | Covers |
 | --- | --- |
-| `tests/helpers/` | Seeded notes, the in-memory `FileSource`, the pack loader used by all tests |
+| `tests/helpers/` | Seeded notes, the in-memory `FileSource`, the pack loader used by all tests. The rule tests load the **frozen** pack in `tests/fixtures/rule-pack/`, not `schema-pack/`, so the shipping pack can change freely; the shipping pack has its own tests below |
 | `tests/schema-pack.test.ts` | The shipped pack loads with zero problems; each type resolves to the spec's property list and order |
 | `tests/schema-loader.test.ts` | Folder detection; invalid YAML, unknown module, bad enum default, property type conflict each reported with file (and line); last-good-copy |
 | `tests/folder-detect.test.ts` | `_schema`, `.schema`, custom, both existing, not found |
@@ -58,6 +58,11 @@ If `node` is not installed, use the project-local one: macOS/Linux `export PATH=
 | `tests/vault-check.test.ts` | The eleven checks each find a seeded problem; fixes resolve their own finding; the scan changes nothing; body tags; duplicates and allocation |
 | `tests/migrate.test.ts` | Schema 1 to 2: IDs, every nested block, domain handling, archived values, created/modified last, no value lost |
 | `tests/naming.test.ts` | Default note names in several languages; when a note is still being named |
+| `tests/shipped-pack.test.ts` | The shipping pack: loads clean, the approved types, modules and domains, every example domain's overrides, and that a new note of every type in every domain is complete and valid |
+| `tests/reference.test.ts` | `schema-pack/REFERENCE.md` names every type, module, vocabulary, domain, prefix, property, attribute and every schema problem and vault check code |
+| `tests/test-vault.test.ts` | Builds the test vault, loads its schema and runs the vault check: every example is clean, every note in `Knowledge/Problems/` gives the finding it is named for |
+| `tests/unique-id.test.ts` | The domain-level unique ID: format, scope, allocation, planning, archiving, conversion, schema prefixes, the vault check |
+| `tests/switch.test.ts` | The master switch setting: off on a fresh install, on for saved settings from before it existed |
 | `tests/schema-preview.test.ts` | The generated property preview: valid YAML, keys equal what a new note starts with, allowed values and ranges in comments, optional properties as comments, deterministic, follows schema changes |
 | `tests/name-sync.test.ts` | `name` follows a rename only when plugin-filled; breadcrumb from a path; what to do with a new note in a mapped folder; the new settings' defaults and repair |
 | `tests/options.test.ts` | Options come from the note's schema; synonyms; locked properties and their notes; picking and toggling |

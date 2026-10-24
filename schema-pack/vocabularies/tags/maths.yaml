@@ -5,3 +5,6 @@ terms:
     synonyms: [thm]
   lemma: {}
   proof: {}
+  algebra: {}
+  calculus:
+    synonyms: [calc]

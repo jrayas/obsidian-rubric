@@ -1,0 +1,39 @@
+type: scenario
+description: A real-world situation needing a decision, with a hidden answer and reasoning.
+uses: [base, findability, relations, review, pathways, curriculum, verification]
+overrides:
+  status:
+    values: [draft, review, published, outdated, archived]
+    default: draft
+properties:
+  decision_type:
+    type: enum
+    values: [diagnosis, trade-off, design-choice, review, planning]
+    default: diagnosis
+    required: true
+  difficulty:
+    type: enum
+    values: [beginner, intermediate, advanced, senior]
+    default: beginner
+    required: true
+  time_minutes:
+    type: integer
+    min: 1
+    default: 15
+    required: true
+  tests:
+    type: list
+    items: link
+    target: kb
+    description: The concept notes this scenario checks.
+  senior_signal:
+    type: string
+    description: What separates a good answer from a great one.
+  answer_verified:
+    type: boolean
+    default: false
+    description: True only after a person has checked the hidden answer.
+  confidence:
+    type: enum
+    values: [low, medium, high]
+    default: low

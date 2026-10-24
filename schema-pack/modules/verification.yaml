@@ -1,5 +1,5 @@
 module: verification
-description: An honest record of who wrote a note and whether a person has checked it. Opt-in.
+description: An honest record of who wrote a note and whether a person has checked it.
 properties:
   ai_generated:
     type: boolean

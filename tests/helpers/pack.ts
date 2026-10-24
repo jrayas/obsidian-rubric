@@ -3,7 +3,10 @@ import { join, relative, sep } from 'node:path';
 import { loadSchemaPack } from '../../src/core/schema-loader';
 import type { LoadResult, SchemaFileSource, SchemaPack } from '../../src/core/schema-types';
 
-export const PACK_DIR = join(__dirname, '..', '..', 'schema-pack');
+/** The frozen pack the rule tests use (see tests/fixtures/rule-pack/README.md). */
+export const PACK_DIR = join(__dirname, '..', 'fixtures', 'rule-pack');
+/** The pack that ships with the plugin. */
+export const SHIPPED_DIR = join(__dirname, '..', '..', 'schema-pack');
 export const PLUGIN_VERSION = '0.1.0';
 
 function walk(dir: string, out: string[] = []): string[] {
@@ -15,14 +18,19 @@ function walk(dir: string, out: string[] = []): string[] {
   return out;
 }
 
-/** The shipped starter pack as a map of schema-folder-relative path -> text. */
-export function packFiles(): Map<string, string> {
+/** The frozen rule pack as a map of schema-folder-relative path -> text. */
+export function packFiles(dir: string = PACK_DIR): Map<string, string> {
   const files = new Map<string, string>();
-  for (const p of walk(PACK_DIR)) {
-    const rel = relative(PACK_DIR, p).split(sep).join('/');
+  for (const p of walk(dir)) {
+    const rel = relative(dir, p).split(sep).join('/');
     if (rel.endsWith('.yaml')) files.set(rel, readFileSync(p, 'utf8'));
   }
   return files;
+}
+
+/** The shipping pack (`schema-pack/`) as a map of schema-folder-relative path -> text. */
+export function shippedFiles(): Map<string, string> {
+  return packFiles(SHIPPED_DIR);
 }
 
 export function memSource(files: Map<string, string>): SchemaFileSource {

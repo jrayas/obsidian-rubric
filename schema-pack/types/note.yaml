@@ -1,6 +1,6 @@
 type: note
 description: A general note.
-uses: [base, findability, taxonomy, relations]
+uses: [base, findability, relations]
 overrides:
   status:
     values: [draft, in-progress, evergreen, archived]

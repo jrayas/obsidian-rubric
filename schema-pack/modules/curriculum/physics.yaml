@@ -1,0 +1,6 @@
+# Example: the physics domain's own sections, added to the default list. Every one starts with "physics-".
+domain: physics
+sections: [physics-mechanics, physics-waves-optics, physics-electromagnetism, physics-thermal]
+override:
+  section:
+    default: physics-mechanics

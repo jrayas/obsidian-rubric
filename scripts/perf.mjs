@@ -1,7 +1,8 @@
 // Performance sanity check on a synthetic vault. Not part of the normal e2e run.
 //   node scripts/perf.mjs [notes]     (default 3000)
 import { spawnSync } from 'node:child_process';
-import { join } from 'node:path';
+import { readFileSync, readdirSync, statSync } from 'node:fs';
+import { join, relative, sep } from 'node:path';
 import { ROOT, PLUGIN_ID } from './lib/paths.mjs';
 import { connect, evaluate, pickTarget, sleep } from './lib/cdp.mjs';
 
@@ -18,10 +19,19 @@ const P = `app.plugins.plugins['${PLUGIN_ID}']`;
 await ev(`${P}.settings.enabled = true; 0`); // a fresh install is switched off
 await ev('app.setting.close(); 0'); // the trust flow leaves the settings dialog open and it becomes activeDocument
 
-// starter pack and a vault of N notes
-await ev(`app.commands.executeCommandById('${PLUGIN_ID}:install-starter-schemas'); 0`);
-await sleep(500);
-await ev(`[...activeDocument.querySelectorAll('.modal button')].find(b => b.textContent === 'Create files')?.click(); 0`);
+// the frozen rule pack, copied in as a user would, and a vault of N notes
+const packDir = join(ROOT, 'tests', 'fixtures', 'rule-pack');
+const packFiles = (dir, out = []) => { for (const n of readdirSync(dir)) { const p = join(dir, n); if (statSync(p).isDirectory()) packFiles(p, out); else if (p.endsWith('.yaml')) out.push(p); } return out; };
+const pack = Object.fromEntries(packFiles(packDir).map((f) => [relative(packDir, f).split(sep).join('/'), readFileSync(f, 'utf8')]));
+await ev(`(async () => {
+  const ad = app.vault.adapter; const files = ${JSON.stringify(pack)};
+  for (const [rel, text] of Object.entries(files)) {
+    let cur = '_schema'; if (!(await ad.exists(cur))) await ad.mkdir(cur);
+    for (const part of rel.split('/').slice(0, -1)) { cur += '/' + part; if (!(await ad.exists(cur))) await ad.mkdir(cur); }
+    await ad.write('_schema/' + rel, text);
+  }
+  await app.plugins.plugins['${PLUGIN_ID}'].schemas.reload('manual'); return 0;
+})()`);
 await sleep(2000);
 const types = ['kb', 'task', 'project', 'note'];
 const t0 = Date.now();

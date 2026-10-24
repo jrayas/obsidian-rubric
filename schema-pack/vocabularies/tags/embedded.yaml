@@ -1,0 +1,9 @@
+# Example: tags for the embedded domain, added to the default tags. A term that is already a default term or synonym is an error.
+domain: embedded
+terms:
+  rtos: {}
+  interrupts:
+    synonyms: [isr]
+  dma: {}
+  firmware: {}
+  bootloader: {}

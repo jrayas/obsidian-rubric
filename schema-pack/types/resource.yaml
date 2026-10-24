@@ -1,6 +1,6 @@
 type: resource
 description: A book, article, video or other resource.
-uses: [base, findability, taxonomy, relations]
+uses: [base, findability, relations]
 overrides:
   status:
     values: [to-consume, in-progress, done, abandoned]

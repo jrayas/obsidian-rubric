@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
 import { STARTER_PACK } from '../src/pack';
-import { PACK_DIR, load } from './helpers/pack';
+import { SHIPPED_DIR as PACK_DIR, load } from './helpers/pack';
 
 function walk(dir: string, out: string[] = []): string[] {
   for (const n of readdirSync(dir)) {
@@ -24,6 +24,6 @@ describe('embedded starter pack', () => {
     const files = new Map(Object.entries(STARTER_PACK));
     const r = await load(files);
     expect(r.problems).toEqual([]);
-    expect(r.pack?.typeNames).toHaveLength(9);
+    expect(r.pack?.typeNames).toHaveLength(11);
   });
 });

@@ -1,0 +1,33 @@
+type: workout
+description: A workout, drill or movement.
+uses: [base, findability, relations]
+overrides:
+  status:
+    values: [draft, tested, reliable, archived]
+    default: draft
+properties:
+  category:
+    type: enum
+    values: [mobility, strength, stability, cardio, skill]
+    default: mobility
+  kind:
+    type: enum
+    values: [find-it, drill, stretch, lift, flow]
+  measure:
+    type: enum
+    values: [time, reps, distance, load, quality]
+  equipment:
+    type: list
+    items: string
+  muscles_primary:
+    type: list
+    items: string
+  muscles_secondary:
+    type: list
+    items: string
+  technique:
+    type: link
+    allow_heading: true
+  mistakes:
+    type: link
+    allow_heading: true

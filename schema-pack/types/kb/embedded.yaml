@@ -1,0 +1,10 @@
+# Example: what a kb note is in embedded work. Its own kinds, a target and a toolchain, and standards.
+domain: embedded
+override:
+  kind:
+    values: [how-to, driver, datasheet-notes, concept, troubleshooting]
+    default: concept
+add:
+  target_mcu: {type: string}
+  toolchain: {type: string}
+  standards: {type: list, items: string}

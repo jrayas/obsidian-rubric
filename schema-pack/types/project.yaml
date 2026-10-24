@@ -1,6 +1,6 @@
 type: project
 description: A project. Milestones are task notes whose `project` link points here.
-uses: [base, findability, taxonomy, relations]
+uses: [base, findability, relations]
 overrides:
   status:
     values: [planning, idea, active, on-hold, done, cancelled]

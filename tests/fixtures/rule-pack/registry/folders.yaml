@@ -1,0 +1,18 @@
+# Root folder -> type. The plugin writes this file when you remember a mapping
+# or edit one in settings; comments are kept.
+mode: combined             # combined | auto | manual
+
+# Fixed by design; listed so the file explains itself.
+order: [type, breadcrumb, folder, ask]
+
+folders:
+  Notes: note
+  Knowledge: kb
+  Wiki: kb
+  Projects: project
+  Exercises: exercise
+  Journal: journal
+  People: person
+  Resources: resource
+  Tasks: task
+  Lessons: lesson

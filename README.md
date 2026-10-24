@@ -13,7 +13,7 @@ It is described as **governance-ready**, not as a compliance system: locks are a
 - **Readable IDs.** `KB-2026-0143`: type prefix, creation year, running number. No counter file; the next number is worked out from your notes.
 - **Timestamps.** `created` and `modified` are real frontmatter fields, always last, local time `YYYY-MM-DDTHH:mm`. `modified` follows any change to the note (including changes that arrive through sync) and ignores moves, breadcrumb rewrites and the plugin's own writes. By default it is the only thing written without asking; optional settings can fill new notes, keep `name` in step with the file name, and write `breadcrumb` from the folder.
 - **Controlled tags, statuses and types.** Synonyms are replaced after you approve; unknown tags can be added to the vocabulary in one click; an invalid status offers the allowed values; changing a note's type shows a preview and keeps old values in `archived_fields` (nothing is ever deleted).
-- **Property preview.** `_schema/preview/<type>.yaml` shows, read-only and always current, what a new note of each type starts with and what each property allows.
+- **Property preview.** `_schema/preview/<type>.yaml` shows, read-only and always current, what a new note of each type starts with and what each property allows. Where a domain changes a type, `_schema/preview/<type>/<domain>.yaml` shows it for that domain.
 - **Vault check.** One report with eleven checks (missing properties, bad values, IDs, tags, names, breadcrumbs, old schema versions, leftover `domain`, timestamps, folder case clashes, schema problems). Every fix shows exactly what it will write and waits for you.
 - **Migration.** Schema 1 → 2 with a diff: old IDs to the year format, nested blocks to flat properties, `domain` removed when it repeats the breadcrumb; anything that would be lost goes to `archived_fields`.
 
@@ -45,7 +45,15 @@ No command has a default hotkey.
 
 ## Starter schema
 
-The starter pack has eight everyday types (note, kb, project, exercise, journal, person, resource, task) and an opt-in **lesson** type that uses the `curriculum` (domain, section, level, order, track) and `verification` modules and a `tracks` vocabulary. It ships a ready-made `maths` domain as an example of the overrides below; delete it or copy it for your own domain.
+The starter pack has 11 types in three groups, and `_schema/REFERENCE.md` (installed with it) is the full reference to every file, attribute, domain and error code.
+
+| Group | Types |
+| --- | --- |
+| Knowledge and learning (placed in a **domain** and a reading path, with `unique_id` and verification) | `kb`, `exercise` (a question to attempt), `scenario` (a decision to make), `example` (a worked example) |
+| Everyday | `note`, `resource`, `project`, `task` |
+| Personal | `journal`, `person`, `workout` |
+
+Five example **domains** show what the override files can do, each in a few lines you can copy or delete: `general` (the default, no files), `maths` and `physics` (subject domains: their own kinds and fields), `pcb` and `embedded` (engineering domains: standards, target, toolchain, their own decision types). There is no breadcrumb property, so the pack works without a breadcrumb plugin.
 
 ## Domain overrides
 

@@ -1,9 +1,9 @@
 import { parse } from 'yaml';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { newNoteFrontmatter } from '../src/core/create';
-import { PREVIEW_MARKER, previewFileName, renderAllPreviews, renderTypePreview } from '../src/core/schema-preview';
+import { PREVIEW_MARKER, previewFileName, previewPath, renderAllPreviews, renderTypePreview } from '../src/core/schema-preview';
 import type { ResolvedType, SchemaPack } from '../src/core/schema-types';
-import { loadPack } from './helpers/pack';
+import { load, loadPack, packFiles } from './helpers/pack';
 
 let pack: SchemaPack;
 const t = (n: string) => pack.types.get(n) as ResolvedType;
@@ -75,9 +75,43 @@ describe('the generated property preview', () => {
     expect(renderTypePreview(r.pack?.types.get('kb') as ResolvedType, r.pack as SchemaPack)).toContain('status: draft  # required; draft | review | live | archived');
   });
 
-  it('makes one file per type, named after the type', () => {
+  it('makes one file per type, named after the type, and one per domain that changes it', () => {
     const all = renderAllPreviews(pack);
-    expect([...all.keys()].sort()).toEqual([...pack.typeNames].map(previewFileName).sort());
+    const defaults = [...pack.typeNames].map(previewFileName).sort();
+    expect([...all.keys()].filter((k) => !k.includes('/')).sort()).toEqual(defaults);
+    // the rule pack's maths domain changes the lesson type: its file lands in <type>/<domain>.yaml
+    expect([...all.keys()].filter((k) => k.includes('/'))).toEqual(['lesson/maths.yaml']);
     expect(previewFileName('kb')).toBe('kb.yaml');
+    expect(previewPath('kb', 'maths')).toBe('kb/maths.yaml');
+  });
+
+  it('a domain’s file starts with that domain’s values, prefix and allowed values, and says how it differs', () => {
+    const text = renderAllPreviews(pack).get('lesson/maths.yaml') as string;
+    expect(text.startsWith(PREVIEW_MARKER)).toBe(true);
+    expect(text).toContain('This is how a new "lesson" note starts in the "maths" domain');
+    expect(text).toContain('Compared with the default lesson (lesson.yaml), this domain adds prerequisite_theorems; removes audience; changes section, kind.');
+    expect(text).toContain('domain: maths');
+    expect(text).toContain('unique_id: LS-MA-YYYY-0001  # set by the plugin');
+    expect(text).toContain('section: maths-foundations');
+    expect(text).toContain('kind: definition  # definition | theorem | proof | example | concept');
+    expect(text).not.toContain('audience:'); // removed for this domain
+    const parsed = parse(text) as Record<string, unknown>;
+    expect(parsed.domain).toBe('maths');
+    expect(Object.keys(parsed)).toContain('unique_id');
+  });
+
+  it('the default file is unchanged by the domain files, and a domain with no override has none', () => {
+    const all = renderAllPreviews(pack);
+    expect(all.get('lesson.yaml')).toContain('domain: general');
+    expect(all.get('lesson.yaml')).toContain('unique_id: LS-GE-YYYY-0001');
+    expect(all.get('lesson.yaml')).not.toContain('in the "');
+    expect([...all.keys()].some((k) => k.includes('general'))).toBe(false);
+  });
+
+  it('writes nothing for a pack with no override files', async () => {
+    const files = packFiles();
+    for (const key of [...files.keys()]) if (/^(types|modules|vocabularies)\/[^/]+\/[^/]+\.yaml$/.test(key)) files.delete(key);
+    const plain = (await load(files)).pack as SchemaPack;
+    expect([...renderAllPreviews(plain).keys()].some((k) => k.includes('/'))).toBe(false);
   });
 });

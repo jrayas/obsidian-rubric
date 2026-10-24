@@ -1,0 +1,5 @@
+# Example: learning paths for the physics domain. Every term starts with "physics-".
+domain: physics
+terms:
+  physics-first-course: {}
+  physics-lab-skills: {}

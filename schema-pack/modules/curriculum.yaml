@@ -1,13 +1,13 @@
 module: curriculum
-description: Where a note sits in a reading path (domain, section, level and order). Opt-in, so a type lists it under "uses".
+description: Where a note sits in a reading path (domain, section, level and order). A domain can change the defaults without forking the schema; see types/kb/ for examples.
 properties:
   domain:
     type: enum
     required: true
-    values: [general, maths]
+    values: [general, maths, physics, pcb, embedded]
     default: general
-    prefixes: {general: GE, maths: MA}
-    description: The knowledge domain. Append a value here to add a domain, give it a two-letter prefix under prefixes (unique, declared and not guessed from the word), then add an override folder for it if it needs different values. Never rename one.
+    prefixes: {general: GE, maths: MA, physics: PY, pcb: PC, embedded: EM}
+    description: The knowledge domain. Append a value to add a domain, give it a two-letter prefix under prefixes (unique, declared and not guessed from the word), then add override files for it if it needs different values. Never rename one.
   unique_id:
     type: string
     pattern: '^[A-Z]{2}-[A-Z]{2}-\d{4}-\d{4,}$'
@@ -19,7 +19,7 @@ properties:
     required: true
     values: [general-start-here, general-reference]
     default: general-start-here
-    description: Subject area. Every value starts with its domain and a hyphen. A domain adds its own with "sections" in modules/curriculum/<domain>.yaml.
+    description: Subject area. Every value starts with its domain and a hyphen. A domain adds its own with sections in modules/curriculum/<domain>.yaml.
   level:
     type: enum
     required: true

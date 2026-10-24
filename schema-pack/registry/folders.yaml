@@ -9,10 +9,12 @@ folders:
   Notes: note
   Knowledge: kb
   Wiki: kb
+  Resources: resource
   Projects: project
+  Tasks: task
   Exercises: exercise
+  Scenarios: scenario
+  Examples: example
   Journal: journal
   People: person
-  Resources: resource
-  Tasks: task
-  Lessons: lesson
+  Workouts: workout

@@ -13,6 +13,8 @@ export interface NewNoteOptions {
   status?: string;
   /** Gives the note its unique ID when its type has one and its domain has a prefix. */
   allocateUnique?: AllocateUnique;
+  /** The note's domain, instead of the `domain` property's default. */
+  domain?: string;
 }
 
 /**
@@ -43,6 +45,11 @@ export function newNoteFrontmatter(type: ResolvedType, o: NewNoteOptions): Front
       case 'status':
         fm.status = o.status ?? (defaultValue(def, o.now)) ?? def.values?.[0];
         break;
+      case 'domain': {
+        const v = o.domain ?? defaultValue(def, o.now);
+        if (v !== undefined) fm.domain = v;
+        break;
+      }
       case UNIQUE_ID: {
         // `domain` comes before it in the schema, so its default is already in `fm`
         const scope = o.allocateUnique ? uniqueScope(type, fm.domain) : null;

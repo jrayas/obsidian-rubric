@@ -1,0 +1,9 @@
+# Example: what a kb note is in physics. Its own kinds, and units and a formula.
+domain: physics
+override:
+  kind:
+    values: [law, derivation, experiment, concept, reference]
+    default: concept
+add:
+  units: {type: string}
+  formula: {type: string}

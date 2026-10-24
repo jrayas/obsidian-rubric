@@ -1,0 +1,12 @@
+# Example: tags for the pcb domain, added to the default tags. A term that is already a default term or synonym is an error.
+domain: pcb
+terms:
+  schematic: {}
+  layout: {}
+  routing: {}
+  stack-up:
+    synonyms: [stackup, layer-stack]
+  decoupling:
+    synonyms: [bypassing]
+  impedance: {}
+  emc: {}

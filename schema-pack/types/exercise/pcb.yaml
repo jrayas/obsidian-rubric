@@ -1,0 +1,4 @@
+# Example: a pcb exercise lists the tools it needs.
+domain: pcb
+add:
+  tools_needed: {type: list, items: string}

@@ -1,0 +1,6 @@
+# Example: the embedded domain's own sections, added to the default list. Every one starts with "embedded-".
+domain: embedded
+sections: [embedded-foundations, embedded-peripherals, embedded-rtos, embedded-debugging]
+override:
+  section:
+    default: embedded-foundations

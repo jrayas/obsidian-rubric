@@ -1,0 +1,7 @@
+# Example: a maths exercise says what kind of question it is.
+domain: maths
+add:
+  question_kind:
+    type: enum
+    values: [calculation, proof-writing]
+    default: calculation

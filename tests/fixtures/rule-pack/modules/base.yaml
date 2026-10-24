@@ -1,0 +1,46 @@
+module: base
+description: Properties every note type has.
+properties:
+  type:
+    type: enum
+    required: true
+    values_from: registry   # the list of type names comes from registry/types.yaml
+    description: The note type. Changing it offers to convert the note.
+  schema:
+    type: integer
+    required: true
+    locked: true
+    generated: true
+    description: Schema version the note was written against. Set by the plugin.
+  id:
+    type: string
+    required: true
+    pattern: '^[A-Z]{2}-\d{4}-\d{4,}$'
+    locked: true
+    immutable: true
+    generated: true
+    description: Readable ID, PREFIX-YYYY-NNNN. Set by the plugin.
+  name:
+    type: string
+    required: true
+    description: Should match the file name.
+  status:
+    type: enum
+    required: true
+    values_from: type       # allowed values and default come from each type
+    description: Where the note is in its life.
+  created:
+    type: datetime
+    required: true
+    locked: true
+    immutable: true
+    generated: true
+    position: end
+    description: Local time, set once at creation.
+  modified:
+    type: datetime
+    required: true
+    locked: true
+    generated: true
+    position: end
+    description: Local time of the last change to the note.
