@@ -6,7 +6,14 @@ properties:
     required: true
     values: [general, maths]
     default: general
-    description: The knowledge domain. Append a value here to add a domain, then add an override folder for it if it needs different values. Never rename one.
+    prefixes: {general: GE, maths: MA}
+    description: The knowledge domain. Append a value here to add a domain, give it a two-letter prefix under prefixes (unique, declared and not guessed from the word), then add an override folder for it if it needs different values. Never rename one.
+  unique_id:
+    type: string
+    pattern: '^[A-Z]{2}-[A-Z]{2}-\d{4}-\d{4,}$'
+    locked: true
+    generated: true
+    description: Readable ID within a domain, TYPE-DOMAIN-YEAR-NNNN, with its own counter per type, domain and year. Set by the plugin. Issued again when the note's domain changes, and the old one is kept in archived_fields. Link to a note by its id, never by this.
   section:
     type: enum
     required: true

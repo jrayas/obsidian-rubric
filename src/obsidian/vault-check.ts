@@ -38,7 +38,7 @@ export class VaultCheckService {
       .filter((p) => !p.split('/')[0]?.startsWith('.') && p.split('/')[0]?.toLowerCase() !== plugin.schemas.folder.toLowerCase());
     const settings = plugin.settings;
     const report = runVaultCheck(
-      { pack, now: new Date(), usedIds: plugin.ids.usedIds(), retiredIds: settings.retiredIds, known: settings.index },
+      { pack, now: new Date(), usedIds: plugin.ids.usedIds(), usedUniqueIds: plugin.ids.usedUniqueIds(), retiredIds: settings.retiredIds, known: settings.index },
       notes,
       { folderPaths: folders, schemaProblems: plugin.schemas.status.problems },
     );

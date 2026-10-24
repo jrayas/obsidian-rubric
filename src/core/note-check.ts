@@ -16,6 +16,8 @@ import { checkTags } from './tags';
 import { formatLocal } from './timestamps';
 import { firstSegment } from './normalise';
 import type { Problem, ResolvedType, SchemaPack, Vocabulary } from './schema-types';
+import { UNIQUE_ID, applyUniqueId, nextUniqueId, parseUniqueId, planUniqueId, planUniqueRenumbering, uniqueScope } from './unique-id';
+import type { AllocateUnique } from './unique-id';
 import { isDatetimeText, isEmpty, validateValue } from './validate';
 
 export type FixKind = 'frontmatter' | 'text' | 'vocabulary' | 'index';
@@ -77,6 +79,8 @@ export interface CheckContext {
   now: Date;
   /** IDs already in use anywhere in the vault. */
   usedIds: Iterable<string>;
+  /** Every `unique_id` in the vault (for the domain-level IDs). Optional: absent means none. */
+  usedUniqueIds?: Iterable<string>;
   retiredIds: Iterable<string>;
   /** First-seen ID and `created` per note path (the small local index, check 9). */
   known: Record<string, KnownEntry>;
@@ -156,8 +160,19 @@ export function makeAllocator(used: Iterable<string>, retired: Iterable<string>)
   };
 }
 
+/** Allocates unique IDs during one scan, like `makeAllocator`. */
+export function makeUniqueAllocator(used: Iterable<string>, retired: Iterable<string>): AllocateUnique {
+  const taken = new Set(used);
+  const gone = [...retired];
+  return (typePrefix, domainPrefix, year) => {
+    const id = nextUniqueId(typePrefix, domainPrefix, year, taken, gone);
+    taken.add(id);
+    return id;
+  };
+}
+
 /** All findings for one note (checks 1 to 9; duplicates are found across notes by `checkDuplicates`). */
-export function checkNote(ctx: CheckContext, note: NoteInput, allocate: (prefix: string, year: number) => string): Finding[] {
+export function checkNote(ctx: CheckContext, note: NoteInput, allocate: (prefix: string, year: number) => string, allocateUnique?: AllocateUnique): Finding[] {
   const { type } = note;
   const out: Finding[] = [];
   const add = (check: number, code: string, severity: Finding['severity'], message: string, fixes: Fix[] = []) =>
@@ -247,6 +262,32 @@ export function checkNote(ctx: CheckContext, note: NoteInput, allocate: (prefix:
       const p = parseId(id);
       const year = yearOf(fm.created);
       if (p && year !== null && p.year !== year) add(3, 'id-year', 'warning', `the ID year ${p.year} differs from the year in created (${year}). It is left as it is.`);
+    }
+  }
+
+  // 3 (continued). the unique ID, TYPE-DOMAIN-YEAR-NNNN, which names the note's type and domain --------------------
+  if (allocateUnique && uniqueScope(type, fm.domain)) {
+    const scope = uniqueScope(type, fm.domain);
+    const year = yearOf(fm.created) ?? ctx.now.getFullYear();
+    if (scope && !has(UNIQUE_ID)) {
+      const change = planUniqueId(fm, type, allocateUnique, year);
+      if (change) add(3, 'missing-unique-id', 'problem', `no unique ID. It will get ${change.to}.`, [fmFix('Assign unique ID', note.text, type, (d) => applyUniqueId(d, change, type, ctx.now))]);
+    } else if (scope && !parseUniqueId(fm[UNIQUE_ID])) {
+      add(3, 'malformed-unique-id', 'problem', `unique ID “${typeof fm[UNIQUE_ID] === 'string' ? fm[UNIQUE_ID] : JSON.stringify(fm[UNIQUE_ID])}” is not TYPE-DOMAIN-YEAR-NNNN. It is never changed automatically.`);
+    } else if (scope) {
+      const parsed = parseUniqueId(fm[UNIQUE_ID]);
+      if (parsed && (parsed.typePrefix !== scope.typePrefix || parsed.domainPrefix !== scope.domainPrefix)) {
+        const change = planUniqueId(fm, type, allocateUnique, year);
+        if (change) {
+          add(
+            3,
+            'unique-id-mismatch',
+            'problem',
+            `unique ID ${String(fm[UNIQUE_ID])} names ${parsed.typePrefix}-${parsed.domainPrefix}, but this note is ${scope.typePrefix}-${scope.domainPrefix} (domain ${scope.domain}). It will get ${change.to}; the old one is kept in archived_fields.`,
+            [fmFix('Issue unique ID again', note.text, type, (d) => applyUniqueId(d, change, type, ctx.now), { retire: [String(fm[UNIQUE_ID])] })],
+          );
+        }
+      }
     }
   }
 
@@ -385,6 +426,35 @@ export function checkDuplicates(
   return out;
 }
 
+/** Check 3 across notes: two notes sharing a unique ID. The older keeps it; the newer gets the next free number. */
+export function checkUniqueDuplicates(ctx: CheckContext, notes: NoteInput[], allocated: Iterable<string> = []): Finding[] {
+  const withId = notes.flatMap((n) => {
+    try {
+      const fm = readFrontmatter(n.text);
+      return typeof fm?.[UNIQUE_ID] === 'string' && parseUniqueId(fm[UNIQUE_ID]) ? [{ n, id: fm[UNIQUE_ID], created: typeof fm.created === 'string' ? fm.created : undefined }] : [];
+    } catch {
+      return [];
+    }
+  });
+  const plan = planUniqueRenumbering(withId.map((w) => ({ path: w.n.path, id: w.id, ...(w.created !== undefined ? { created: w.created } : {}), ctime: w.n.ctime })), ctx.retiredIds, [...(ctx.usedUniqueIds ?? []), ...allocated]);
+  const out: Finding[] = [];
+  for (const r of plan) {
+    const note = notes.find((n) => n.path === r.path) as NoteInput;
+    const keeper = withId.find((w) => w.id === r.from && w.n.path !== r.path);
+    out.push({
+      path: note.path,
+      basename: note.basename,
+      check: 3,
+      code: 'duplicate-unique-id',
+      severity: 'problem',
+      message: `unique ID ${r.from} is also used by “${keeper?.n.basename ?? 'an older note'}”, which is older. This note will get ${r.to}.`,
+      fixes: [fmFix('Renumber', note.text, note.type, (d) => void (d[UNIQUE_ID] = r.to), { retire: [r.from] })],
+      baseText: note.text,
+    });
+  }
+  return out;
+}
+
 /** Checks 10 and 11: folders that differ only by case, and problems in the schema files themselves. */
 export function checkGlobal(ctx: CheckContext, folderPaths: string[], schemaProblems: Problem[]): GlobalFinding[] {
   const out: GlobalFinding[] = [];
@@ -424,16 +494,28 @@ export function runVaultCheck(
   extra: { folderPaths: string[]; schemaProblems: Problem[] },
 ): VaultReport {
   const allocate = makeAllocator(ctx.usedIds, ctx.retiredIds);
+  const allocateUnique = makeUniqueAllocator(ctx.usedUniqueIds ?? [], ctx.retiredIds);
   const findings: Finding[] = [];
   const allocated: string[] = [];
+  const allocatedUnique: string[] = [];
   for (const n of notes) {
-    for (const f of checkNote(ctx, n, (prefix, year) => {
-      const id = allocate(prefix, year);
-      allocated.push(id);
-      return id;
-    })) findings.push(f);
+    for (const f of checkNote(
+      ctx,
+      n,
+      (prefix, year) => {
+        const id = allocate(prefix, year);
+        allocated.push(id);
+        return id;
+      },
+      (typePrefix, domainPrefix, year) => {
+        const id = allocateUnique(typePrefix, domainPrefix, year);
+        allocatedUnique.push(id);
+        return id;
+      },
+    )) findings.push(f);
   }
   findings.push(...checkDuplicates(ctx, notes, allocated));
+  findings.push(...checkUniqueDuplicates(ctx, notes, allocatedUnique));
   const global = checkGlobal(ctx, extra.folderPaths, extra.schemaProblems);
   return { scanned: notes.length, findings, globalFindings: global, notesWithFindings: new Set(findings.map((f) => f.path)).size };
 }

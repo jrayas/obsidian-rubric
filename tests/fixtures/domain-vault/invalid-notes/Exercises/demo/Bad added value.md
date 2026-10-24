@@ -8,6 +8,7 @@ aliases: []
 description: A short test exercise.
 tags: []
 domain: demo
+unique_id: EX-DM-2026-0002
 section: demo-basics
 level: beginner
 order: 101

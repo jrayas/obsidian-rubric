@@ -59,7 +59,7 @@ describe('effective types', () => {
 
   it('lists the same effective properties, in the same order, as the vault validator (tests/validator)', () => {
     expect(names(typeFor(pack, 'kb', 'demo')).join(', ')).toBe(
-      'type, schema, id, name, status, aliases, description, tags, domain, section, level, order, track, ai_generated, generated_by, verified, kind, prerequisite_theorems, created, modified',
+      'type, schema, id, name, status, aliases, description, tags, domain, unique_id, section, level, order, track, ai_generated, generated_by, verified, kind, prerequisite_theorems, created, modified',
     );
     expect(names(typeFor(pack, 'exercise', 'demo')).join(', ')).toContain('difficulty, question_kind, created, modified');
   });

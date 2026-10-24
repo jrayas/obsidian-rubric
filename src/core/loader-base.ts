@@ -13,7 +13,7 @@ export const isObj = (v: unknown): v is Obj => typeof v === 'object' && v !== nu
 export const PROPERTY_KEYS = new Set([
   'type', 'items', 'required', 'default', 'values', 'values_from', 'min', 'max', 'pattern', 'vocabulary',
   'strict', 'normalise', 'locked', 'immutable', 'generated', 'managed_by', 'position', 'allow_heading',
-  'target', 'description',
+  'target', 'description', 'prefixes',
 ]);
 export const OVERRIDE_KEYS = new Set(['values', 'default', 'required']);
 
@@ -162,6 +162,35 @@ export function parseProperty(
     }
   }
 
+  let prefixes: Record<string, string> | undefined;
+  if (raw.prefixes !== undefined) {
+    if (type !== 'enum') {
+      ld.warn('unknown-attribute', file, `Property "${name}": "prefixes" only applies to enums`, at('prefixes'));
+    } else if (!isObj(raw.prefixes)) {
+      ld.error('prefixes', file, `Property "${name}": "prefixes" must map each value to two capital letters`, at('prefixes'));
+      ok = false;
+    } else {
+      prefixes = {};
+      const owner = new Map<string, string>();
+      for (const [value, prefix] of Object.entries(raw.prefixes)) {
+        const line = at('prefixes', value);
+        if (typeof prefix !== 'string' || !/^[A-Z]{2}$/.test(prefix)) {
+          ld.error('prefixes', file, `Property "${name}": the prefix for "${value}" must be two capital letters`, line);
+          ok = false;
+        } else if (values && !values.includes(value)) {
+          ld.error('prefixes', file, `Property "${name}": "${value}" has a prefix but is not one of its values`, line);
+          ok = false;
+        } else if (owner.has(prefix)) {
+          ld.error('prefixes', file, `Property "${name}": "${owner.get(prefix) ?? ''}" and "${value}" both use the prefix ${prefix}`, line);
+          ok = false;
+        } else {
+          owner.set(prefix, value);
+          prefixes[value] = prefix;
+        }
+      }
+    }
+  }
+
   const bool = (key: string): boolean => {
     const v = raw[key];
     if (v === undefined) return false;
@@ -207,6 +236,7 @@ export function parseProperty(
       ok = false;
     }
   }
+  if (prefixes) def.prefixes = prefixes;
   if (typeof raw.target === 'string') def.target = raw.target;
   if (typeof raw.description === 'string') def.description = raw.description;
   if (module) def.module = module;

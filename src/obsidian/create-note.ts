@@ -93,7 +93,7 @@ export class CreateNoteModal extends Modal {
       const file = await plugin.ids.exclusive(async () => {
         const now = new Date();
         const id = plugin.ids.allocate(type.prefix, now.getFullYear());
-        const fm = newNoteFrontmatter(type, { name: this.name, id, now });
+        const fm = newNoteFrontmatter(type, { name: this.name, id, now, allocateUnique: (tp, dp, year) => plugin.ids.allocateUnique(tp, dp, year) });
         const text = editFrontmatter('', (draft) => {
           for (const [k, v] of Object.entries(fm)) draft[k] = v;
         }).text;

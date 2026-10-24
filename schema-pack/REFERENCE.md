@@ -82,6 +82,7 @@ A vocabulary file has `vocabulary` (its name) and `terms`: a map of preferred te
 | `position: end` | all | Always sorts after every other property |
 | `allow_heading` | `link` | The link may include a heading: `"[[Note#Heading]]"` |
 | `target` | `link`, list of `link` | Link suggestions are limited to notes of this type |
+| `prefixes` | `enum` (the `domain` property) | Maps each value to a two-letter prefix, unique across the values (`{ general: GE, maths: MA }`). Declared, not guessed from the word, because physics and philosophy would both be `PH`. Used by `unique_id`; a value with no prefix gets no unique ID |
 | `description` | all | Free text for people reading the file |
 
 A property name must have the same value type (and item type) in every type, because Obsidian keeps one type per property name across the vault. Enum value lists may differ between types.
@@ -93,6 +94,7 @@ The eight everyday types (note, kb, project, exercise, journal, person, resource
 | Piece | What it is |
 | --- | --- |
 | `modules/curriculum.yaml` | `domain`, `section`, `level`, `topic`, `order`, `track`: where a note sits in a reading path. `domain` picks the override files below; every `section` value and `track` term starts with its domain and a hyphen |
+| `unique_id` (in the curriculum module) | A second ID, `TYPE-DOMAIN-YEAR-NNNN` such as `LS-MA-2026-0001`, with its own counter per type, domain and year. `id` stays the one global identity (never changes, what links should use); `unique_id` is a readable label that names the note's type and domain, so it is issued again when either changes and the old one is kept in `archived_fields`. Needs `prefixes` on the `domain` property |
 | `modules/verification.yaml` | `ai_generated`, `generated_by`, `verified`, `verified_by`, `references`: an honest record of who wrote a note and whether a person has checked it |
 | `vocabularies/tracks.yaml` | Named learning paths, every term starting with its domain |
 | `types/lesson.yaml` | A teaching note (prefix LS, folder `Lessons`) that uses both modules. A new type starts at schema version 1 |

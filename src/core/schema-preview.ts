@@ -60,7 +60,12 @@ const PLACEHOLDERS = { datetime: 'YYYY-MM-DDTHH:mm' } as const;
 /** What one type's preview file contains. Deterministic: the same schema always gives the same text. */
 export function renderTypePreview(type: ResolvedType, pack: SchemaPack): string {
   // The same function that creates a new note, with stand-ins for what varies per note.
-  const fm = newNoteFrontmatter(type, { name: 'Note name', id: `${type.prefix}-YYYY-0001`, now: new Date(2000, 0, 1) });
+  const fm = newNoteFrontmatter(type, {
+    name: 'Note name',
+    id: `${type.prefix}-YYYY-0001`,
+    now: new Date(2000, 0, 1),
+    allocateUnique: (typePrefix, domainPrefix) => `${typePrefix}-${domainPrefix}-YYYY-0001`,
+  });
   if ('created' in fm) fm.created = PLACEHOLDERS.datetime;
   if ('modified' in fm) fm.modified = PLACEHOLDERS.datetime;
 

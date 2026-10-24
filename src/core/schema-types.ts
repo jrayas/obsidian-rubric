@@ -43,6 +43,8 @@ export interface PropertyDef {
   position?: 'end';
   allowHeading: boolean;
   target?: string;
+  /** On the `domain` enum: each value's two-letter prefix, used by `unique_id` (`{ physics: 'PH' }`). */
+  prefixes?: Record<string, string>;
   description?: string;
   /** Module that defined it, or undefined for a type's own property. */
   module?: string;

@@ -25,6 +25,7 @@ export class ChangeWatcher {
   private readonly timers = new Map<string, number>();
   private readonly lastType = new Map<string, string>();
   private readonly lastCrumb = new Map<string, string>();
+  private readonly lastDomain = new Map<string, string>();
   private readonly renamedAt = new Map<string, number>();
   private readonly dismissed = new Set<string>();
   private busy: Promise<void> = Promise.resolve();
@@ -59,6 +60,11 @@ export class ChangeWatcher {
           this.lastCrumb.delete(old);
           this.lastCrumb.set(f.path, c);
         }
+        const d = this.lastDomain.get(old);
+        if (d !== undefined) {
+          this.lastDomain.delete(old);
+          this.lastDomain.set(f.path, d);
+        }
       }),
     );
   }
@@ -79,6 +85,9 @@ export class ChangeWatcher {
     else this.lastType.delete(file.path);
     if (typeof fm?.breadcrumb === 'string') this.lastCrumb.set(file.path, fm.breadcrumb);
     else this.lastCrumb.delete(file.path);
+    const domain = domainOf(fm);
+    if (domain !== undefined) this.lastDomain.set(file.path, domain);
+    else this.lastDomain.delete(file.path);
   }
 
   private schedule(file: TFile, fm: Record<string, unknown> | undefined): void {
@@ -117,6 +126,7 @@ export class ChangeWatcher {
     }
     const prevType = this.lastType.get(file.path);
     const prevCrumb = this.lastCrumb.get(file.path);
+    const prevDomain = this.lastDomain.get(file.path);
     this.track(file, fm);
     if (!fm) return;
 
@@ -146,6 +156,16 @@ export class ChangeWatcher {
       const key = `convert:${file.path}:${prevType}>${type.name}`;
       if (from && !this.dismissed.has(key)) {
         if (!(await plugin.actions.convert(file, type, from))) this.dismissed.add(key);
+        return;
+      }
+    }
+
+    // the domain changed: the unique ID names the domain, so offer to issue it again
+    const domainNow = domainOf(fm);
+    if (plugin.settings.promptDomainChange && ctx.type?.byName.has('unique_id') && domainNow !== undefined && domainNow !== prevDomain) {
+      const key = `unique:${file.path}:${prevDomain ?? ''}>${domainNow}`;
+      if (!this.dismissed.has(key)) {
+        if (!(await plugin.actions.reissueUniqueId(file, ctx.type))) this.dismissed.add(key);
         return;
       }
     }
@@ -199,7 +219,10 @@ export class ChangeWatcher {
       confirmText: `Convert ${planned.length} notes`,
     });
     if (!ok) {
-      for (const p of planned) this.dismissed.add(`convert:${p.file.path}:${p.source.name}>${p.to.name}`);
+      for (const p of planned) {
+        this.dismissed.add(`convert:${p.file.path}:${p.source.name}>${p.to.name}`);
+        plugin.actions.discard(p);
+      }
       return;
     }
     const progress = new Notice('', 0);

@@ -270,6 +270,7 @@ export class RubricSettingTab extends PluginSettingTab {
           { name: 'Ask about tag synonyms and unknown tags', control: { type: 'toggle', key: 'promptTags' } },
           { name: 'Ask about an invalid status', control: { type: 'toggle', key: 'promptStatus' } },
           { name: 'Ask when the type changes', control: { type: 'toggle', key: 'promptTypeChange' } },
+          { name: 'Ask when the domain changes', desc: 'Offers to issue the unique ID again for the new domain. The old one is kept in archived_fields.', control: { type: 'toggle', key: 'promptDomainChange' } },
         ],
       },
       {

@@ -8,6 +8,7 @@ aliases: []
 description: A short test note.
 tags: [theorem, lemma]
 domain: demo
+unique_id: KB-DM-2026-0002
 section: demo-proofs
 level: beginner
 order: 20

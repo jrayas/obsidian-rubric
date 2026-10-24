@@ -8,6 +8,7 @@ aliases: []
 description: A short test note.
 tags: []
 domain: demo
+unique_id: KB-DM-2026-0006
 section: demo-basics
 level: beginner
 order: 106

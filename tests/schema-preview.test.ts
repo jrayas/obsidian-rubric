@@ -12,11 +12,17 @@ beforeAll(async () => {
 });
 
 describe('the generated property preview', () => {
+  it('shows what a unique ID looks like for a type that has one', () => {
+    const lesson = renderTypePreview(t('lesson'), pack);
+    expect(lesson).toContain('unique_id: LS-GE-YYYY-0001  # set by the plugin');
+    expect(renderTypePreview(t('kb'), pack)).not.toContain('unique_id');
+  });
+
   it('is a valid YAML file whose keys are exactly what a new note of that type starts with, in order', () => {
     for (const type of pack.types.values()) {
       const text = renderTypePreview(type, pack);
       const parsed = parse(text) as Record<string, unknown>;
-      const created = newNoteFrontmatter(type, { name: 'x', id: 'x', now: new Date() });
+      const created = newNoteFrontmatter(type, { name: 'x', id: 'x', now: new Date(), allocateUnique: () => 'x' });
       expect(Object.keys(parsed), type.name).toEqual(Object.keys(created));
     }
   });

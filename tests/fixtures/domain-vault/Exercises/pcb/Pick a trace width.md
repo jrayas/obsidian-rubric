@@ -8,6 +8,7 @@ aliases: []
 description: A short test exercise.
 tags: []
 domain: pcb
+unique_id: EX-PC-2026-0001
 section: pcb-core
 level: beginner
 order: 30

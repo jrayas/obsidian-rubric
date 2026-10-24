@@ -87,7 +87,7 @@ For each type the plugin writes a read-only file, for example `_schema/preview/k
 | Keep the name property in step with the file name | After a rename, `name` follows the file name, but only if it was empty or filled by the plugin | On |
 | Set breadcrumb from the folder | Writes the real folder path to `breadcrumb` when a note is created or moved. Only for people who do not use a breadcrumb plugin | Off |
 | Ask about changes in | Open notes only, or every note (may ask about notes that arrived through sync) | Open notes only |
-| Ask about tag synonyms / an invalid status / when the type changes | Each prompt can be switched off | On |
+| Ask about tag synonyms / an invalid status / when the type changes / when the domain changes | Each prompt can be switched off | On |
 
 Moving or renaming a note never changes `modified`. A move that changes the first breadcrumb segment to another schema still offers the conversion preview.
 
@@ -110,6 +110,15 @@ These questions are asked for notes you have open. Obsidian cannot tell a change
 `PREFIX-YYYY-NNNN`: NT note, KB kb, PR project, EX exercise, JR journal, PE person, RS resource, TK task, LS lesson. The year comes from `created` and never changes; the number counts per type per year and restarts each January. IDs are locked and immutable. A converted note keeps its old ID.
 
 Two notes with the same ID (for example created offline on two devices): the vault check keeps the ID on the older note and offers the newer one the next free number, with a preview. A renumbered ID is never given out again.
+
+### The unique ID (types with a domain)
+
+A type that uses the `curriculum` module also has `unique_id`: `TYPE-DOMAIN-YEAR-NNNN`, for example `LS-MA-2026-0001` (a lesson in maths). It is separate from `id`, which stays the one global identity and never changes. The unique ID is a readable label with its own counter per type, domain and year, so "the 42nd maths lesson this year" is easy to see. Each domain's two-letter prefix is declared next to the `domain` values in the schema (`prefixes: { maths: MA }`); a domain with no prefix gets no unique ID.
+
+- New notes get one when they are created or filled, from the note's domain.
+- When a note's **domain** changes (or its **type**, in a conversion), the plugin offers to issue it again, with a preview. The old value is kept in `archived_fields` and never handed out again. Turn the question off with **Ask when the domain changes**.
+- **Check vault** reports a missing unique ID, one that names another type or domain, a malformed one (never overwritten), and duplicates (the older note keeps it).
+- Link to a note by its `id`, never by its unique ID, which can change.
 
 ## Timestamps
 

@@ -8,6 +8,7 @@ aliases: []
 description: A short test note.
 tags: [lemma, routing]
 domain: demo
+unique_id: KB-DM-2026-0001
 section: demo-basics
 level: beginner
 order: 10

@@ -36,6 +36,8 @@ export interface RubricSettings {
   promptTags: boolean;
   promptStatus: boolean;
   promptTypeChange: boolean;
+  /** Ask to issue the unique ID again when a note's domain changes. */
+  promptDomainChange: boolean;
   /** Folders the user answered "Not now" for; not asked again on every open. */
   skippedFolders: string[];
   /** IDs given up by renumbering. They are never handed out again. */
@@ -65,6 +67,7 @@ export const DEFAULT_SETTINGS: RubricSettings = {
   promptTags: true,
   promptStatus: true,
   promptTypeChange: true,
+  promptDomainChange: true,
   skippedFolders: [],
   retiredIds: [],
   index: {},

@@ -8,6 +8,7 @@ aliases: []
 description: A short test note.
 tags: []
 domain: pcb
+unique_id: KB-PC-2026-0003
 section: pcb-core
 level: beginner
 order: 109

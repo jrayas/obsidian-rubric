@@ -70,7 +70,7 @@ describe('shipped schema pack', () => {
     const pack = await loadPack();
     expect(pack.types.get('lesson')?.properties.map((p) => p.name)).toEqual([
       ...BASE, ...FIND, ...TAX, ...REL,
-      'domain', 'section', 'level', 'topic', 'order', 'track',
+      'domain', 'unique_id', 'section', 'level', 'topic', 'order', 'track',
       'ai_generated', 'generated_by', 'verified', 'verified_by', 'references',
       'kind', 'audience', 'confidence', ...END,
     ]);

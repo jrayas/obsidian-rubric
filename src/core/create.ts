@@ -2,6 +2,8 @@ import { defaultValue } from './convert';
 import type { Frontmatter } from './frontmatter';
 import type { ResolvedType } from './schema-types';
 import { formatLocal } from './timestamps';
+import { UNIQUE_ID, uniqueScope } from './unique-id';
+import type { AllocateUnique } from './unique-id';
 
 export interface NewNoteOptions {
   name: string;
@@ -9,6 +11,8 @@ export interface NewNoteOptions {
   now: Date;
   /** Overrides the type's default status. */
   status?: string;
+  /** Gives the note its unique ID when its type has one and its domain has a prefix. */
+  allocateUnique?: AllocateUnique;
 }
 
 /**
@@ -39,6 +43,12 @@ export function newNoteFrontmatter(type: ResolvedType, o: NewNoteOptions): Front
       case 'status':
         fm.status = o.status ?? (defaultValue(def, o.now)) ?? def.values?.[0];
         break;
+      case UNIQUE_ID: {
+        // `domain` comes before it in the schema, so its default is already in `fm`
+        const scope = o.allocateUnique ? uniqueScope(type, fm.domain) : null;
+        if (scope && o.allocateUnique) fm.unique_id = o.allocateUnique(scope.typePrefix, scope.domainPrefix, o.now.getFullYear());
+        break;
+      }
       default: {
         if (def.managedBy === 'external') break; // another plugin writes it
         if (!def.required && def.default === undefined) break;
@@ -57,6 +67,8 @@ export interface CompletionOptions {
   allocateId: (year: number) => string;
   /** Used for `created` when the note has none (the file's own creation time). */
   fileCreated?: Date;
+  /** Gives the note its unique ID when its type has one and its domain has a prefix. */
+  allocateUnique?: AllocateUnique;
 }
 
 export interface CompletionPlan {
@@ -94,6 +106,11 @@ export function planCompletion(fm: Frontmatter, type: ResolvedType, o: Completio
       case 'modified':
         added.modified = formatLocal(o.now);
         break;
+      case UNIQUE_ID: {
+        const scope = o.allocateUnique ? uniqueScope(type, has('domain') ? fm.domain : added.domain) : null;
+        if (scope && o.allocateUnique) added.unique_id = o.allocateUnique(scope.typePrefix, scope.domainPrefix, year);
+        break;
+      }
       default: {
         if (def.managedBy === 'external') break;
         if (!def.required && def.default === undefined) break;

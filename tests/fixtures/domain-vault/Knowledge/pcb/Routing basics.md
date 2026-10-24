@@ -8,6 +8,7 @@ aliases: []
 description: A short test note.
 tags: [routing, layout]
 domain: pcb
+unique_id: KB-PC-2026-0002
 section: pcb-core
 level: beginner
 order: 10

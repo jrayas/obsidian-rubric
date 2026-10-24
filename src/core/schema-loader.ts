@@ -265,6 +265,10 @@ export async function loadSchemaPack(source: SchemaFileSource, options: LoadOpti
     }
     // `position: end` fields go last, in their declared order.
     const ordered = [...list.filter((p) => p.position !== 'end'), ...list.filter((p) => p.position === 'end')];
+    // A unique ID is made from the domain's prefix, so the type must declare prefixes on its `domain` property.
+    if (ordered.some((p) => p.name === 'unique_id') && !ordered.find((p) => p.name === 'domain')?.prefixes) {
+      ld.error('unique-id-prefixes', entry.file, 'This type has a "unique_id" property, so its "domain" property needs "prefixes" (two capital letters for each domain)', t.file.lineOf(['uses']));
+    }
     const rt: ResolvedType = {
       name,
       prefix,

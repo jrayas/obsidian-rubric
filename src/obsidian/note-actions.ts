@@ -2,6 +2,7 @@ import { Notice } from 'obsidian';
 import type { TFile } from 'obsidian';
 import { planConversion } from '../core/convert';
 import { planCompletion } from '../core/create';
+import { UNIQUE_ID, applyUniqueId, planUniqueId } from '../core/unique-id';
 import { desiredOrder, editFrontmatter, readFrontmatter } from '../core/frontmatter';
 import type { Frontmatter } from '../core/frontmatter';
 import { describeChanges } from '../core/preview';
@@ -18,6 +19,8 @@ export interface PlannedConversion {
   to: ResolvedType;
   plan: ReturnType<typeof planConversion>;
   changes: KeyChange[];
+  /** Unique IDs reserved for this plan; give them back when the plan is not carried out. */
+  reserved: string[];
 }
 
 /** Previewed, approved changes to one note: convert its type, complete it with the properties its type needs. */
@@ -40,9 +43,21 @@ export class NoteActions {
     if (!loaded) return null;
     const source = from ?? this.plugin.notes.context(file, loaded.fm).type;
     if (!source || source.name === to.name) return null;
-    const plan = planConversion(loaded.fm, source, to, new Date());
+    const reserved: string[] = [];
+    const plan = planConversion(loaded.fm, source, to, new Date(), {
+      allocateUnique: (typePrefix, domainPrefix, year) => {
+        const id = this.plugin.ids.allocateUnique(typePrefix, domainPrefix, year);
+        reserved.push(id);
+        return id;
+      },
+    });
     const dry = editFrontmatter(loaded.text, plan.apply, { order: (k) => desiredOrder(k, to), forceOrder: true });
-    return { file, text: loaded.text, source, to, plan, changes: dry.changes };
+    return { file, text: loaded.text, source, to, plan, changes: dry.changes, reserved };
+  }
+
+  /** A plan that will not be carried out: give back its reserved unique IDs. */
+  discard(p: PlannedConversion): void {
+    for (const id of p.reserved) this.plugin.ids.release(id);
   }
 
   /** Write a planned conversion. The note must still equal the text the plan was made from. */
@@ -53,7 +68,14 @@ export class NoteActions {
     const outcome = await plugin.queue.editExact(p.file, p.text, { mutate: p.plan.apply, forceOrder: true });
     if (outcome.error) {
       plugin.watcher.acceptType(p.file.path, p.source.name);
+      this.discard(p);
       return outcome.error;
+    }
+    // The unique ID the note had is kept in archived_fields and never handed out again.
+    const old = p.plan.archived[UNIQUE_ID];
+    if (typeof old === 'string' && !plugin.settings.retiredIds.includes(old)) {
+      plugin.settings.retiredIds.push(old);
+      await plugin.saveSettings();
     }
     return null;
   }
@@ -78,7 +100,10 @@ export class NoteActions {
       ],
       confirmText: 'Convert',
     });
-    if (!ok) return false;
+    if (!ok) {
+      this.discard(planned);
+      return false;
+    }
     const err = await this.applyConversion(planned);
     if (err) {
       new Notice(err);
@@ -101,6 +126,11 @@ export class NoteActions {
       fileCreated: new Date(file.stat.ctime),
       allocateId: (year) => {
         const id = plugin.ids.allocate(type.prefix, year);
+        allocated.push(id);
+        return id;
+      },
+      allocateUnique: (typePrefix, domainPrefix, year) => {
+        const id = plugin.ids.allocateUnique(typePrefix, domainPrefix, year);
         allocated.push(id);
         return id;
       },
@@ -128,6 +158,53 @@ export class NoteActions {
       if (!options.silent) new Notice(outcome.error);
       return false;
     }
+    return true;
+  }
+
+  /**
+   * The note's domain changed: issue its unique ID again for the new domain, after a preview. The old value is kept in
+   * `archived_fields` and never handed out again. Returns true when it was written.
+   */
+  async reissueUniqueId(file: TFile, type: ResolvedType): Promise<boolean> {
+    const { plugin } = this;
+    if (!plugin.requireOn()) return false;
+    const loaded = await this.load(file);
+    if (!loaded) return false;
+    const reserved: string[] = [];
+    const created = typeof loaded.fm.created === 'string' ? loaded.fm.created : '';
+    const year = Number(/^(\d{4})/.exec(created)?.[1] ?? new Date().getFullYear());
+    const now = new Date();
+    const change = planUniqueId(loaded.fm, type, (typePrefix, domainPrefix, y) => {
+      const id = plugin.ids.allocateUnique(typePrefix, domainPrefix, y);
+      reserved.push(id);
+      return id;
+    }, year);
+    if (!change) return false;
+    const mutate = (fm: Frontmatter): void => applyUniqueId(fm, change, type, now);
+    const dry = editFrontmatter(loaded.text, mutate, { order: (k) => desiredOrder(k, type), forceOrder: true });
+    const ok = await preview(plugin.app, {
+      title: `Issue a new unique ID for “${file.basename}”?`,
+      lead: change.from !== undefined
+        ? `The domain changed, so the unique ID ${change.from} no longer fits. The old one is kept in archived_fields and not used again. The ID (id) does not change.`
+        : 'The note has no unique ID yet.',
+      sections: [{ heading: 'Changes', lines: describeChanges(dry.changes) }],
+      confirmText: 'Issue new unique ID',
+    });
+    if (!ok) {
+      for (const id of reserved) plugin.ids.release(id);
+      return false;
+    }
+    const outcome = await plugin.queue.editExact(file, loaded.text, { mutate, forceOrder: true });
+    if (outcome.error) {
+      for (const id of reserved) plugin.ids.release(id);
+      new Notice(outcome.error);
+      return false;
+    }
+    if (change.from !== undefined && !plugin.settings.retiredIds.includes(change.from)) {
+      plugin.settings.retiredIds.push(change.from);
+      await plugin.saveSettings();
+    }
+    new Notice(`Unique ID for “${file.basename}” is now ${change.to}.`);
     return true;
   }
 }

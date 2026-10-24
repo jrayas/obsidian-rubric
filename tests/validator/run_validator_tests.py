@@ -79,6 +79,11 @@ NOTE_RULES = {
     'Domain tag in pcb': "tags term 'theorem' not preferred",                # another domain's tag
     'Added property outside its domain': 'property question_kind not in schema',
     'Bad added value': "question_kind='essay' not allowed",
+    'Missing unique id': 'missing unique_id (domain demo)',
+    'Unique id wrong domain': 'does not match type kb and domain demo (KB-DM)',
+    'Unique id wrong type': 'does not match type kb and domain demo (KB-DM)',
+    'Malformed unique id': 'unique_id pattern',
+    'Unique id duplicate': 'duplicate unique_id KB-DM-2026-0001',
 }
 code, out = run(fresh('invalid-notes', True))
 errs = errors(out)
@@ -123,6 +128,11 @@ CASES = [
     ('added property clashes with another type\'s property of that name', {'types/exercise/demo.yaml': 'domain: demo\nadd:\n  kind: {type: integer}\n'}, 'different value types'),
     ('added list of terms with an unknown vocabulary', {KB: 'domain: demo\nadd:\n  labels: {type: list, items: term, vocabulary: nothing}\n'}, 'needs a known vocabulary'),
     ('add without a type', {KB: 'domain: demo\nadd:\n  thing: {description: x}\n'}, 'needs a type'),
+    ('domain prefix that is not two capital letters', {'modules/curriculum.yaml': lambda t: t.replace('{pcb: PC, demo: DM}', '{pcb: PC, demo: Dem}')}, 'must be two capital letters'),
+    ('two domains with the same prefix', {'modules/curriculum.yaml': lambda t: t.replace('{pcb: PC, demo: DM}', '{pcb: PC, demo: PC}')}, 'both use the prefix PC'),
+    ('prefix for a value the domain property does not have', {'modules/curriculum.yaml': lambda t: t.replace('{pcb: PC, demo: DM}', '{pcb: PC, demo: DM, physics: PH}')}, 'not one of the domain values'),
+    ('unique_id property but no prefixes on domain', {'modules/curriculum.yaml': lambda t: t.replace('    prefixes: {pcb: PC, demo: DM}\n', '')}, 'needs prefixes'),
+    ('a unique_id in a domain that has no prefix', {'modules/curriculum.yaml': lambda t: t.replace('{pcb: PC, demo: DM}', '{pcb: PC}')}, 'unique_id present but domain demo has no prefix'),
     ('override file that does not parse', {KB: 'domain: demo\nremove: [a\n'}, 'does not parse'),
 ]
 for label, changes, expect in CASES:
@@ -163,7 +173,7 @@ code, out = run(root, '--domain', 'demo')
 for expect in ['domain: demo', 'types/kb/demo.yaml', 'override kind: values', 'add prerequisite_theorems', 'remove standards', 'sections: demo-basics, demo-proofs',
                'modules/curriculum/demo.yaml', 'vocabularies/tags/demo.yaml', 'removed: standards', 'added: prerequisite_theorems', 'vocabulary tags: default 3 terms + 2']:
     check('--domain demo prints "%s"' % expect, expect in out, out)
-check('--domain demo: kb lists its effective properties in note order', '  kb: type, schema, id, name, status, aliases, description, tags, domain, section, level, order, track, ai_generated, generated_by, verified, kind, prerequisite_theorems, created, modified' in out, out)
+check('--domain demo: kb lists its effective properties in note order', '  kb: type, schema, id, name, status, aliases, description, tags, domain, unique_id, section, level, order, track, ai_generated, generated_by, verified, kind, prerequisite_theorems, created, modified' in out, out)
 check('--domain demo: exercise gets question_kind and keeps standards', 'difficulty, question_kind, created, modified' in out and 'standards' in out.split('  exercise:')[1].split('\n')[0], out)
 check('--domain demo exits 0', code == 0)
 code, out = run(root, '--domain', 'pcb')

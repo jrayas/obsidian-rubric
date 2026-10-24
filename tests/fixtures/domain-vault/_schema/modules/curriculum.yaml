@@ -4,6 +4,12 @@ properties:
     type: enum
     required: true
     values: [pcb, demo]
+    prefixes: {pcb: PC, demo: DM}
+  unique_id:
+    type: string
+    pattern: '^[A-Z]{2}-[A-Z]{2}-\d{4}-\d{4,}$'
+    locked: true
+    generated: true
   section:
     type: enum
     required: true
