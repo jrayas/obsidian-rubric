@@ -1,283 +1,28 @@
+import { allPropertyOwners, loadDomains } from './domain-loader';
 import { compareVersions } from './semver';
 import { nameKey } from './normalise';
-import { YamlFile } from './yaml-file';
-import type { YamlPath } from './yaml-file';
-import { ITEM_TYPES, SUPPORTED_FORMAT, VALUE_TYPES } from './schema-types';
+import { SUPPORTED_FORMAT } from './schema-types';
+import { Loader, OVERRIDE_KEYS, asStringList, checkDefault, isObj, parseProperties, show } from './loader-base';
+import type { Obj } from './loader-base';
+import type { YamlFile } from './yaml-file';
 import type {
   FoldersConfig,
-  ItemType,
   LoadResult,
   ModuleDef,
-  Problem,
   PropertyDef,
   ResolvedType,
   SchemaFileSource,
   SchemaPack,
   ScopeConfig,
-  Severity,
   TypeOverride,
-  ValueType,
   Vocabulary,
 } from './schema-types';
 
-type Obj = Record<string, unknown>;
-
-/** Render any YAML value for a message without risking "[object Object]". */
-const show = (v: unknown): string => (typeof v === 'string' ? v : (JSON.stringify(v) ?? 'nothing'));
-const isObj = (v: unknown): v is Obj => typeof v === 'object' && v !== null && !Array.isArray(v);
-const PROPERTY_KEYS = new Set([
-  'type', 'items', 'required', 'default', 'values', 'values_from', 'min', 'max', 'pattern', 'vocabulary',
-  'strict', 'normalise', 'locked', 'immutable', 'generated', 'managed_by', 'position', 'allow_heading',
-  'target', 'description',
-]);
-const OVERRIDE_KEYS = new Set(['values', 'default', 'required']);
+export { checkDefault };
 
 export interface LoadOptions {
   /** Version of the running plugin, compared with `min_plugin_version`. */
   pluginVersion: string;
-}
-
-/** Collects problems and reads YAML files, remembering each file's text for line numbers. */
-class Loader {
-  readonly problems: Problem[] = [];
-  private readonly files = new Map<string, YamlFile>();
-
-  constructor(private readonly source: SchemaFileSource) {}
-
-  report(severity: Severity, code: string, file: string, message: string, line?: number): void {
-    this.problems.push({ severity, code, file, message, ...(line !== undefined ? { line } : {}) });
-  }
-
-  error(code: string, file: string, message: string, line?: number): void {
-    this.report('error', code, file, message, line);
-  }
-
-  warn(code: string, file: string, message: string, line?: number): void {
-    this.report('warning', code, file, message, line);
-  }
-
-  /** Read and parse; null (with a problem recorded) when missing or not valid YAML. */
-  async readYaml(path: string, optional = false): Promise<{ file: YamlFile; data: unknown } | null> {
-    const text = await this.source.read(path);
-    if (text === null) {
-      if (!optional) this.error('file-missing', path, `File not found: ${path}`);
-      return null;
-    }
-    const yf = new YamlFile(path, text);
-    const errs = yf.syntaxErrors();
-    if (errs.length > 0) {
-      for (const e of errs) this.error('yaml-syntax', path, `Invalid YAML: ${e.message}`, e.line);
-      return null;
-    }
-    this.files.set(path, yf);
-    return { file: yf, data: yf.toJS() };
-  }
-}
-
-function asStringList(v: unknown): string[] | null {
-  if (!Array.isArray(v)) return null;
-  return v.every((x) => typeof x === 'string' || typeof x === 'number') ? v.map(String) : null;
-}
-
-/** Parse one property definition. Returns null after reporting when it cannot be used. */
-function parseProperty(
-  ld: Loader,
-  yf: YamlFile,
-  basePath: YamlPath,
-  name: string,
-  raw: unknown,
-  module: string | undefined,
-): PropertyDef | null {
-  const file = yf.path;
-  const at = (...rest: string[]) => yf.lineOf([...basePath, name, ...rest]);
-  if (!isObj(raw)) {
-    ld.error('property-shape', file, `Property "${name}" must be a map of attributes`, at());
-    return null;
-  }
-  let ok = true;
-  for (const key of Object.keys(raw)) {
-    if (!PROPERTY_KEYS.has(key)) {
-      ld.warn('unknown-attribute', file, `Property "${name}": unknown attribute "${key}"`, at(key));
-    }
-  }
-  const typeRaw = raw.type;
-  if (typeof typeRaw !== 'string' || !(VALUE_TYPES as readonly string[]).includes(typeRaw)) {
-    ld.error(
-      'unknown-value-type',
-      file,
-      `Property "${name}": unknown value type "${show(typeRaw)}" (use ${VALUE_TYPES.join(', ')})`,
-      at('type'),
-    );
-    return null;
-  }
-  const type = typeRaw as ValueType;
-  let items: ItemType | undefined;
-  if (type === 'list') {
-    if (typeof raw.items !== 'string' || !(ITEM_TYPES as readonly string[]).includes(raw.items)) {
-      ld.error('list-items', file, `Property "${name}": a list needs "items" (one of ${ITEM_TYPES.join(', ')})`, at('items') ?? at());
-      ok = false;
-    } else {
-      items = raw.items as ItemType;
-    }
-  } else if (raw.items !== undefined) {
-    ld.warn('unknown-attribute', file, `Property "${name}": "items" only applies to lists`, at('items'));
-  }
-
-  let values: string[] | undefined;
-  if (raw.values !== undefined) {
-    const list = asStringList(raw.values);
-    if (!list || list.length === 0) {
-      ld.error('enum-values', file, `Property "${name}": "values" must be a non-empty list`, at('values'));
-      ok = false;
-    } else {
-      values = list;
-    }
-  }
-  let valuesFrom: 'type' | 'registry' | undefined;
-  if (raw.values_from !== undefined) {
-    if (raw.values_from === 'type' || raw.values_from === 'registry') valuesFrom = raw.values_from;
-    else {
-      ld.error('values-from', file, `Property "${name}": "values_from" must be "type" or "registry"`, at('values_from'));
-      ok = false;
-    }
-  }
-  if (type === 'enum' && !values && !valuesFrom) {
-    ld.error('enum-values', file, `Property "${name}": an enum needs "values" or "values_from"`, at('type'));
-    ok = false;
-  }
-
-  const num = (key: 'min' | 'max'): number | undefined => {
-    const v = raw[key];
-    if (v === undefined) return undefined;
-    if (typeof v !== 'number' || !Number.isFinite(v)) {
-      ld.error('number-limit', file, `Property "${name}": "${key}" must be a number`, at(key));
-      ok = false;
-      return undefined;
-    }
-    if (type !== 'integer') ld.warn('unknown-attribute', file, `Property "${name}": "${key}" only applies to integers`, at(key));
-    return v;
-  };
-  const min = num('min');
-  const max = num('max');
-  if (min !== undefined && max !== undefined && min > max) {
-    ld.error('number-limit', file, `Property "${name}": min ${min} is above max ${max}`, at('min'));
-    ok = false;
-  }
-
-  let pattern: string | undefined;
-  if (raw.pattern !== undefined) {
-    if (typeof raw.pattern !== 'string') {
-      ld.error('pattern', file, `Property "${name}": "pattern" must be text`, at('pattern'));
-      ok = false;
-    } else {
-      try {
-        new RegExp(raw.pattern);
-        pattern = raw.pattern;
-      } catch (e) {
-        ld.error('pattern', file, `Property "${name}": invalid pattern (${(e as Error).message})`, at('pattern'));
-        ok = false;
-      }
-    }
-  }
-
-  const bool = (key: string): boolean => {
-    const v = raw[key];
-    if (v === undefined) return false;
-    if (typeof v !== 'boolean') {
-      ld.error('boolean-attribute', file, `Property "${name}": "${key}" must be true or false`, at(key));
-      ok = false;
-      return false;
-    }
-    return v;
-  };
-
-  const def: PropertyDef = {
-    name,
-    type,
-    required: bool('required'),
-    strict: bool('strict'),
-    normalise: bool('normalise'),
-    locked: bool('locked'),
-    immutable: bool('immutable'),
-    generated: bool('generated'),
-    allowHeading: bool('allow_heading'),
-    source: { file, line: at() },
-  };
-  if (items) def.items = items;
-  if (raw.default !== undefined) def.default = raw.default;
-  if (values) def.values = values;
-  if (valuesFrom) def.valuesFrom = valuesFrom;
-  if (min !== undefined) def.min = min;
-  if (max !== undefined) def.max = max;
-  if (pattern !== undefined) def.pattern = pattern;
-  if (typeof raw.vocabulary === 'string') def.vocabulary = raw.vocabulary;
-  if (raw.managed_by !== undefined) {
-    if (raw.managed_by === 'external') def.managedBy = 'external';
-    else {
-      ld.error('managed-by', file, `Property "${name}": "managed_by" must be "external"`, at('managed_by'));
-      ok = false;
-    }
-  }
-  if (raw.position !== undefined) {
-    if (raw.position === 'end') def.position = 'end';
-    else {
-      ld.error('position', file, `Property "${name}": "position" must be "end"`, at('position'));
-      ok = false;
-    }
-  }
-  if (typeof raw.target === 'string') def.target = raw.target;
-  if (typeof raw.description === 'string') def.description = raw.description;
-  if (module) def.module = module;
-  return ok ? def : null;
-}
-
-function parseProperties(
-  ld: Loader,
-  yf: YamlFile,
-  data: Obj,
-  module: string | undefined,
-): PropertyDef[] {
-  const out: PropertyDef[] = [];
-  const props = data.properties;
-  if (props === undefined || props === null) return out;
-  if (!isObj(props)) {
-    ld.error('properties-shape', yf.path, '"properties" must be a map of property name to attributes', yf.lineOf(['properties']));
-    return out;
-  }
-  for (const [name, raw] of Object.entries(props)) {
-    const def = parseProperty(ld, yf, ['properties'], name, raw, module);
-    if (def) out.push(def);
-  }
-  return out;
-}
-
-/** Check a default value against a property's type and limits. Returns an error message or null. */
-export function checkDefault(def: PropertyDef, value: unknown, values: string[] | undefined): string | null {
-  if (value === undefined) return null;
-  switch (def.type) {
-    case 'enum':
-      if (typeof value !== 'string' || !values || !values.includes(value))
-        return `default "${show(value)}" is not one of the allowed values (${(values ?? []).join(', ')})`;
-      return null;
-    case 'integer':
-      if (typeof value !== 'number' || !Number.isInteger(value)) return `default "${show(value)}" is not a whole number`;
-      if (def.min !== undefined && value < def.min) return `default ${value} is below min ${def.min}`;
-      if (def.max !== undefined && value > def.max) return `default ${value} is above max ${def.max}`;
-      return null;
-    case 'boolean':
-      return typeof value === 'boolean' ? null : `default "${show(value)}" is not true or false`;
-    case 'list':
-      return Array.isArray(value) ? null : 'default for a list must be a list';
-    case 'date':
-      if (value === 'today') return null;
-      return typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value) ? null : `default "${show(value)}" is not a date (YYYY-MM-DD or today)`;
-    case 'datetime':
-      return typeof value === 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(value)
-        ? null
-        : `default "${show(value)}" is not a datetime (YYYY-MM-DDTHH:mm)`;
-    default:
-      return typeof value === 'string' ? null : `default "${show(value)}" must be text`;
-  }
 }
 
 function parseVocabulary(ld: Loader, name: string, file: string, yf: YamlFile, data: unknown): Vocabulary | null {
@@ -364,6 +109,7 @@ export async function loadSchemaPack(source: SchemaFileSource, options: LoadOpti
 
   // --- modules -------------------------------------------------------------------------
   const modules = new Map<string, ModuleDef>();
+  const moduleFiles = new Map<string, string>();
   const moduleReg = isObj(r.modules) ? r.modules : {};
   if (!isObj(r.modules)) ld.error('registry-shape', REG, 'Missing "modules" map', 1);
   for (const [name, p] of Object.entries(moduleReg)) {
@@ -387,10 +133,12 @@ export async function loadSchemaPack(source: SchemaFileSource, options: LoadOpti
     };
     if (typeof m.data.description === 'string') def.description = m.data.description;
     modules.set(name, def);
+    moduleFiles.set(name, p);
   }
 
   // --- vocabularies --------------------------------------------------------------------
   const vocabularies = new Map<string, Vocabulary>();
+  const vocabularyFiles = new Map<string, string>();
   const vocabReg = isObj(r.vocabularies) ? r.vocabularies : {};
   for (const [name, p] of Object.entries(vocabReg)) {
     if (typeof p !== 'string') {
@@ -400,11 +148,15 @@ export async function loadSchemaPack(source: SchemaFileSource, options: LoadOpti
     const v = await ld.readYaml(p);
     if (!v) continue;
     const vocab = parseVocabulary(ld, name, p, v.file, v.data);
-    if (vocab) vocabularies.set(name, vocab);
+    if (vocab) {
+      vocabularies.set(name, vocab);
+      vocabularyFiles.set(name, p);
+    }
   }
 
   // --- types ---------------------------------------------------------------------------
   const types = new Map<string, ResolvedType>();
+  const typeFiles = new Map<string, string>();
   const typeReg = isObj(r.types) ? r.types : {};
   if (!isObj(r.types) || Object.keys(typeReg).length === 0) ld.error('registry-shape', REG, 'The registry lists no types', reg.file.lineOf(['types']) ?? 1);
   const typeNames = Object.keys(typeReg);
@@ -524,23 +276,25 @@ export async function loadSchemaPack(source: SchemaFileSource, options: LoadOpti
     };
     if (typeof t.data.description === 'string') rt.description = t.data.description;
     types.set(name, rt);
+    typeFiles.set(name, entry.file);
   }
 
-  // --- property type conflicts across types ---------------------------------------------
+  // --- per-domain overrides --------------------------------------------------------------
+  const domainOut = await loadDomains(ld, { source, typeFiles, moduleFiles, vocabularyFiles, modules, vocabularies, types });
+
+  // --- property type conflicts across types (and across each domain's effective types) -------
   const shapes = new Map<string, { sig: string; type: string; file: string; line?: number }>();
-  for (const t of types.values()) {
-    for (const p of t.properties) {
-      const sig = p.type === 'list' ? `list of ${p.items ?? '?'}` : p.type;
-      const prev = shapes.get(p.name);
-      if (!prev) shapes.set(p.name, { sig, type: t.name, file: p.source.file, ...(p.source.line !== undefined ? { line: p.source.line } : {}) });
-      else if (prev.sig !== sig) {
-        ld.error(
-          'type-conflict',
-          p.source.file,
-          `Property "${p.name}" is ${sig} here but ${prev.sig} in type "${prev.type}" (${prev.file}). Obsidian keeps one type per property name.`,
-          p.source.line,
-        );
-      }
+  for (const { type, prop: p } of allPropertyOwners(types, domainOut.effectiveTypes)) {
+    const sig = p.type === 'list' ? `list of ${p.items ?? '?'}` : p.type;
+    const prev = shapes.get(p.name);
+    if (!prev) shapes.set(p.name, { sig, type, file: p.source.file, ...(p.source.line !== undefined ? { line: p.source.line } : {}) });
+    else if (prev.sig !== sig) {
+      ld.error(
+        'type-conflict',
+        p.source.file,
+        `Property "${p.name}" is ${sig} here but ${prev.sig} in type "${prev.type}" (${prev.file}). Obsidian keeps one type per property name.`,
+        p.source.line,
+      );
     }
   }
 
@@ -560,6 +314,7 @@ export async function loadSchemaPack(source: SchemaFileSource, options: LoadOpti
     vocabularies,
     folders,
     scope,
+    ...domainOut,
   };
   return { pack, problems: ld.problems };
 }

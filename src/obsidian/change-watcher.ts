@@ -1,3 +1,4 @@
+import { domainOf, typeFor, vocabFor } from '../core/domain-overrides';
 import { Notice, TFile } from 'obsidian';
 import { checkTags } from '../core/tags';
 import { matchNote } from '../core/matcher';
@@ -117,11 +118,11 @@ export class ChangeWatcher {
     // A first breadcrumb segment that now belongs to another schema, right after a move. Collected for every note
     // (not only open ones) so a folder reorganisation is handled once, as a batch.
     const crumb = typeof fm.breadcrumb === 'string' ? fm.breadcrumb : '';
-    const typeNow = typeof fm.type === 'string' ? (pack.types.get(fm.type) ?? null) : null;
+    const typeNow = typeof fm.type === 'string' ? (typeFor(pack, fm.type, domainOf(fm)) ?? null) : null;
     const moved = Date.now() - (this.renamedAt.get(file.path) ?? 0) < RENAME_WINDOW_MS;
     if (plugin.settings.promptTypeChange && typeNow && crumb && crumb !== prevCrumb && moved && plugin.notes.context(file).verdict.managed) {
       const hit = matchNote(pack, { path: 'x.md', frontmatter: { breadcrumb: crumb } }, { mode: 'auto', noMatch: 'unmanaged' });
-      const to = hit.kind === 'matched' ? pack.types.get(hit.type) : undefined;
+      const to = hit.kind === 'matched' ? typeFor(pack, hit.type, domainOf(fm)) : undefined;
       if (to && to.name !== typeNow.name && !this.dismissed.has(`convert:${file.path}:${typeNow.name}>${to.name}`)) {
         this.candidates.set(file.path, { file, from: typeNow, to });
         this.scheduleFlush();
@@ -136,7 +137,7 @@ export class ChangeWatcher {
 
     // the `type` property changed to another schema
     if (plugin.settings.promptTypeChange && type && prevType && prevType !== type.name) {
-      const from = pack.types.get(prevType);
+      const from = typeFor(pack, prevType, domainOf(fm));
       const key = `convert:${file.path}:${prevType}>${type.name}`;
       if (from && !this.dismissed.has(key)) {
         if (!(await plugin.actions.convert(file, type, from))) this.dismissed.add(key);
@@ -214,7 +215,7 @@ export class ChangeWatcher {
     if (!pack) return;
     for (const def of type.properties) {
       if (def.type !== 'list' || def.items !== 'term' || !def.vocabulary) continue;
-      const vocab = pack.vocabularies.get(def.vocabulary);
+      const vocab = vocabFor(pack, def.vocabulary, domainOf(fm));
       if (!vocab || fm[def.name] === undefined) continue;
       const issues = checkTags(fm[def.name], vocab);
 

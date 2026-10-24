@@ -1,6 +1,15 @@
 # Current
 
-**Updated (automation settings added):** 2026-10-21 01:44 — **Project complete.** Every item in `docs/plan.md` is done (see `tracking/progress.md`), all tests pass and the build succeeds.
+**Updated:** 2026-10-25 — latest task: **per-domain schema overrides** (D-63 to D-67), done and tested, committed locally, **not pushed**. The summary below it is the earlier project summary; its test counts are out of date (now 315 unit tests, 64 validator tests, 86 real-app checks that were last run before this task).
+
+## Latest task: per-domain overrides
+
+- Plugin: `src/core/domain-overrides.ts` (resolution), `src/core/domain-loader.ts` (reading and checking the files), `src/core/loader-base.ts` (shared loader pieces moved out of `schema-loader.ts`). `typeFor` / `vocabFor` give the effective type or vocabulary for a note's `domain`; `NoteService.context()` returns the effective type, so options, autocomplete, the vault check and the write queue follow.
+- Validator: `/Users/dominic/Vault/Second Brain The Knowledge/tools/validate.py` (edited in place, the only vault file touched; **not committed** in the vault). Output and exit code are byte-identical on the real vault for six argument combinations (0 errors, 574 notes).
+- Tests: `npm test` (315), `npm run test:validator` (64, against `tests/fixtures/domain-vault`, needs the vault's validator path or `VALIDATE_PY`). Both also checked on a scratch copy of the real vault with a `maths` domain added (0 problems).
+- Found on the way (D-65): vault check 8 and the schema 1 to 2 migration treated a defined `domain` property as a leftover and offered to remove it. Fixed.
+- **Not run:** the real-app suite (`npm run e2e`) and any GUI check, as asked earlier. The new code in `src/obsidian/` is small (it passes the note's domain to the new lookups); by hand in `dev/testvault` it is untested.
+- Test vault plugin folder updated with the new build.
 
 ## Final summary
 

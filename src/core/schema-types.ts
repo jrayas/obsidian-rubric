@@ -68,6 +68,8 @@ export interface VocabularyTerm {
 }
 
 export interface Vocabulary {
+  /** Set on an effective vocabulary: the domain whose terms were added. Absent on the default vocabulary. */
+  domain?: string;
   name: string;
   file: string;
   terms: VocabularyTerm[];
@@ -76,6 +78,8 @@ export interface Vocabulary {
 }
 
 export interface ResolvedType {
+  /** Set on an effective type: the domain whose overrides were applied. Absent on the default type. */
+  domain?: string;
   name: string;
   prefix: string;
   version: number;
@@ -115,7 +119,47 @@ export interface ScopeConfig {
   include: string[];
 }
 
+/** What one domain override file may change about one existing property. */
+export interface DomainChange {
+  values?: string[];
+  default?: unknown;
+  description?: string;
+  line?: number;
+}
+
+/** A type or module override file for one domain: `override`, `add`, `remove` (and `sections` in a module file). */
+export interface DomainFile {
+  file: string;
+  domain: string;
+  /** 'type' or 'module', and its name. */
+  kind: 'type' | 'module';
+  name: string;
+  override: Map<string, DomainChange>;
+  add: PropertyDef[];
+  remove: { name: string; line?: number }[];
+  /** Extra values for the module's `section` property (module files only). */
+  sections: string[];
+}
+
+/** A vocabulary override file: extra terms for one domain. */
+export interface DomainVocabulary {
+  file: string;
+  domain: string;
+  name: string;
+  terms: VocabularyTerm[];
+  /** Line of each term in the file, for messages. */
+  lines: Map<string, number | undefined>;
+}
+
 export interface SchemaPack {
+  /** The values of the `domain` property: the domains that may have override files. */
+  domains: string[];
+  /** Override files found, by domain slug. */
+  domainFiles: Map<string, { types: Map<string, DomainFile>; modules: Map<string, DomainFile>; vocabularies: Map<string, DomainVocabulary> }>;
+  /** Effective types, key `<domain>/<type>`. A pair with no override has no entry: the default type applies. */
+  effectiveTypes: Map<string, ResolvedType>;
+  /** Effective vocabularies, key `<domain>/<vocabulary>`. */
+  effectiveVocabularies: Map<string, Vocabulary>;
   format: number;
   minPluginVersion: string;
   typeNames: string[];
@@ -135,6 +179,8 @@ export interface LoadResult {
 /** Read-only access to the schema folder. Paths are relative to it, with `/` separators. */
 export interface SchemaFileSource {
   read(path: string): Promise<string | null>;
+  /** Names of the files (not folders) directly inside a folder; empty when the folder does not exist. */
+  list(dir: string): Promise<string[]>;
 }
 
 export const SUPPORTED_FORMAT = 1;

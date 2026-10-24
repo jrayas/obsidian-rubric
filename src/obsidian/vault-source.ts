@@ -19,6 +19,14 @@ export class RubricSource implements SchemaFileSource {
     if (!(await adapter.exists(p))) return null;
     return adapter.read(p);
   }
+
+  async list(dir: string): Promise<string[]> {
+    const adapter = this.app.vault.adapter;
+    const p = this.full(dir);
+    if (!(await adapter.exists(p))) return [];
+    const listed = await adapter.list(p);
+    return listed.files.map((f) => f.split('/').pop() ?? f);
+  }
 }
 
 /** Root-level folder names, including hidden ones, which the vault index does not list. */

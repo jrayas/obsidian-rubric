@@ -1,6 +1,7 @@
 import { Editor, EditorSuggest, TFile } from 'obsidian';
 import type { EditorPosition, EditorSuggestContext, EditorSuggestTriggerInfo } from 'obsidian';
 import { stringify } from 'yaml';
+import { domainOf } from '../core/domain-overrides';
 import { filterOptions, optionsFor } from '../core/options';
 import type { OptionList, OptionValue } from '../core/options';
 import type { PropertyDef } from '../core/schema-types';
@@ -69,7 +70,7 @@ export class SchemaValueSuggest extends EditorSuggest<Suggestion> {
     const def = ctx.type.byName.get(key);
     const pack = this.plugin.schemas.pack;
     if (!def || !pack) return null;
-    const list = optionsFor(def, ctx.frontmatter?.[key], pack);
+    const list = optionsFor(def, ctx.frontmatter?.[key], pack, domainOf(ctx.frontmatter));
     if (!list || list.linkTarget) return null; // link lists are offered by the picker, not inline
     this.pending = { def, list, form };
     return { start: { line: cursor.line, ch: cursor.ch - query.length }, end: cursor, query };

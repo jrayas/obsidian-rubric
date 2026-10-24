@@ -1,0 +1,6 @@
+domain: demo
+add:
+  question_kind:
+    type: enum
+    values: [calculation, proof-writing]
+    default: calculation

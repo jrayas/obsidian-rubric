@@ -1,0 +1,3 @@
+mode: exclude
+exclude: [_meta, tools]
+include: []

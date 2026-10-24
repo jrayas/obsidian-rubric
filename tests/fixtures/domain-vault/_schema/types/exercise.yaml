@@ -1,0 +1,12 @@
+type: exercise
+description: A question to attempt.
+uses: [base, findability, curriculum, verification]
+overrides:
+  status:
+    values: [draft, review, published]
+    default: draft
+properties:
+  difficulty:
+    type: enum
+    values: [beginner, intermediate, advanced]
+    required: true

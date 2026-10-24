@@ -55,3 +55,5 @@ Ticked with date and time (local). Task definitions are in `docs/plan.md`.
 - [x] P6.2 Manifest minimum version, desktop-only — 2026-10-21 01:33
 - [x] P6.3 User docs and release checklist — 2026-10-21 01:33
 - [x] P6.4 Package and clean-vault install — 2026-10-21 01:33
+
+- [x] 2026-10-25 Per-domain schema overrides: engine, loader, validator, fixtures, tests, README (D-63 to D-67)

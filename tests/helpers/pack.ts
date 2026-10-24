@@ -26,7 +26,14 @@ export function packFiles(): Map<string, string> {
 }
 
 export function memSource(files: Map<string, string>): SchemaFileSource {
-  return { read: (path) => Promise.resolve(files.get(path) ?? null) };
+  return {
+    read: (path) => Promise.resolve(files.get(path) ?? null),
+    list: (dir) => {
+      const prefix = `${dir}/`;
+      const names = [...files.keys()].filter((k) => k.startsWith(prefix) && !k.slice(prefix.length).includes('/')).map((k) => k.slice(prefix.length));
+      return Promise.resolve(names);
+    },
+  };
 }
 
 export function load(files: Map<string, string>, pluginVersion = PLUGIN_VERSION): Promise<LoadResult> {

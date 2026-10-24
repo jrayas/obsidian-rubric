@@ -1,0 +1,8 @@
+domain: demo
+override:
+  kind:
+    values: [definition, theorem, proof]
+    default: definition
+add:
+  prerequisite_theorems: {type: list, items: link, target: kb}
+remove: [standards]

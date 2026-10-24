@@ -1,0 +1,14 @@
+module: findability
+properties:
+  aliases:
+    type: list
+    items: string
+    default: []
+  description:
+    type: string
+  tags:
+    type: list
+    items: term
+    vocabulary: tags
+    strict: true
+    normalise: true

@@ -85,9 +85,9 @@ export function planMigration(fm: Frontmatter, type: ResolvedType, now: Date): M
     if (Object.keys(leftovers).length > 0) archived[block] = leftovers;
   }
 
-  // leftover domain texts
+  // leftover domain texts (a schema that defines `domain` as a real property keeps it)
   for (const key of ['domain', 'domain_path'] as const) {
-    if (fm[key] === undefined) continue;
+    if (fm[key] === undefined || type.byName.has(key)) continue;
     removeKeys.push(key);
     if (!domainRepeatsBreadcrumb(fm, key)) archived[key] = fm[key];
   }

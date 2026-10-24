@@ -8,3 +8,6 @@ coverage/
 .claude/
 .obsidian/
 *.zip
+
+# test fixtures carry their own .claude folder (a domain-file stand-in)
+!tests/fixtures/domain-vault/.claude/

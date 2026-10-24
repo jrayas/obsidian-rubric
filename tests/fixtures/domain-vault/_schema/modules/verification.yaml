@@ -1,0 +1,13 @@
+module: verification
+properties:
+  ai_generated:
+    type: boolean
+    default: false
+  generated_by:
+    type: string
+  verified:
+    type: boolean
+    default: false
+  standards:
+    type: list
+    items: string

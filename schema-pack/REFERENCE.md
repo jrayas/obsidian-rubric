@@ -86,6 +86,10 @@ A vocabulary file has `vocabulary` (its name) and `terms`: a map of preferred te
 
 A property name must have the same value type (and item type) in every type, because Obsidian keeps one type per property name across the vault. Enum value lists may differ between types.
 
+## Domain overrides
+
+Next to a default file you can add a folder of the same name with one override file per domain, named by the domain: `types/kb.yaml` plus `types/kb/maths.yaml`, `modules/verification/maths.yaml`, `vocabularies/tags/maths.yaml`. A note whose `domain` is maths then uses the default plus that file; a note in a domain with no file uses the default. The file starts with `domain: maths` and may use `override` (change `values`, `default`, `description` of an existing property), `add` (properties allowed only for this domain) and `remove` (properties not allowed). A module file may also have `sections: [...]`, added to the module's `section` values. Core properties (`type`, `schema`, `id`, `name`, `status`, `domain`, `section`, `level`, `order`, `created`, `modified`) cannot be removed; an override cannot change a property's type; `section` and `track` values start with `<domain>-`. Vocabulary override files hold `domain:` and `terms:`; a term equal to a default term or synonym is an error. See the README for the full rules.
+
 ## The preview folder
 
 `preview/<type>.yaml` is written by the plugin, not by you. It shows what a new note of that type starts with (the properties in order with their starting values, and a comment after each saying what is allowed) and lists the properties that are not written until used. It is rewritten whenever the schema changes and is never read back, so editing it changes nothing: change the type and module files instead. It is ignored when the schema reloads. The setting **Write property previews to the schema folder** turns it off.

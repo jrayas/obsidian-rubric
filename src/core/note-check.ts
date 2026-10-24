@@ -4,6 +4,7 @@
  * text it was prepared from, so what is shown is what is written. Nothing here changes anything.
  */
 import { defaultValue } from './convert';
+import { domainOf, domainViolations, vocabFor } from './domain-overrides';
 import { desiredOrder, editFrontmatter, readFrontmatter } from './frontmatter';
 import type { Frontmatter } from './frontmatter';
 import { convertOldId, parseId, parseOldId, planRenumbering, nextId, yearOf } from './ids';
@@ -27,7 +28,8 @@ export interface Fix {
   mutate?: (fm: Frontmatter) => void;
   transform?: (text: string) => string;
   forceOrder?: boolean;
-  vocabulary?: { name: string; term: string };
+  /** `domain` set: the term goes into that domain's vocabulary file when it has one, else the default. */
+  vocabulary?: { name: string; term: string; domain?: string };
   /** IDs this fix gives up (renumbering). They are never handed out again. */
   retire?: string[];
   /** For kind 'index': the entry to accept as the new known value. */
@@ -226,6 +228,10 @@ export function checkNote(ctx: CheckContext, note: NoteInput, allocate: (prefix:
         : [];
     add(2, `value-${issue.code}`, 'problem', issue.message, fixes);
   }
+  // The note's domain: `section` and `track` start with it, and properties the domain removed are not present.
+  // Reported only: the plugin never deletes a value, and which prefix is right is the author's call.
+  const baseType = ctx.pack.types.get(type.name);
+  if (baseType) for (const v of domainViolations(baseType, type, fm)) add(2, v.code, 'problem', v.message);
 
   // 3. IDs --------------------------------------------------------------------------------------------------------
   if (has('id')) {
@@ -247,7 +253,7 @@ export function checkNote(ctx: CheckContext, note: NoteInput, allocate: (prefix:
   // 4. tags -------------------------------------------------------------------------------------------------------
   for (const def of type.properties) {
     if (def.type !== 'list' || def.items !== 'term' || !def.vocabulary) continue;
-    const vocab: Vocabulary | undefined = ctx.pack.vocabularies.get(def.vocabulary);
+    const vocab: Vocabulary | undefined = vocabFor(ctx.pack, def.vocabulary, domainOf(fm));
     if (!vocab) continue;
     if (def.name in fm) {
       const issues = checkTags(fm[def.name], vocab);
@@ -259,7 +265,7 @@ export function checkNote(ctx: CheckContext, note: NoteInput, allocate: (prefix:
       if (def.strict) {
         for (const tag of issues.unknown) {
           add(4, 'tag-unknown', 'problem', `tag “${tag}” is not in the vocabulary.`, [
-            { label: 'Add to vocabulary', kind: 'vocabulary', diff: [`+ ${def.vocabulary}: ${tag}`], vocabulary: { name: def.vocabulary, term: tag } },
+            { label: 'Add to vocabulary', kind: 'vocabulary', diff: [`+ ${def.vocabulary}: ${tag}`], vocabulary: { name: def.vocabulary, term: tag, ...(domainOf(fm) ? { domain: domainOf(fm) as string } : {}) } },
           ]);
         }
       }
@@ -313,8 +319,9 @@ export function checkNote(ctx: CheckContext, note: NoteInput, allocate: (prefix:
   }
 
   // 8. leftover domain ------------------------------------------------------------------------------------------
+  // Only when the schema does not define the property: a schema with a real `domain` property keeps it.
   for (const key of ['domain', 'domain_path'] as const) {
-    if (fm[key] === undefined) continue;
+    if (fm[key] === undefined || type.byName.has(key)) continue;
     const repeats = domainRepeatsBreadcrumb(fm, key);
     add(8, 'leftover-domain', 'warning', repeats ? `leftover ${key} repeats the breadcrumb.` : `leftover ${key} (it does not repeat the breadcrumb, so it is kept until a migration archives it).`, repeats
       ? [fmFix(`Remove ${key}`, note.text, type, (d) => void delete d[key])]

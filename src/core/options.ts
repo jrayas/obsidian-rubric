@@ -1,4 +1,5 @@
 import { ARCHIVED_FIELDS, LOCKED_NAMES } from './schema-types';
+import { vocabFor } from './domain-overrides';
 import type { PropertyDef, SchemaPack, Vocabulary } from './schema-types';
 
 export type OptionValue = string | number | boolean;
@@ -60,7 +61,7 @@ export function normaliseTerms(values: string[], vocab: Vocabulary | undefined):
  * The values a property offers, from the note's own schema. Null when the property is locked or has
  * no fixed list (free text, dates, links without a target).
  */
-export function optionsFor(def: PropertyDef, current: unknown, pack: SchemaPack): OptionList | null {
+export function optionsFor(def: PropertyDef, current: unknown, pack: SchemaPack, domain?: string): OptionList | null {
   if (isLocked(def.name, def)) return null;
   const item = (value: OptionValue, checked: boolean, synonyms: string[] = []): OptionItem => ({
     value,
@@ -84,7 +85,7 @@ export function optionsFor(def: PropertyDef, current: unknown, pack: SchemaPack)
       return def.target ? { property: def.name, mode: 'single', items: [], linkTarget: def.target } : null;
     case 'list': {
       if (def.items === 'term') {
-        const vocab = def.vocabulary ? pack.vocabularies.get(def.vocabulary) : undefined;
+        const vocab = def.vocabulary ? vocabFor(pack, def.vocabulary, domain) : undefined;
         if (!vocab) return null;
         const have = new Set(normaliseTerms(currentList(current), vocab));
         return {
@@ -130,9 +131,9 @@ export function filterOptions(list: OptionList, query: string): FilteredItem[] {
 }
 
 /** The new value after the user picks (single) or toggles (multi) an option. */
-export function applyPick(def: PropertyDef, current: unknown, list: OptionList, value: OptionValue, pack: SchemaPack): unknown {
+export function applyPick(def: PropertyDef, current: unknown, list: OptionList, value: OptionValue, pack: SchemaPack, domain?: string): unknown {
   if (list.mode === 'single') return value;
-  const vocab = def.vocabulary ? pack.vocabularies.get(def.vocabulary) : undefined;
+  const vocab = def.vocabulary ? vocabFor(pack, def.vocabulary, domain) : undefined;
   const existing = normaliseTerms(currentList(current), vocab);
   const word = String(value);
   return existing.includes(word) ? existing.filter((v) => v !== word) : [...existing, word];

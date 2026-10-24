@@ -1,0 +1,6 @@
+vocabulary: tags
+terms:
+  layout: {}
+  routing:
+    synonyms: [routes]
+  power: {}

@@ -51,7 +51,7 @@ export class VaultCheckService {
   async apply(finding: Finding, fix: Fix): Promise<string | null> {
     const { plugin } = this;
     if (fix.kind === 'vocabulary' && fix.vocabulary) {
-      await plugin.vocabulary.addTerm(fix.vocabulary.name, fix.vocabulary.term);
+      await plugin.vocabulary.addTerm(fix.vocabulary.name, fix.vocabulary.term, fix.vocabulary.domain);
       return null;
     }
     if (fix.kind === 'index' && fix.accept) {

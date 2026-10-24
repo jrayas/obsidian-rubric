@@ -13,6 +13,7 @@
     "lint:css": "stylelint --max-warnings 0 styles.css",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:validator": "python3 tests/validator/run_validator_tests.py",
     "version": "node version-bump.mjs && git add manifest.json versions.json",
     "vault:create": "node scripts/create-test-vault.mjs",
     "debug:launch": "node scripts/debug-launch.mjs",

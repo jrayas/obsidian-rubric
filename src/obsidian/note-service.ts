@@ -1,5 +1,6 @@
 import { TFile, getFrontMatterInfo, parseYaml } from 'obsidian';
 import type { App, Plugin } from 'obsidian';
+import { domainOf, typeFor } from '../core/domain-overrides';
 import { matchNote } from '../core/matcher';
 import type { MatchResult } from '../core/matcher';
 import { NAMING_PATIENCE_MS, stillBeingNamed } from '../core/naming';
@@ -72,7 +73,8 @@ export class NoteService {
     if (!verdict.managed) return { file, verdict, match: null, type: null, frontmatter };
     const s = this.getSettings();
     const match = matchNote(pack, { path: file.path, frontmatter }, { mode: pack.folders.mode, noMatch: s.noMatch });
-    const type = match.kind === 'matched' ? (pack.types.get(match.type) ?? null) : null;
+    // The type as this note's domain sees it: the default plus that domain's override files, if any.
+    const type = match.kind === 'matched' ? (typeFor(pack, match.type, domainOf(frontmatter)) ?? null) : null;
     return { file, verdict, match, type, frontmatter };
   }
 

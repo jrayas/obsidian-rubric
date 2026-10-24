@@ -2,6 +2,7 @@ import { TFile } from 'obsidian';
 import { readFrontmatter } from '../core/frontmatter';
 import type { Frontmatter } from '../core/frontmatter';
 import { isNewerThanSchema, newerSchemaMessage } from '../core/migrate';
+import { domainOf } from '../core/domain-overrides';
 import { applyPick, lockNote, optionsFor } from '../core/options';
 import type { OptionItem, OptionList, OptionValue } from '../core/options';
 import type { PropertyDef, ResolvedType } from '../core/schema-types';
@@ -54,15 +55,15 @@ export class OptionSession {
     const note = lockNote(this.key, def);
     if (note) return { kind: 'locked', def, note };
     if (!def) return { kind: 'unavailable', message: `The ${ctx.type.name} schema has no property “${this.key}”.` };
-    const list = this.buildList(def, fm[def.name]);
+    const list = this.buildList(def, fm[def.name], domainOf(fm));
     if (!list) return { kind: 'unavailable', message: `“${def.name}” has no fixed list of values.` };
     return { kind: 'ready', def, type: ctx.type, list };
   }
 
-  private buildList(def: PropertyDef, current: unknown): OptionList | null {
+  private buildList(def: PropertyDef, current: unknown, domain?: string): OptionList | null {
     const pack = this.plugin.schemas.pack;
     if (!pack) return null;
-    const list = optionsFor(def, current, pack);
+    const list = optionsFor(def, current, pack, domain);
     if (list?.linkTarget) list.items = this.linkItems(list.linkTarget, current);
     return list;
   }
@@ -98,12 +99,12 @@ export class OptionSession {
     const pack = this.plugin.schemas.pack;
     if (!pack) return null;
     const fm = await this.currentFrontmatter();
-    const next = applyPick(def, fm[def.name], list, value, pack);
+    const next = applyPick(def, fm[def.name], list, value, pack, domainOf(fm));
     const outcome = await this.plugin.queue.set(this.file, { [def.name]: next });
     if (outcome.error) {
       this.plugin.notify(`Could not save “${def.name}”: ${outcome.error}`);
       return list;
     }
-    return this.buildList(def, next);
+    return this.buildList(def, next, domainOf(fm));
   }
 }

@@ -1,0 +1,13 @@
+format: 1
+min_plugin_version: 0.1.0
+modules:
+  base: modules/base.yaml
+  findability: modules/findability.yaml
+  curriculum: modules/curriculum.yaml
+  verification: modules/verification.yaml
+vocabularies:
+  tags: vocabularies/tags.yaml
+  tracks: vocabularies/tracks.yaml
+types:
+  kb:       { file: types/kb.yaml,       prefix: KB, version: 1 }
+  exercise: { file: types/exercise.yaml, prefix: EX, version: 1 }

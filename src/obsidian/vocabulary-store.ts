@@ -13,8 +13,11 @@ export class VocabularyStore {
     private readonly schemas: SchemaService,
   ) {}
 
-  async addTerm(vocabulary: string, term: string): Promise<void> {
-    const file = this.schemas.pack?.vocabularies.get(vocabulary)?.file;
+  async addTerm(vocabulary: string, term: string, domain?: string): Promise<void> {
+    const pack = this.schemas.pack;
+    // A note in a domain that has its own file for this vocabulary adds the term there, so the default stays untouched.
+    const own = domain ? pack?.domainFiles.get(domain)?.vocabularies.get(vocabulary)?.file : undefined;
+    const file = own ?? pack?.vocabularies.get(vocabulary)?.file;
     if (!file) return;
     const path = normalizePath(`${this.schemas.folder}/${file}`);
     const text = await this.app.vault.adapter.read(path);

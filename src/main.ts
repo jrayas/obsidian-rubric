@@ -1,3 +1,4 @@
+import { domainOf, typeFor } from './core/domain-overrides';
 import { Notice, Plugin, normalizePath } from 'obsidian';
 import type { TFile } from 'obsidian';
 import { STARTER_PACK } from './pack';
@@ -50,7 +51,7 @@ export default class RubricPlugin extends Plugin {
     this.queue = new WriteQueue(this.app, (file, fm) => {
       const pack = this.schemas.pack;
       const ctx = this.notes.context(file, fm);
-      return ctx.type ?? (pack && typeof fm.type === 'string' ? (pack.types.get(fm.type) ?? null) : null);
+      return ctx.type ?? (pack && typeof fm.type === 'string' ? (typeFor(pack, fm.type, domainOf(fm)) ?? null) : null);
     });
     this.layer = new PropertiesLayer(this);
     this.ids = new IdService(this.app, () => this.settings);
@@ -165,7 +166,8 @@ export default class RubricPlugin extends Plugin {
 
   /** A schema was chosen for one note without remembering the folder: give the note what its type needs. */
   private async applyType(file: TFile, typeName: string): Promise<void> {
-    const type = this.schemas.pack?.types.get(typeName);
+    const pack = this.schemas.pack;
+    const type = pack ? typeFor(pack, typeName, domainOf(this.notes.frontmatterOf(file))) : undefined;
     if (type) await this.actions.complete(file, type);
   }
 
@@ -184,7 +186,7 @@ export default class RubricPlugin extends Plugin {
       allowUnmanaged: false,
       applyText: 'Preview',
     });
-    const to = choice?.type ? pack.types.get(choice.type) : null;
+    const to = choice?.type ? typeFor(pack, choice.type, domainOf(this.notes.frontmatterOf(file))) : null;
     if (to) await this.actions.convert(file, to, current);
   }
 

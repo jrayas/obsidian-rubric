@@ -15,6 +15,7 @@ import { MarkdownView, Notice, Platform, setIcon } from 'obsidian';
 import type { App, TFile } from 'obsidian';
 import { holdStep, isModifierHeld } from '../core/hold-state';
 import type { HoldEffect, HoldInput, HoldState } from '../core/hold-state';
+import { domainOf } from '../core/domain-overrides';
 import { isLocked, lockNote, optionsFor } from '../core/options';
 import type RubricPlugin from '../main';
 import type { HoldKey } from '../settings';
@@ -241,7 +242,7 @@ export class PropertiesLayer {
     const def = noteCtx?.type?.byName.get(key);
     const locked = isLocked(key, def);
     const pack = this.plugin.schemas.pack;
-    const hasList = !locked && def && pack ? optionsFor(def, noteCtx?.frontmatter?.[def.name], pack) !== null : false;
+    const hasList = !locked && def && pack ? optionsFor(def, noteCtx?.frontmatter?.[def.name], pack, domainOf(noteCtx?.frontmatter)) !== null : false;
     const ok = !!file && !!noteCtx?.type && noteCtx.verdict.managed && (locked || hasList);
     return { ok, locked, hasList };
   }

@@ -1,0 +1,38 @@
+module: base
+properties:
+  type:
+    type: enum
+    required: true
+    values_from: registry
+  schema:
+    type: integer
+    required: true
+    locked: true
+    generated: true
+  id:
+    type: string
+    required: true
+    pattern: '^[A-Z]{2}-\d{4}-\d{4,}$'
+    locked: true
+    immutable: true
+    generated: true
+  name:
+    type: string
+    required: true
+  status:
+    type: enum
+    required: true
+    values_from: type
+  created:
+    type: datetime
+    required: true
+    locked: true
+    immutable: true
+    generated: true
+    position: end
+  modified:
+    type: datetime
+    required: true
+    locked: true
+    generated: true
+    position: end

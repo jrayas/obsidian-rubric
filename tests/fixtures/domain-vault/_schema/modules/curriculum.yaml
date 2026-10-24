@@ -1,0 +1,26 @@
+module: curriculum
+properties:
+  domain:
+    type: enum
+    required: true
+    values: [pcb, demo]
+  section:
+    type: enum
+    required: true
+    values: [pcb-start-here, pcb-core]
+    description: Every value starts with its domain and a hyphen.
+  level:
+    type: enum
+    required: true
+    values: [beginner, intermediate, advanced]
+  order:
+    type: integer
+    required: true
+    min: 1
+  track:
+    type: list
+    items: term
+    vocabulary: tracks
+    strict: true
+    normalise: true
+    default: []
