@@ -4,7 +4,7 @@
   "private": true,
   "description": "Schema-driven properties, validation and migration for Obsidian notes.",
   "type": "module",
-  "license": "0BSD",
+  "license": "MIT",
   "scripts": {
     "dev": "node esbuild.config.mjs",
     "build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
@@ -35,5 +35,23 @@
     "typescript-eslint": "8.71.2",
     "vitest": "5.0.5",
     "yaml": "2.9.1"
-  }
+  },
+  "author": "Joan Anthirayas",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jrayas/obsidian-vault-schema.git"
+  },
+  "homepage": "https://github.com/jrayas/obsidian-vault-schema#readme",
+  "bugs": {
+    "url": "https://github.com/jrayas/obsidian-vault-schema/issues"
+  },
+  "keywords": [
+    "obsidian",
+    "obsidian-plugin",
+    "schema",
+    "yaml",
+    "properties",
+    "frontmatter",
+    "validation"
+  ]
 }

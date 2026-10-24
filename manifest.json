@@ -5,5 +5,6 @@
   "minAppVersion": "1.13.7",
   "description": "Drive property autocomplete, option pickers, validation and migration from YAML note schemas kept in your vault.",
   "author": "Joan Anthirayas",
-  "isDesktopOnly": true
+  "isDesktopOnly": true,
+  "authorUrl": "https://github.com/jrayas"
 }

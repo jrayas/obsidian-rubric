@@ -19,7 +19,7 @@ It is described as **governance-ready**, not as a compliance system: locks are a
 
 ## Install
 
-1. Build or download `main.js`, `manifest.json` and `styles.css`.
+1. Download `main.js`, `manifest.json` and `styles.css` from the latest [release](https://github.com/jrayas/obsidian-vault-schema/releases) (or build them: see Development).
 2. Copy them to `<your vault>/.obsidian/plugins/vault-schema/` and enable **Vault Schema** in *Settings → Community plugins*.
 3. Run the command **Install starter schema pack** to create `_schema/` with the starter types (it never overwrites existing files).
 
@@ -62,4 +62,4 @@ npm run build     # production build: main.js
 npm run e2e       # real Obsidian, isolated profile (needs Obsidian installed)
 ```
 
-Documentation for contributors is in [docs/README.md](docs/README.md). Licence: 0BSD.
+Documentation for contributors is in [docs/README.md](docs/README.md). Licence: [MIT](LICENSE).
