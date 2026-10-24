@@ -28,7 +28,7 @@ export async function listRootFolders(app: App): Promise<string[]> {
 }
 
 /** Cheap fingerprint of every file in a folder tree, used to notice edits to a hidden folder. */
-export async function folderSignature(app: App, folder: string): Promise<string> {
+export async function folderSignature(app: App, folder: string, skipSub?: string): Promise<string> {
   const adapter = app.vault.adapter;
   const parts: string[] = [];
   const walk = async (dir: string): Promise<void> => {
@@ -42,7 +42,10 @@ export async function folderSignature(app: App, folder: string): Promise<string>
       const st = await adapter.stat(f);
       parts.push(`${f}:${st?.mtime ?? 0}:${st?.size ?? 0}`);
     }
-    for (const d of listed.folders.sort()) await walk(d);
+    for (const d of listed.folders.sort()) {
+      if (skipSub && d.split('/').pop() === skipSub && normalizePath(d) === normalizePath(`${folder}/${skipSub}`)) continue;
+      await walk(d);
+    }
   };
   await walk(normalizePath(folder));
   return parts.join('|');

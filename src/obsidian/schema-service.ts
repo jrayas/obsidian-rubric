@@ -5,6 +5,7 @@ import type { FolderDetection } from '../core/folder-detect';
 import { loadSchemaPack } from '../core/schema-loader';
 import type { Problem, SchemaPack } from '../core/schema-types';
 import type { VaultSchemaSettings } from '../settings';
+import { PREVIEW_FOLDER } from '../core/schema-preview';
 import { VaultSchemaSource, folderSignature, listRootFolders } from './vault-source';
 
 export interface SchemaStatus {
@@ -60,7 +61,7 @@ export class SchemaService {
     await this.reload('startup');
     const { vault } = this.app;
     const maybe = (path: string) => {
-      if (!this.status.detection.hidden && isInSchemaFolder(path, this.folder)) this.schedule();
+      if (!this.status.detection.hidden && isInSchemaFolder(path, this.folder) && !this.isPreviewPath(path)) this.schedule();
     };
     this.plugin.registerEvent(vault.on('create', (f) => maybe(f.path)));
     this.plugin.registerEvent(vault.on('modify', (f) => maybe(f.path)));
@@ -73,6 +74,11 @@ export class SchemaService {
     this.plugin.registerInterval(window.setInterval(() => void this.poll(), POLL_MS));
   }
 
+  /** The generated preview files never trigger a reload. */
+  private isPreviewPath(path: string): boolean {
+    return normalizePath(path).toLowerCase().startsWith(normalizePath(`${this.folder}/${PREVIEW_FOLDER}/`).toLowerCase());
+  }
+
   private schedule(): void {
     if (this.timer !== null) window.clearTimeout(this.timer);
     this.timer = window.setTimeout(() => {
@@ -83,7 +89,7 @@ export class SchemaService {
 
   private async poll(): Promise<void> {
     if (!this.status.detection.hidden || !this.status.detection.exists) return;
-    const sig = await folderSignature(this.app, this.folder);
+    const sig = await folderSignature(this.app, this.folder, PREVIEW_FOLDER);
     if (sig !== this.lastSignature) {
       this.lastSignature = sig;
       await this.reload('change');
@@ -139,7 +145,7 @@ export class SchemaService {
     } else {
       this.publish(detection, problems, this.pack !== null, reason);
     }
-    if (detection.hidden) this.lastSignature = await folderSignature(this.app, detection.folder);
+    if (detection.hidden) this.lastSignature = await folderSignature(this.app, detection.folder, PREVIEW_FOLDER);
   }
 
   private publish(detection: FolderDetection, problems: Problem[], usingLastGood: boolean, reason: string): void {

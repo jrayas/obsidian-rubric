@@ -19,8 +19,6 @@ export interface QueuedEdit {
   forceOrder?: boolean;
   /** Leave the property order alone (the silent `modified` stamp must change nothing else). */
   keepOrder?: boolean;
-  /** Change the body (the text after the frontmatter) in the same write. */
-  body?: (body: string) => string;
 }
 
 interface Pending {
@@ -118,7 +116,7 @@ export class WriteQueue {
               edit.mutate(fm);
               lastDraft = fm;
             },
-            { order: (keys) => { const t = this.typeFor(file, lastDraft); return t ? desiredOrder(keys, t) : keys; }, forceOrder: edit.forceOrder === true, ...(edit.body ? { body: edit.body } : {}) },
+            { order: (keys) => { const t = this.typeFor(file, lastDraft); return t ? desiredOrder(keys, t) : keys; }, forceOrder: edit.forceOrder === true },
           );
           outcome.changes = result.changes;
           if (result.changed) {
@@ -248,7 +246,6 @@ export class WriteQueue {
               return type ? desiredOrder(keys, type) : keys;
             },
             forceOrder: entry.edits.some((e) => e.forceOrder === true),
-            ...(entry.edits.some((e) => e.body) ? { body: (b: string) => entry.edits.reduce((acc, e) => (e.body ? e.body(acc) : acc), b) } : {}),
             ...(entry.edits.every((e) => e.keepOrder === true) ? { order: (keys: string[]) => keys } : {}),
           },
         );

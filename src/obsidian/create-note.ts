@@ -1,8 +1,7 @@
 import { Modal, Notice, Setting, normalizePath } from 'obsidian';
 import { newNoteFrontmatter } from '../core/create';
 import { checkFileName } from '../core/fs-names';
-import { desiredOrder, editFrontmatter } from '../core/frontmatter';
-import { insertBodyIfEmpty, useTemplate } from '../core/templates';
+import { editFrontmatter } from '../core/frontmatter';
 import type VaultSchemaPlugin from '../main';
 
 /** "Create note from schema": pick a type, a name and a folder; the note is created with an ID and every default. */
@@ -95,17 +94,9 @@ export class CreateNoteModal extends Modal {
         const now = new Date();
         const id = plugin.ids.allocate(type.prefix, now.getFullYear());
         const fm = newNoteFrontmatter(type, { name: this.name, id, now });
-        // the type's template: starting values replace the defaults, and its body is the new note's text
-        const tpl = plugin.settings.useSchemaTemplates ? plugin.schemas.pack?.templates.get(type.name) : undefined;
-        const use = useTemplate(tpl, type, { name: this.name, id, type: type.name, now, folder: this.folder });
-        for (const [k, v] of Object.entries(use.values)) fm[k] = v;
-        const text = editFrontmatter(
-          '',
-          (draft) => {
-            for (const [k, v] of Object.entries(fm)) draft[k] = v;
-          },
-          { order: (keys) => desiredOrder(keys, type), body: (b) => insertBodyIfEmpty(b, use.body) },
-        ).text;
+        const text = editFrontmatter('', (draft) => {
+          for (const [k, v] of Object.entries(fm)) draft[k] = v;
+        }).text;
         if (this.folder && !plugin.app.vault.getFolderByPath(this.folder)) await plugin.app.vault.createFolder(this.folder);
         plugin.queue.ledger.record(path, text);
         return plugin.app.vault.create(path, text);

@@ -7,6 +7,8 @@ export interface VaultSchemaSettings {
   /** `_schema` (default), `.schema`, or a custom root folder name. */
   schemaFolder: string;
   noMatch: NoMatchBehaviour;
+  /** Write the read-only property previews to `<schema folder>/preview/`. */
+  writePreviews: boolean;
   rememberAnswer: boolean;
   holdKey: HoldKey;
   holdDelayMs: number;
@@ -17,10 +19,8 @@ export interface VaultSchemaSettings {
   batchMode: boolean;
   /** What to do with a new note in a mapped folder: add its properties, ask with a preview, or nothing. */
   onCreate: OnCreate;
-  /** Quiet time after a note appears before it is filled, so a template can finish first. */
+  /** Quiet time after a note appears before it is filled, so another plugin's template can finish first. */
   createDelayMs: number;
-  /** Insert `_schema/templates/<type>.md` (body and starting values) into notes the plugin fills. */
-  useSchemaTemplates: boolean;
   /** Keep `name` in step with the file name when the note is renamed (only if `name` was empty or filled by the plugin). */
   syncName: boolean;
   /** Write `breadcrumb` from the real folder when a note is created or moved. Off unless no breadcrumb plugin is used. */
@@ -41,6 +41,7 @@ export interface VaultSchemaSettings {
 export const DEFAULT_SETTINGS: VaultSchemaSettings = {
   schemaFolder: '_schema',
   noMatch: 'ask',
+  writePreviews: true,
   rememberAnswer: true,
   holdKey: 'Alt',
   holdDelayMs: 330,
@@ -51,7 +52,6 @@ export const DEFAULT_SETTINGS: VaultSchemaSettings = {
   batchMode: true,
   onCreate: 'ask',
   createDelayMs: 1500,
-  useSchemaTemplates: true,
   syncName: true,
   breadcrumbFromFolder: false,
   promptScope: 'open',

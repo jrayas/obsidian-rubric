@@ -12,6 +12,7 @@ import { KnownIndex } from './obsidian/known-index';
 import { ModifiedStamper } from './obsidian/modified-stamper';
 import { NoteActions } from './obsidian/note-actions';
 import { OptionPickerModal } from './obsidian/picker-modal';
+import { PreviewWriter } from './obsidian/preview-writer';
 import { PropertiesLayer } from './obsidian/properties-layer';
 import { RegistryStore } from './obsidian/registry-store';
 import { SchemaValueSuggest } from './obsidian/source-suggest';
@@ -34,6 +35,7 @@ export default class VaultSchemaPlugin extends Plugin {
   ids!: IdService;
   known!: KnownIndex;
   autoSync!: AutoSync;
+  previews!: PreviewWriter;
   actions!: NoteActions;
   vocabulary!: VocabularyStore;
   private stamper!: ModifiedStamper;
@@ -56,6 +58,7 @@ export default class VaultSchemaPlugin extends Plugin {
     this.vocabulary = new VocabularyStore(this.app, this.schemas);
     this.known = new KnownIndex(this);
     this.autoSync = new AutoSync(this);
+    this.previews = new PreviewWriter(this);
     this.stamper = new ModifiedStamper(this);
     this.watcher = new ChangeWatcher(this);
     this.notes.applyType = (file, type) => this.applyType(file, type);
@@ -129,7 +132,10 @@ export default class VaultSchemaPlugin extends Plugin {
         this.syncLayer();
       });
     });
-    this.register(this.schemas.onChange(() => this.layer.refreshCovered()));
+    this.register(this.schemas.onChange(() => {
+      this.layer.refreshCovered();
+      this.previews.schedule();
+    }));
   }
 
   async saveSettings(): Promise<void> {
@@ -140,6 +146,7 @@ export default class VaultSchemaPlugin extends Plugin {
   async onSettingChanged(key: keyof VaultSchemaSettings): Promise<void> {
     await this.saveSettings();
     if (key === 'commandsOnly') this.syncLayer();
+    if (key === 'writePreviews' && this.settings.writePreviews) void this.previews.sync();
   }
 
   /** Install or remove the Properties-area layer to match the "commands only" setting. */
@@ -152,6 +159,7 @@ export default class VaultSchemaPlugin extends Plugin {
     this.layer?.uninstall();
     this.stamper?.stop();
     this.known?.stop();
+    this.previews?.stop();
     this.watcher?.stop();
   }
 

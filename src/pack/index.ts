@@ -18,13 +18,6 @@ import person from '../../schema-pack/types/person.yaml';
 import resource from '../../schema-pack/types/resource.yaml';
 import task from '../../schema-pack/types/task.yaml';
 import reference from '../../schema-pack/REFERENCE.md';
-import tplKb from '../../schema-pack/templates/kb.md';
-import tplProject from '../../schema-pack/templates/project.md';
-import tplExercise from '../../schema-pack/templates/exercise.md';
-import tplJournal from '../../schema-pack/templates/journal.md';
-import tplPerson from '../../schema-pack/templates/person.md';
-import tplResource from '../../schema-pack/templates/resource.md';
-import tplTask from '../../schema-pack/templates/task.md';
 
 /** Path inside the schema folder -> file text. */
 export const STARTER_PACK: Readonly<Record<string, string>> = {
@@ -46,12 +39,5 @@ export const STARTER_PACK: Readonly<Record<string, string>> = {
   'types/person.yaml': person,
   'types/resource.yaml': resource,
   'types/task.yaml': task,
-  'templates/kb.md': tplKb,
-  'templates/project.md': tplProject,
-  'templates/exercise.md': tplExercise,
-  'templates/journal.md': tplJournal,
-  'templates/person.md': tplPerson,
-  'templates/resource.md': tplResource,
-  'templates/task.md': tplTask,
   'REFERENCE.md': reference,
 };

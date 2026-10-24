@@ -1,6 +1,4 @@
 import { defaultValue } from './convert';
-import { insertBodyIfEmpty, useTemplate } from './templates';
-import type { TemplateDef } from './templates';
 import type { Frontmatter } from './frontmatter';
 import type { ResolvedType } from './schema-types';
 import { formatLocal } from './timestamps';
@@ -59,19 +57,11 @@ export interface CompletionOptions {
   allocateId: (year: number) => string;
   /** Used for `created` when the note has none (the file's own creation time). */
   fileCreated?: Date;
-  /** The type's schema template, when the feature is on. */
-  template?: TemplateDef;
-  /** The note's folder, for the {{folder}} placeholder. */
-  folder?: string;
 }
 
 export interface CompletionPlan {
   added: Record<string, unknown>;
   apply: (fm: Frontmatter) => void;
-  /** Inserts the template body into an empty note; leaves any text alone. Absent when there is no template body. */
-  body?: (existing: string) => string;
-  /** Whether the template contributes a body. */
-  templateBody: string | null;
 }
 
 /**
@@ -112,15 +102,8 @@ export function planCompletion(fm: Frontmatter, type: ResolvedType, o: Completio
       }
     }
   }
-  // The type's template: its values replace the schema defaults, never anything the note already has.
-  const id = typeof fm.id === 'string' && fm.id ? fm.id : typeof added.id === 'string' ? added.id : '';
-  const use = useTemplate(o.template, type, { name: o.name, id, type: type.name, now: o.now, folder: o.folder ?? '' });
-  for (const [k, v] of Object.entries(use.values)) if (!has(k)) added[k] = v;
-  const templateBody = use.body;
   return {
     added,
-    templateBody,
-    ...(templateBody !== null ? { body: (existing: string) => insertBodyIfEmpty(existing, templateBody) } : {}),
     apply(draft) {
       for (const [k, v] of Object.entries(added)) draft[k] = v;
     },

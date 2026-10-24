@@ -2,7 +2,7 @@ import { Notice } from 'obsidian';
 import type { TFile } from 'obsidian';
 import { planConversion } from '../core/convert';
 import { planCompletion } from '../core/create';
-import { bodyOf, desiredOrder, editFrontmatter, readFrontmatter } from '../core/frontmatter';
+import { desiredOrder, editFrontmatter, readFrontmatter } from '../core/frontmatter';
 import type { Frontmatter } from '../core/frontmatter';
 import { describeChanges } from '../core/preview';
 import type { KeyChange } from '../core/frontmatter';
@@ -96,35 +96,30 @@ export class NoteActions {
       name: file.basename,
       now: new Date(),
       fileCreated: new Date(file.stat.ctime),
-      folder: file.parent?.path === '/' ? '' : (file.parent?.path ?? ''),
-      ...(plugin.settings.useSchemaTemplates && plugin.schemas.pack?.templates.get(type.name) ? { template: plugin.schemas.pack.templates.get(type.name) } : {}),
       allocateId: (year) => {
         const id = plugin.ids.allocate(type.prefix, year);
         allocated.push(id);
         return id;
       },
     });
-    const dry = editFrontmatter(loaded.text, plan.apply, { order: (k) => desiredOrder(k, type), forceOrder: true, ...(plan.body ? { body: plan.body } : {}) });
-    if (Object.keys(plan.added).length === 0 && !dry.changed) {
+    if (Object.keys(plan.added).length === 0) {
       if (!options.silent) new Notice(`“${file.basename}” already has everything a ${type.name} needs.`);
       return false;
     }
+    const dry = editFrontmatter(loaded.text, plan.apply, { order: (k) => desiredOrder(k, type), forceOrder: true });
     const ok = options.silent
       ? true
       : await preview(plugin.app, {
       title: `Add ${type.name} properties to “${file.basename}”?`,
       lead: 'Existing values are not changed.',
-      sections: [
-        { heading: 'Added', lines: describeChanges(dry.changes) },
-        ...(plan.templateBody !== null && plan.body && plan.body(bodyOf(loaded.text)) !== bodyOf(loaded.text) ? [{ heading: 'Template body inserted (the note was empty)', lines: plan.templateBody.trim().split('\n').slice(0, 12) }] : []),
-      ],
+      sections: [{ heading: 'Added', lines: describeChanges(dry.changes) }],
       confirmText: 'Add properties',
     });
     if (!ok) {
       for (const id of allocated) plugin.ids.release(id);
       return false;
     }
-    const outcome = await plugin.queue.editExact(file, loaded.text, { mutate: plan.apply, forceOrder: true, ...(plan.body ? { body: plan.body } : {}) });
+    const outcome = await plugin.queue.editExact(file, loaded.text, { mutate: plan.apply, forceOrder: true });
     if (outcome.error) {
       for (const id of allocated) plugin.ids.release(id);
       if (!options.silent) new Notice(outcome.error);

@@ -145,6 +145,11 @@ export class VaultSchemaSettingTab extends PluginSettingTab {
               setting.setName('Status').setDesc(this.statusText());
             },
           },
+          {
+            name: 'Write property previews to the schema folder',
+            desc: 'Generated read-only files in the preview folder inside the schema folder: what a new note of each type starts with. Rewritten whenever the schema changes; never read back.',
+            control: { type: 'toggle', key: 'writePreviews' },
+          },
           { name: 'Reload schemas', desc: 'Read the schema files again now.', action: () => void plugin.schemas.reload('manual') },
           { name: 'Open schema folder', desc: 'Show the folder in your file manager.', action: () => plugin.openSchemaFolder() },
           { name: 'Install starter schema pack', desc: 'Create the starter files that are missing. Never overwrites.', action: () => void plugin.installStarterPack() },
@@ -232,14 +237,9 @@ export class VaultSchemaSettingTab extends PluginSettingTab {
           },
           {
             name: 'Wait before filling a new note (milliseconds)',
-            desc: 'Gives a template time to finish first. Only missing properties are added; nothing a template wrote is changed.',
+            desc: 'Gives Obsidian's Templates plugin (or another plugin) time to finish first. Only missing properties are added; nothing already written is changed.',
             visible: () => this.plugin.settings.onCreate !== 'nothing',
             control: { type: 'number', key: 'createDelayMs', min: 700, max: 30000, step: 100 },
-          },
-          {
-            name: 'Insert the schema template into new notes',
-            desc: 'Uses _schema/templates/<type>.md: its body goes into an empty note and its starting values into properties the note does not have. Existing text is never changed.',
-            control: { type: 'toggle', key: 'useSchemaTemplates' },
           },
           {
             name: 'Keep the name property in step with the file name',

@@ -1,5 +1,0 @@
-## Technique
-
-## Common mistakes
-
-## Progressions

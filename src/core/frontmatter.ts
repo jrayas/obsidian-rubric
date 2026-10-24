@@ -26,25 +26,6 @@ export interface EditOptions {
   order?: (keys: string[]) => string[];
   /** Apply `order` even when no value changed. */
   forceOrder?: boolean;
-  /** Change the body (the text after the frontmatter). Returning it unchanged leaves the note alone. */
-  body?: (body: string) => string;
-}
-
-/** The text after the frontmatter block (the whole text when there is none). */
-export function bodyOf(text: string): string {
-  const parts = split(text);
-  if (!parts) return text;
-  const nl = parts.tail.indexOf('\n');
-  return nl < 0 ? '' : parts.tail.slice(nl + 1);
-}
-
-function withBody(text: string, fn: (body: string) => string): string {
-  const parts = split(text);
-  if (!parts) return fn(text);
-  const nl = parts.tail.indexOf('\n');
-  if (nl < 0) return text + (text.endsWith('\n') ? '' : '\n') + fn('');
-  const head = parts.head + parts.yaml + parts.tail.slice(0, nl + 1);
-  return head + fn(parts.tail.slice(nl + 1));
 }
 
 /** The first line ending found in a file; LF when there is none. */
@@ -53,7 +34,7 @@ export function detectEol(text: string): Eol {
   return i > 0 && text.charAt(i - 1) === '\r' ? '\r\n' : '\n';
 }
 
-export interface Split {
+interface Split {
   /** Everything before the YAML text, including the opening delimiter line. */
   head: string;
   yaml: string;
@@ -62,7 +43,7 @@ export interface Split {
 }
 
 /** Split a file into opening delimiter, YAML text and the rest. Null when there is no frontmatter. */
-export function split(text: string): Split | null {
+function split(text: string): Split | null {
   const body = text.charAt(0) === '\ufeff' ? text.slice(1) : text;
   const bom = body.length === text.length ? '' : '\ufeff';
   const firstEnd = body.indexOf('\n');
@@ -124,8 +105,6 @@ function keyOf(pair: { key: unknown }): string {
  */
 export function editFrontmatter(text: string, mutate: (fm: Frontmatter) => void, options: EditOptions = {}): EditResult {
   const eol = detectEol(text);
-  // a body written by the caller uses \n; keep the file's own line endings
-  const bodyFn = options.body ? (b: string) => { const r = (options.body as (x: string) => string)(b); return eol === '\r\n' ? r.replace(/\r?\n/g, '\r\n') : r; } : undefined;
   const parts = split(text);
   const doc = parts ? parseDocument(parts.yaml) : new Document({});
   if (doc.errors.length > 0) throw new FrontmatterError(doc.errors[0]?.message ?? 'Invalid frontmatter');
@@ -154,11 +133,7 @@ export function editFrontmatter(text: string, mutate: (fm: Frontmatter) => void,
   const orderDiffers = !deepEqual(wantedOrder, currentOrder);
   const applyOrder = options.order !== undefined && orderDiffers && (changes.length > 0 || options.forceOrder === true);
 
-  if (changes.length === 0 && !applyOrder) {
-    if (!bodyFn) return { text, changed: false, changes };
-    const next = withBody(text, bodyFn);
-    return { text: next, changed: next !== text, changes };
-  }
+  if (changes.length === 0 && !applyOrder) return { text, changed: false, changes };
 
   if (!isMap(doc.contents)) doc.contents = doc.createNode({});
   const map = doc.contents as YAMLMap;
@@ -192,8 +167,7 @@ export function editFrontmatter(text: string, mutate: (fm: Frontmatter) => void,
   const out = parts
     ? parts.head + yamlText + parts.tail
     : `---${eol}${yamlText}---${eol}${text}`;
-  const finalText = bodyFn ? withBody(out, bodyFn) : out;
-  return { text: finalText, changed: finalText !== text, changes };
+  return { text: out, changed: out !== text, changes };
 }
 
 /**
