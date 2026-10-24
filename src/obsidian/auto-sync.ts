@@ -34,7 +34,7 @@ export class AutoSync {
 
   private async afterRename(file: TFile, oldPath: string): Promise<void> {
     const { plugin } = this;
-    if (!this.plugin.app.vault.getFileByPath(file.path)) return;
+    if (!plugin.isOn() || !this.plugin.app.vault.getFileByPath(file.path)) return;
     const fm = await this.read(file);
     const ctx = plugin.notes.context(file, fm ?? {});
     if (!ctx.verdict.managed || !ctx.type || !fm) return;
@@ -63,7 +63,7 @@ export class AutoSync {
   /** After the plugin fills a new note: give it its breadcrumb too, if that setting is on. */
   async afterFill(file: TFile): Promise<void> {
     const { plugin } = this;
-    if (!plugin.settings.breadcrumbFromFolder) return;
+    if (!plugin.isOn() || !plugin.settings.breadcrumbFromFolder) return;
     const fm = await this.read(file);
     const type = plugin.notes.context(file, fm ?? {}).type;
     const crumb = breadcrumbFromPath(file.path);

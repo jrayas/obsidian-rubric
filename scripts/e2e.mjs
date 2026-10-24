@@ -97,7 +97,7 @@ const write = (path, text) => ev(`app.vault.adapter.write(${JSON.stringify(path)
 const fmLines = async (path) => (await read(path)).split('---')[1].split('\n');
 
 // ---------------------------------------------------------------- Phase 1: schema foundation
-await ev(`${P}.settings.onCreate = 'nothing'; 0`); // the older checks seed many bare notes; the new automation is tested in Phase 7
+await ev(`${P}.settings.enabled = true; ${P}.settings.onCreate = 'nothing'; 0`); // a fresh install is switched off; every check here needs it on // the older checks seed many bare notes; the new automation is tested in Phase 7
 await check('P1 plugin loads with no console errors and reports no schema folder yet', async () => {
   eq(await ev(`!!${P}`), true, 'plugin loaded');
   eq(await ev(`${P}.schemas.status.problems.map(p => p.code)`), ['folder-missing'], 'problems');

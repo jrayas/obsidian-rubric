@@ -154,6 +154,8 @@ export class NoteService {
     const pack = this.schemas.pack;
     if (!pack || !this.app.vault.getFileByPath(file.path)) return;
     const asNew = this.treatAsNew.delete(file.path);
+    // Master switch off: a new note is not filled and nobody is asked which schema it uses.
+    if (!this.getSettings().enabled) return;
     // A new note is filled after it has its real name, not while the title is still being typed.
     if (event === 'create' && !asNew && this.isBeingNamed(file)) {
       this.awaitingName.set(file.path, Date.now());

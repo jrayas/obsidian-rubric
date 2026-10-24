@@ -58,6 +58,9 @@ export class VaultCheckService {
       plugin.known.accept(finding.path, fix.accept);
       return null;
     }
+    // Adding a vocabulary term and accepting a known ID change schema files or plugin data, so they work while the
+    // switch is off. Everything below writes a note.
+    if (!plugin.isOn()) return 'Rubric is off. Turn it on to change notes.';
     const file = plugin.app.vault.getFileByPath(finding.path);
     if (!file) return 'The note no longer exists.';
     if (fix.kind === 'text' && fix.transform) {
@@ -85,6 +88,7 @@ export class VaultCheckService {
   async applyAll(items: { finding: Finding; fix: Fix }[], onProgress: (p: Progress, failed: number) => void): Promise<{ applied: number; failed: string[] }> {
     const failed: string[] = [];
     let applied = 0;
+    if (items.some((it) => it.fix.kind === 'text' || it.fix.kind === 'frontmatter') && !this.plugin.requireOn()) return { applied, failed };
     for (let i = 0; i < items.length; i++) {
       const it = items[i] as { finding: Finding; fix: Fix };
       const err = await this.apply(it.finding, it.fix);

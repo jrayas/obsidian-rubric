@@ -102,6 +102,9 @@ export class ModifiedStamper {
       this.baseline.set(file.path, after);
       return;
     }
+    // Master switch off: nothing is stamped. The baseline stays as it was, so the next change after it is switched
+    // on is compared with how the note was before.
+    if (!this.plugin.isOn()) return;
     const ctx = this.plugin.notes.context(file);
     if (!ctx.verdict.managed || !ctx.type || !this.isManagedNote(text)) {
       this.baseline.set(file.path, after);

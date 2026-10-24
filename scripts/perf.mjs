@@ -15,6 +15,7 @@ run('debug-launch.mjs', ['--empty']);
 const c = await connect(await pickTarget('main'));
 const ev = (e) => evaluate(c, e);
 const P = `app.plugins.plugins['${PLUGIN_ID}']`;
+await ev(`${P}.settings.enabled = true; 0`); // a fresh install is switched off
 await ev('app.setting.close(); 0'); // the trust flow leaves the settings dialog open and it becomes activeDocument
 
 // starter pack and a vault of N notes

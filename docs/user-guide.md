@@ -15,6 +15,17 @@ For someone installing and using Rubric. (Developers: start at [README.md](READM
 2. Settings → Community plugins → enable **Rubric** (turn off restricted mode if asked).
 3. Run **Install starter schema pack** from the command palette. It lists the files it will create, asks, and never overwrites.
 
+## The switch: Rubric starts off
+
+On a fresh install Rubric is **off**, so you can write and change your schema before anything acts on your notes. The status bar shows **Rubric: off** (click it to turn it on); the same switch is in *Settings → Rubric → Switch* and in the command **Toggle automation on or off**. Rubric never turns itself on, and while it is off a notice at start-up reminds you.
+
+| While it is off | |
+| --- | --- |
+| Never happens | `modified` stamps, filling or asking about new notes, the "which schema?" question, tag, status and type-change prompts, `name` and breadcrumb syncing, conversions, **Create note from schema**, **Convert this note**, **Choose schema for this note**, and fixes and migrations from **Check vault** that change a note |
+| Still works | Loading and checking the schema files, the schema problems list and notices, **Check vault** (it only reads), option lists and autocomplete (they only suggest; picking a value is you editing the property), **Reload schemas**, the property previews, adding a term to a vocabulary, **Install starter schema pack** |
+
+Turning it off also drops stamps and prompts that were waiting; a write already running finishes. Notes you change while it is off do not get a `modified` stamp, and nothing is asked afterwards about those changes: run **Check vault** after turning it on. If you installed an earlier version, your saved settings keep it **on**.
+
 ## The schema folder
 
 `_schema/` at the vault root (or `.schema`, or a name you choose in settings). It holds:
@@ -134,6 +145,7 @@ The vault check offers it per note, and **Migrate all `<type>` notes** for sever
 
 | Symptom | What to check |
 | --- | --- |
+| Nothing happens: no `modified`, no prompts, no filling | Is Rubric on? The status bar says **Rubric: off** when it is off (see "The switch") |
 | No suggestions on a property | Is the note in scope and matched to a schema? Is **Commands only** on? Is the property in the type's schema? |
 | One notice: "Properties area features are unavailable" | This Obsidian version changed the internals the layer needs. Use the commands and the picker window. Report the Obsidian version |
 | "Schema problem in …" | The notice names the file and line; the plugin is using the last good copy |

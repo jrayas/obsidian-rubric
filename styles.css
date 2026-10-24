@@ -171,3 +171,11 @@
   gap: var(--size-2-2);
   margin-top: var(--size-2-2);
 }
+
+.rubric-status {
+  cursor: pointer;
+}
+
+.rubric-status-off {
+  color: var(--text-warning);
+}

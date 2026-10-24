@@ -110,6 +110,11 @@ export class ChangeWatcher {
       this.track(file, plugin.notes.frontmatterOf(file));
       return;
     }
+    // Master switch off: keep track of the notes, but collect and ask about nothing.
+    if (!plugin.isOn()) {
+      this.track(file, fm);
+      return;
+    }
     const prevType = this.lastType.get(file.path);
     const prevCrumb = this.lastCrumb.get(file.path);
     this.track(file, fm);
@@ -163,7 +168,7 @@ export class ChangeWatcher {
     const { plugin } = this;
     const list = [...this.candidates.values()].filter((c) => plugin.notes.frontmatterOf(c.file)?.type === c.from.name);
     this.candidates.clear();
-    if (!this.enabled || list.length === 0) return;
+    if (!this.enabled || !plugin.isOn() || list.length === 0) return;
     if (list.length === 1 || !plugin.settings.batchMode) {
       for (const c of list) {
         if (!this.isBeingEdited(c.file)) continue;

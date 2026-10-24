@@ -4,6 +4,12 @@ export type OnCreate = 'fill' | 'ask' | 'nothing';
 export type PromptScope = 'open' | 'all';
 
 export interface RubricSettings {
+  /**
+   * The master switch. Off: the plugin never changes a note and never asks about one (no `modified` stamps, no
+   * filling of new notes, no prompts, no conversions, no fixes). Loading and checking the schema, the vault check
+   * report and the option lists keep working. Off on a fresh install, so a schema can be written before anything acts.
+   */
+  enabled: boolean;
   /** `_schema` (default), `.schema`, or a custom root folder name. */
   schemaFolder: string;
   noMatch: NoMatchBehaviour;
@@ -39,6 +45,7 @@ export interface RubricSettings {
 }
 
 export const DEFAULT_SETTINGS: RubricSettings = {
+  enabled: false,
   schemaFolder: '_schema',
   noMatch: 'ask',
   writePreviews: true,
@@ -68,6 +75,8 @@ export function mergeSettings(stored: unknown): RubricSettings {
   const out: RubricSettings = { ...DEFAULT_SETTINGS, skippedFolders: [], retiredIds: [], index: {} };
   if (typeof stored !== 'object' || stored === null) return out;
   const s = stored as Record<string, unknown>;
+  // Saved settings from a version without the switch: the plugin was already working, so it stays on.
+  if (!('enabled' in s)) out.enabled = true;
   const rec = out as unknown as Record<string, unknown>;
   for (const key of Object.keys(DEFAULT_SETTINGS) as (keyof RubricSettings)[]) {
     const v = s[key];

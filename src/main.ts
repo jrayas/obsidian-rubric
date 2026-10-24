@@ -42,6 +42,7 @@ export default class RubricPlugin extends Plugin {
   private stamper!: ModifiedStamper;
   watcher!: ChangeWatcher;
   private readonly shownOnce = new Set<string>();
+  private statusEl: HTMLElement | null = null;
 
   async onload(): Promise<void> {
     this.settings = mergeSettings(await this.loadData());
@@ -68,6 +69,9 @@ export default class RubricPlugin extends Plugin {
       if (done) await this.autoSync.afterFill(file);
     };
     this.addSettingTab(new RubricSettingTab(this.app, this));
+    this.statusEl = this.addStatusBarItem();
+    this.registerDomEvent(this.statusEl, 'click', () => void this.toggleActive());
+    this.updateStatus();
     this.registerEditorSuggest(new SchemaValueSuggest(this));
 
     this.addCommand({
@@ -87,12 +91,18 @@ export default class RubricPlugin extends Plugin {
     });
 
     this.addCommand({
+      id: 'toggle-active',
+      name: 'Toggle automation on or off',
+      callback: () => void this.toggleActive(),
+    });
+
+    this.addCommand({
       id: 'choose-schema',
       name: 'Choose schema for this note',
       checkCallback: (checking) => {
         const file = this.app.workspace.getActiveFile();
         if (!file || file.extension !== 'md' || !this.schemas.pack) return false;
-        if (!checking) void this.notes.promptForSchema(file, this.notes.context(file).match);
+        if (!checking && this.requireOn()) void this.notes.promptForSchema(file, this.notes.context(file).match);
         return true;
       },
     });
@@ -108,14 +118,16 @@ export default class RubricPlugin extends Plugin {
       checkCallback: (checking) => {
         const file = this.app.workspace.getActiveFile();
         if (!file || file.extension !== 'md' || !this.schemas.pack) return false;
-        if (!checking) void this.convertActive(file);
+        if (!checking && this.requireOn()) void this.convertActive(file);
         return true;
       },
     });
     this.addCommand({
       id: 'create-note-from-schema',
       name: 'Create note from schema',
-      callback: () => openCreateNote(this),
+      callback: () => {
+        if (this.requireOn()) openCreateNote(this);
+      },
     });
     this.addCommand({
       id: 'show-all-options',
@@ -131,6 +143,9 @@ export default class RubricPlugin extends Plugin {
         this.autoSync.start();
         this.watcher.start();
         this.syncLayer();
+        if (!this.settings.enabled) {
+          this.notifyOnce('off-at-start', 'Rubric is off, so it will not change or ask about your notes. Turn it on in its settings, or click its item in the status bar.');
+        }
       });
     });
     this.register(this.schemas.onChange(() => {
@@ -147,7 +162,46 @@ export default class RubricPlugin extends Plugin {
   async onSettingChanged(key: keyof RubricSettings): Promise<void> {
     await this.saveSettings();
     if (key === 'commandsOnly') this.syncLayer();
+    if (key === 'enabled') this.onActiveChanged();
     if (key === 'writePreviews' && this.settings.writePreviews) void this.previews.sync();
+  }
+
+  /** Is the master switch on? Everything that changes a note on its own, or asks about one, checks this first. */
+  isOn(): boolean {
+    return this.settings.enabled;
+  }
+
+  /** For something the user asked for that needs the switch on: say so and return false when it is off. */
+  requireOn(): boolean {
+    if (this.settings.enabled) return true;
+    new Notice('Rubric is off, so it will not change notes. Turn it on in its settings, or click its item in the status bar.');
+    return false;
+  }
+
+  async toggleActive(): Promise<void> {
+    this.settings.enabled = !this.settings.enabled;
+    await this.onSettingChanged('enabled');
+  }
+
+  /** The switch changed (settings page, command or status bar): drop pending work when it went off, and say what happened. */
+  private onActiveChanged(): void {
+    if (!this.settings.enabled) {
+      // Stamps and prompts that were waiting for a quiet moment are dropped, not postponed. A write already running finishes.
+      this.stamper.stop();
+      this.watcher.stop();
+    }
+    this.updateStatus();
+    new Notice(this.settings.enabled ? 'Rubric is on.' : 'Rubric is off. It will not change or ask about your notes.');
+  }
+
+  private updateStatus(): void {
+    const el = this.statusEl;
+    if (!el) return;
+    const on = this.settings.enabled;
+    el.setText(on ? 'Rubric: on' : 'Rubric: off');
+    el.setAttribute('aria-label', on ? 'Rubric is on. Click to turn it off.' : 'Rubric is off. Click to turn it on.');
+    el.addClass('rubric-status');
+    el.toggleClass('rubric-status-off', !on);
   }
 
   /** Install or remove the Properties-area layer to match the "commands only" setting. */

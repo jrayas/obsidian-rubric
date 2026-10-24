@@ -119,6 +119,17 @@ export class RubricSettingTab extends PluginSettingTab {
     return [
       {
         type: 'group',
+        heading: 'Switch',
+        items: [
+          {
+            name: 'Turn on Rubric',
+            desc: 'While this is off, Rubric never changes a note and never asks about one: no modified stamps, no filling of new notes, no prompts, conversions or fixes. It still loads and checks your schema files, reports problems, runs Check vault and offers option lists. Turn it on when your schema is ready.',
+            control: { type: 'toggle', key: 'enabled' },
+          },
+        ],
+      },
+      {
+        type: 'group',
         heading: 'Schema folder',
         items: [
           {

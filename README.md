@@ -23,6 +23,8 @@ It is described as **governance-ready**, not as a compliance system: locks are a
 2. Copy them to `<your vault>/.obsidian/plugins/rubric/` and enable **Rubric** in *Settings → Community plugins*.
 3. Run the command **Install starter schema pack** to create `_schema/` with the starter types (it never overwrites existing files).
 
+Rubric starts **off** on a fresh install, so you can write and change your schema without it touching a note. When the schema is ready, turn it on from the status bar, the settings page or the command **Toggle automation on or off**.
+
 Requires Obsidian **1.13.7 or later** (desktop only). See [docs/user-guide.md](docs/user-guide.md) for details.
 
 ## Commands
@@ -30,6 +32,7 @@ Requires Obsidian **1.13.7 or later** (desktop only). See [docs/user-guide.md](d
 | Command | What it does |
 | --- | --- |
 | Show all options for this property | Latches the option list for the focused property (assign a hotkey in Obsidian's Hotkeys settings); opens a picker window if the Properties-area features are off |
+| Toggle automation on or off | The master switch. Rubric is **off** on a fresh install so you can write your schema first; the status bar item does the same |
 | Check vault | Runs the eleven checks and opens the report |
 | Reload schemas | Reads the schema files again (use after editing a hidden `.schema` folder) |
 | Open schema folder | Shows the schema folder in Finder or Explorer |

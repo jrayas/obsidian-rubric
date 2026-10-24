@@ -48,6 +48,7 @@ export class NoteActions {
   /** Write a planned conversion. The note must still equal the text the plan was made from. */
   async applyConversion(p: PlannedConversion): Promise<string | null> {
     const { plugin } = this;
+    if (!plugin.isOn()) return 'Rubric is off.';
     plugin.watcher.acceptType(p.file.path, p.to.name);
     const outcome = await plugin.queue.editExact(p.file, p.text, { mutate: p.plan.apply, forceOrder: true });
     if (outcome.error) {
@@ -60,6 +61,7 @@ export class NoteActions {
   /** Rule 8: preview, then convert. Values that no longer apply go to `archived_fields`; nothing is deleted. */
   async convert(file: TFile, to: ResolvedType, from?: ResolvedType | null): Promise<boolean> {
     const { plugin } = this;
+    if (!plugin.requireOn()) return false;
     const planned = await this.planConvert(file, to, from);
     if (!planned) {
       const cur = from ?? plugin.notes.context(file).type;
@@ -89,6 +91,7 @@ export class NoteActions {
   /** Give a note everything its type needs (type, schema, ID, created, modified, defaults), after a preview. */
   async complete(file: TFile, type: ResolvedType, options: { silent?: boolean } = {}): Promise<boolean> {
     const { plugin } = this;
+    if (!plugin.requireOn()) return false;
     const loaded = await this.load(file);
     if (!loaded) return false;
     const allocated: string[] = [];
