@@ -4,8 +4,7 @@
 //   npm run e2e -- --keep  leave Obsidian running afterwards
 //   npm run e2e -- --only <text>  run only checks whose name contains <text>
 import { spawnSync } from 'node:child_process';
-import { readFileSync, readdirSync, statSync } from 'node:fs';
-import { join, relative, sep } from 'node:path';
+import { join } from 'node:path';
 import { ROOT, PLUGIN_ID } from './lib/paths.mjs';
 import { connect, evaluate, pickTarget, sleep } from './lib/cdp.mjs';
 
@@ -105,28 +104,18 @@ await check('P1 plugin loads with no console errors and reports no schema folder
   eq(consoleErrors, [], 'console errors');
 });
 
-// The schema is installed the way a user does it: copy the schema-pack files into the schema folder.
-function packFiles(dir = join(ROOT, 'schema-pack'), out = []) {
-  for (const name of readdirSync(dir)) {
-    const p = join(dir, name);
-    if (statSync(p).isDirectory()) packFiles(p, out);
-    else out.push(p);
-  }
-  return out;
-}
-await check('P1 copying the schema-pack files into the schema folder loads without problems', async () => {
-  const base = join(ROOT, 'schema-pack');
-  await ev(`app.vault.adapter.mkdir('_schema').then(() => 0)`);
-  for (const f of packFiles()) {
-    const rel = relative(base, f).split(sep).join('/');
-    const dir = rel.split('/').slice(0, -1).join('/');
-    if (dir) await ev(`(async () => { const d = '_schema/${dir}'.split('/'); let cur = ''; for (const p of d) { cur = cur ? cur + '/' + p : p; if (!(await app.vault.adapter.exists(cur))) await app.vault.adapter.mkdir(cur); } return 0; })()`);
-    await write('_schema/' + rel, readFileSync(f, 'utf8'));
-  }
-  await ev(`${P}.schemas.reload('manual').then(() => 0)`);
+await check('P1 starter pack installs through the command and loads without problems', async () => {
+  await ev(`app.commands.executeCommandById('${PLUGIN_ID}:install-starter-schemas'); 0`);
+  await waitFor(() => clickButton('Create files'), 'the confirm dialog');
   await waitFor(() => ev(`${P}.schemas.pack !== null`), 'pack to load');
-  eq(await ev(`${P}.schemas.status.problems.filter(p => p.severity === 'error').length`), 0, 'problems');
+  eq(await ev(`${P}.schemas.status.problems.length`), 0, 'problems');
   eq(await ev(`${P}.schemas.pack.typeNames.length`), 8, 'types');
+  // running it again creates nothing and never overwrites
+  await write('_schema/types/note.yaml', (await read('_schema/types/note.yaml')) + '# edited\n');
+  await ev(`app.commands.executeCommandById('${PLUGIN_ID}:install-starter-schemas'); 0`);
+  await sleep(400);
+  assert((await read('_schema/types/note.yaml')).includes('# edited'), 'an existing file was overwritten');
+  eq(await ev(`activeDocument.querySelectorAll('.modal').length`), 0, 'dialog open for nothing to do');
 });
 
 await check('P1 a broken schema file keeps the last good copy with one notice; fixing it recovers', async () => {

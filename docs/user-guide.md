@@ -13,7 +13,7 @@ For someone installing and using Rubric. (Developers: start at [README.md](READM
 
 1. Copy `main.js`, `manifest.json` and `styles.css` into `<vault>/.obsidian/plugins/rubric/`.
 2. Settings → Community plugins → enable **Rubric** (turn off restricted mode if asked).
-3. Add a schema: copy the contents of the repository's `schema-pack/` folder into `_schema/` at the top of your vault (or write your own files). There is no install command: the plugin reads the files as soon as they appear and reloads when you edit them. Until a schema folder exists, the settings page says so.
+3. Run **Install starter schema pack** from the command palette. It lists the files it will create, asks, and never overwrites.
 
 ## The schema folder
 
@@ -31,7 +31,7 @@ For someone installing and using Rubric. (Developers: start at [README.md](READM
 
 Edit these files in any editor. The plugin reloads them when they change (for a hidden `.schema` folder, within a few seconds, or run **Reload schemas**). If a file has a mistake you get one notice naming the file and line, the plugin keeps using the last good copy, and the settings page lists the problem. Fix the file and it recovers without a restart.
 
-The plugin itself only ever writes `folders.yaml` and `scope.yaml` (when you change a mapping or a rule in settings, or answer the "which schema?" prompt), one term into a tags vocabulary (when you click *Add to vocabulary*), and the generated property previews. Comments in those files are kept.
+The plugin itself only ever writes `folders.yaml` and `scope.yaml` (when you change a mapping or a rule in settings, or answer the "which schema?" prompt), one term into the tags vocabulary (when you click *Add to vocabulary*), and the starter pack (when you run the install command). Comments in those files are kept.
 
 ## Which schema does a note use?
 

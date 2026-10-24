@@ -130,7 +130,7 @@ export class SchemaService {
         severity: 'error',
         code: 'folder-missing',
         file: detection.folder,
-        message: `Schema folder "${detection.folder}" was not found. Create it and copy the schema files into it; they load as soon as they appear.`,
+        message: `Schema folder "${detection.folder}" was not found. Run "Install starter schema pack" or create the folder.`,
       });
       this.publish(detection, problems, this.pack !== null, reason);
       return;

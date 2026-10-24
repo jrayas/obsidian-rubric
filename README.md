@@ -21,7 +21,7 @@ It is described as **governance-ready**, not as a compliance system: locks are a
 
 1. Download `main.js`, `manifest.json` and `styles.css` from the latest [release](https://github.com/jrayas/obsidian-rubric/releases) (or build them: see Development).
 2. Copy them to `<your vault>/.obsidian/plugins/rubric/` and enable **Rubric** in *Settings → Community plugins*.
-3. Add a schema: copy the contents of [`schema-pack/`](schema-pack) from this repository into a folder called `_schema` at the top of your vault, or write your own files there. The plugin reads them as soon as they appear, and again whenever you edit them. `schema-pack/REFERENCE.md` explains every attribute.
+3. Run the command **Install starter schema pack** to create `_schema/` with the starter types (it never overwrites existing files).
 
 Requires Obsidian **1.13.7 or later** (desktop only). See [docs/user-guide.md](docs/user-guide.md) for details.
 
@@ -32,9 +32,11 @@ Requires Obsidian **1.13.7 or later** (desktop only). See [docs/user-guide.md](d
 | Show all options for this property | Latches the option list for the focused property (assign a hotkey in Obsidian's Hotkeys settings); opens a picker window if the Properties-area features are off |
 | Check vault | Runs the eleven checks and opens the report |
 | Reload schemas | Reads the schema files again (use after editing a hidden `.schema` folder) |
+| Open schema folder | Shows the schema folder in Finder or Explorer |
 | Choose schema for this note | Asks which schema a note should use |
 | Convert this note to another type | Preview, then convert; old values are kept in `archived_fields` |
 | Create note from schema | Creates a note with an ID, `created` and every default |
+| Install starter schema pack | Creates the starter schema files that are missing |
 
 No command has a default hotkey.
 

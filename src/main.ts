@@ -1,7 +1,9 @@
 import { domainOf, typeFor } from './core/domain-overrides';
-import { Notice, Plugin } from 'obsidian';
+import { Notice, Plugin, normalizePath } from 'obsidian';
 import type { TFile } from 'obsidian';
+import { STARTER_PACK } from './pack';
 import { SchemaService } from './obsidian/schema-service';
+import { confirm } from './obsidian/modals';
 import { NoteService } from './obsidian/note-service';
 import { AutoSync } from './obsidian/auto-sync';
 import { ChangeWatcher } from './obsidian/change-watcher';
@@ -72,6 +74,16 @@ export default class RubricPlugin extends Plugin {
       id: 'reload-schemas',
       name: 'Reload schemas',
       callback: () => void this.schemas.reload('manual'),
+    });
+    this.addCommand({
+      id: 'open-schema-folder',
+      name: 'Open schema folder',
+      callback: () => this.openSchemaFolder(),
+    });
+    this.addCommand({
+      id: 'install-starter-schemas',
+      name: 'Install starter schema pack',
+      callback: () => void this.installStarterPack(),
     });
 
     this.addCommand({
@@ -199,5 +211,51 @@ export default class RubricPlugin extends Plugin {
       return;
     }
     new OptionPickerModal(this, target.file, target.key).open();
+  }
+
+  /** Show the schema folder in the system file manager (Finder or Explorer). */
+  openSchemaFolder(): void {
+    const folder = this.schemas.folder;
+    const adapter = this.app.vault.adapter as { getFullPath?: (p: string) => string };
+    const full = adapter.getFullPath?.(normalizePath(folder));
+    const req = (window as unknown as { require?: (m: string) => { shell?: { openPath(p: string): Promise<string> } } }).require;
+    const shell = req?.('electron')?.shell;
+    if (full && shell) {
+      void shell.openPath(full);
+    } else {
+      new Notice(`Schema folder: ${folder}`);
+    }
+  }
+
+  /** Create the starter pack files that do not exist yet. Never overwrites. Asks first. */
+  async installStarterPack(): Promise<void> {
+    const folder = this.schemas.folder;
+    const adapter = this.app.vault.adapter;
+    const missing: string[] = [];
+    for (const rel of Object.keys(STARTER_PACK)) {
+      if (!(await adapter.exists(normalizePath(`${folder}/${rel}`)))) missing.push(rel);
+    }
+    if (missing.length === 0) {
+      new Notice(`The starter schema pack is already in ${folder}. Nothing to create.`);
+      return;
+    }
+    const ok = await confirm(
+      this.app,
+      'Install starter schema pack?',
+      [
+        `This creates ${missing.length} files in "${folder}/". Existing files are never overwritten.`,
+        missing.join(', '),
+      ],
+      'Create files',
+    );
+    if (!ok) return;
+    for (const rel of missing) {
+      const path = normalizePath(`${folder}/${rel}`);
+      const dir = path.split('/').slice(0, -1).join('/');
+      if (dir && !(await adapter.exists(dir))) await adapter.mkdir(dir);
+      await adapter.write(path, STARTER_PACK[rel] ?? '');
+    }
+    new Notice(`Created ${missing.length} schema files in ${folder}.`);
+    await this.schemas.reload('manual');
   }
 }
