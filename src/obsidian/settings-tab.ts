@@ -237,6 +237,11 @@ export class VaultSchemaSettingTab extends PluginSettingTab {
             control: { type: 'number', key: 'createDelayMs', min: 700, max: 30000, step: 100 },
           },
           {
+            name: 'Insert the schema template into new notes',
+            desc: 'Uses _schema/templates/<type>.md: its body goes into an empty note and its starting values into properties the note does not have. Existing text is never changed.',
+            control: { type: 'toggle', key: 'useSchemaTemplates' },
+          },
+          {
             name: 'Keep the name property in step with the file name',
             desc: 'After a rename, name follows the file name only if it was empty or filled by this plugin. A name you wrote is never overwritten.',
             control: { type: 'toggle', key: 'syncName' },

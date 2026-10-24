@@ -1421,6 +1421,149 @@ await check('P9 the same holds for a multi-choice list, a typed autocomplete, an
   await ev(`${P}.watcher.enabled = true; 0`);
 });
 
+// ---------------------------------------------------------------- naming and templates
+const focusTitle = () => ev(`(() => { const t = activeDocument.querySelector('.inline-title'); t.focus(); getSelection().selectAllChildren(t); return t.textContent; })()`);
+const openFresh = async (path) => {
+  await ev(`(async () => { const f = await app.vault.create(${JSON.stringify(path)}, ''); await app.workspace.getLeaf(false).openFile(f); return 0; })()`);
+  await waitFor(() => ev(`!!activeDocument.querySelector('.inline-title')`), 'the title field');
+  await sleep(300);
+};
+
+await check('P10 a new note is filled after you have typed its name and pressed Enter, not while you are typing', async () => {
+  await ev(`${P}.watcher.enabled = false; 0`);
+  await setS({ onCreate: 'fill', createDelayMs: 1500, useSchemaTemplates: true });
+  await openFresh('Knowledge/Untitled 9.md');
+  await focusTitle();
+  await client.send('Input.insertText', { text: 'Naming' });
+  await sleep(300);
+  await client.send('Input.insertText', { text: ' test' });
+  await sleep(4000); // well past the usual wait
+  eq(await read('Knowledge/Untitled 9.md'), '', 'filled while the name was still being typed');
+  await press('Enter', 'Enter', 13);
+  await waitFor(() => ev(`!!app.vault.getFileByPath('Knowledge/Naming test.md')`), 'the rename', 6000);
+  await waitFor(async () => (await read('Knowledge/Naming test.md')).includes('id: KB-'), 'the fill after the rename', 8000);
+  eq((await fm('Knowledge/Naming test.md')).name, 'Naming test', 'name should be the typed name, not Untitled');
+  eq(await strayModals(), 0, 'a dialog appeared');
+});
+
+await check('P10 keeping the default name: the note is filled once you leave the title field', async () => {
+  await openFresh('Knowledge/Untitled 8.md');
+  await focusTitle();
+  await sleep(3500);
+  eq(await read('Knowledge/Untitled 8.md'), '', 'filled while the title field still had focus');
+  await ev(`activeDocument.activeElement.blur(); 0`);
+  await waitFor(async () => (await read('Knowledge/Untitled 8.md')).includes('id: KB-'), 'the fill after leaving the title', 10000);
+  eq((await fm('Knowledge/Untitled 8.md')).name, 'Untitled 8', 'name');
+});
+
+await check('P10 ask mode also waits for the name, then shows the preview', async () => {
+  await setS({ onCreate: 'ask' });
+  await openFresh('Knowledge/Untitled 7.md');
+  await focusTitle();
+  await client.send('Input.insertText', { text: 'Asked after naming' });
+  await sleep(3500);
+  eq(await strayModals(), 0, 'a preview appeared while the name was being typed');
+  await press('Enter', 'Enter', 13);
+  const m = await waitModal('Add kb properties');
+  assert(m.title.includes('Asked after naming'), `the preview should use the new name: ${m.title}`);
+  await clickButton('Not now');
+  await sleep(500);
+  eq(await read('Knowledge/Asked after naming.md'), '', 'Not now wrote to the note');
+  await setS({ onCreate: 'fill' });
+});
+
+const tplPath = '_schema/templates/kb.md';
+await check('P10 schema templates: the starter pack ships them and a new empty note gets the body', async () => {
+  eq(await ev(`[...${P}.schemas.pack.templates.keys()].sort()`), ['exercise', 'journal', 'kb', 'person', 'project', 'resource', 'task'], 'templates loaded');
+  await ev(`app.vault.create('Knowledge/Tpl One.md', '').then(() => 0)`);
+  await waitFor(async () => (await read('Knowledge/Tpl One.md')).includes('id: KB-'), 'the fill', 8000);
+  const text = await read('Knowledge/Tpl One.md');
+  assert(text.endsWith('---\n## Summary\n\n## Details\n\n## Sources\n'), `template body: ${JSON.stringify(text.slice(-60))}`);
+  eq((await noteKeys('Knowledge/Tpl One.md')).slice(-2), ['created', 'modified'], 'created and modified last');
+});
+
+await check('P10 a note that already has text keeps it exactly; template values never replace the note’s own', async () => {
+  const orig = await read(tplPath);
+  try {
+    await write(tplPath, '---\naudience: team\nkind: faq\n---\n## From the edited template\n');
+    await waitFor(() => ev(`${P}.schemas.pack.templates.get('kb').body.includes('edited template')`), 'the template to reload');
+    await write('Knowledge/Tpl Two.md', '---\nkind: how-to\n---\nMy own text\n');
+    await waitFor(async () => (await read('Knowledge/Tpl Two.md')).includes('id: KB-'), 'the fill', 8000);
+    const f = await fm('Knowledge/Tpl Two.md');
+    eq([f.kind, f.audience], ['how-to', 'team'], 'the note’s kind must win; the template supplies audience');
+    assert((await read('Knowledge/Tpl Two.md')).endsWith('---\nMy own text\n'), 'the note’s text changed');
+    await ev(`app.vault.create('Knowledge/Tpl Three.md', '').then(() => 0)`);
+    await waitFor(async () => (await read('Knowledge/Tpl Three.md')).includes('id: KB-'), 'the fill', 8000);
+    const g = await fm('Knowledge/Tpl Three.md');
+    eq([g.kind, g.audience], ['faq', 'team'], 'template values should replace the schema defaults');
+    assert((await read('Knowledge/Tpl Three.md')).endsWith('## From the edited template\n'), 'edited template body');
+  } finally {
+    await write(tplPath, orig);
+    await waitFor(() => ev(`!${P}.schemas.pack.templates.get('kb').body.includes('edited template')`), 'the template to restore');
+  }
+});
+
+await check('P10 placeholders are filled; the setting turns templates off', async () => {
+  const path = '_schema/templates/task.md';
+  const orig = await read(path);
+  try {
+    await write(path, '## {{name}} ({{id}})\n\nCreated {{date}} in {{folder}}\n');
+    await waitFor(() => ev(`${P}.schemas.pack.templates.get('task').body.includes('{{name}}')`), 'the template to reload');
+    await ev(`app.vault.create('Tasks/Ph One.md', '').then(() => 0)`);
+    await waitFor(async () => (await read('Tasks/Ph One.md')).includes('id: TK-'), 'the fill', 8000);
+    const t = await read('Tasks/Ph One.md');
+    const id = (await fm('Tasks/Ph One.md')).id;
+    assert(t.includes(`## Ph One (${id})`) && /Created \d{4}-\d{2}-\d{2} in Tasks/.test(t), `placeholders: ${JSON.stringify(t.slice(-80))}`);
+    await setS({ useSchemaTemplates: false });
+    await ev(`app.vault.create('Tasks/Ph Two.md', '').then(() => 0)`);
+    await waitFor(async () => (await read('Tasks/Ph Two.md')).includes('id: TK-'), 'the fill', 8000);
+    assert((await read('Tasks/Ph Two.md')).endsWith('---\n'), 'a template body was inserted with the setting off');
+  } finally {
+    await setS({ useSchemaTemplates: true });
+    await write(path, orig);
+    await waitFor(() => ev(`!${P}.schemas.pack.templates.get('task').body.includes('{{name}}')`), 'the template to restore');
+  }
+});
+
+await check('P10 a bad template is a warning with file and line; the schema still loads and notes still fill', async () => {
+  const path = '_schema/templates/person.md';
+  const orig = await read(path);
+  try {
+    await write(path, '---\nrelationship: stranger\nid: PE-1\n---\n## Hi {{who}}\n');
+    await waitFor(() => ev(`${P}.schemas.status.problems.some(p => p.code === 'template')`), 'the warning');
+    const probs = await ev(`${P}.schemas.status.problems.filter(p => p.code === 'template').map(p => p.severity + ' ' + p.file + ':' + p.line)`);
+    assert(probs.every((x) => x.startsWith('warning templates/person.md')) && probs.some((x) => /:2$/.test(x)) && probs.some((x) => /:3$/.test(x)), `problems: ${JSON.stringify(probs)}`);
+    eq(await ev(`!!${P}.schemas.pack`), true, 'schema pack must still be loaded');
+    await ev(`app.vault.createFolder('People').catch(() => {}).then(() => app.vault.create('People/Tpl Person.md', '')).then(() => 0)`);
+    await waitFor(async () => (await read('People/Tpl Person.md')).includes('id: PE-'), 'the fill', 8000);
+    assert(!(await read('People/Tpl Person.md')).includes('stranger'), 'an invalid template value was used');
+  } finally {
+    await write(path, orig);
+    await waitFor(() => ev(`!${P}.schemas.status.problems.some(p => p.code === 'template')`), 'the warning to clear');
+  }
+});
+
+await check('P10 ask mode previews the template body; Create note from schema inserts it', async () => {
+  await setS({ onCreate: 'ask' });
+  await ev(`app.vault.create('Knowledge/Tpl Ask.md', '').then(() => 0)`);
+  const m = await waitModal('Add kb properties');
+  assert(m.text.includes('Template body inserted') && m.pre.join('\n').includes('## Summary'), 'the preview should show the template body');
+  eq(await read('Knowledge/Tpl Ask.md'), '', 'written before approval');
+  await clickButton('Add properties');
+  await waitFor(async () => (await read('Knowledge/Tpl Ask.md')).endsWith('## Sources\n'), 'the note with its body');
+  await setS({ onCreate: 'nothing' });
+  await closeStrayModals();
+  await ev(`app.commands.executeCommandById('${PLUGIN_ID}:create-note-from-schema'); 0`);
+  await waitModal('Create note from schema');
+  await ev(`(() => { const m = [...activeDocument.querySelectorAll('.modal')].pop(); const sel = m.querySelectorAll('select')[0]; sel.value = 'kb'; sel.dispatchEvent(new Event('change', { bubbles: true })); const t = m.querySelector('input[type=text]'); t.value = 'Created With Template'; t.dispatchEvent(new Event('input', { bubbles: true })); return 0; })()`);
+  await sleep(300);
+  await clickButton('Create');
+  await waitFor(() => ev(`!!app.vault.getFileByPath('Knowledge/Created With Template.md')`), 'the note');
+  assert((await read('Knowledge/Created With Template.md')).endsWith('---\n## Summary\n\n## Details\n\n## Sources\n'), 'the new note should carry the template body');
+  await closeStrayModals();
+  await ev(`${P}.watcher.enabled = true; 0`);
+});
+
 // ---------------------------------------------------------------- Option key robustness
 await ev(`${P}.layer.releaseSafety = true; 0`);
 await check('P8 a lost key release never leaves the list stuck: any event without the Option flag, or the window losing focus, closes it', async () => {

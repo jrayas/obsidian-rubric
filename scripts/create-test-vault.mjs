@@ -160,7 +160,7 @@ folder fill themselves (the setting is *Settings → Vault Schema → Automation
 | Command palette → **Show all options for this property** (assign a hotkey first) | A list that stays open until Escape |
 | Click a ▾ button next to a value | The same list |
 | Hold the key on \`id\` or \`created\` | A note saying who manages it |
-| Create a **new note** in \`Knowledge/\` | It fills itself: ID, created, status, defaults |
+| Create a **new note** in \`Knowledge/\`, type its name, press Enter | It is filled after the name is set: ID, created, status, defaults, and the template body from \`_schema/templates/kb.md\` |
 | Rename that note | \`name\` follows the file name |
 | Command palette → **Create note from schema** | Pick a type and name; try a name like \`a:b\` |
 | Apply the template **Knowledge note** to a new note in \`Knowledge/\` | Template values stay; ID and defaults are added around them |
@@ -175,7 +175,7 @@ missing and an odd breadcrumb, a leftover domain, and two schema 1 notes (try **
 exact change first. Nothing is written until you press a button.
 
 ## Schema files
-Edit anything in \`_schema/\` (for example add a tag in \`vocabularies/tags.yaml\` or a status in \`types/kb.yaml\`). The plugin
+Edit anything in \`_schema/\` (for example the starting body in \`templates/kb.md\`, or add a tag in \`vocabularies/tags.yaml\` or a status in \`types/kb.yaml\`). The plugin
 reloads it. Break a file on purpose: you get one notice naming the file and line, and the last good copy stays in use.
 \`_schema/REFERENCE.md\` explains every attribute.
 

@@ -115,6 +115,8 @@ export interface ScopeConfig {
   include: string[];
 }
 
+import type { TemplateDef } from './templates';
+
 export interface SchemaPack {
   format: number;
   minPluginVersion: string;
@@ -124,6 +126,8 @@ export interface SchemaPack {
   vocabularies: Map<string, Vocabulary>;
   folders: FoldersConfig;
   scope: ScopeConfig;
+  /** Starting body and values per type, from `templates/<type>.md`. Types without a file have no entry. */
+  templates: Map<string, TemplateDef>;
 }
 
 export interface LoadResult {

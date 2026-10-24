@@ -19,6 +19,8 @@ export interface VaultSchemaSettings {
   onCreate: OnCreate;
   /** Quiet time after a note appears before it is filled, so a template can finish first. */
   createDelayMs: number;
+  /** Insert `_schema/templates/<type>.md` (body and starting values) into notes the plugin fills. */
+  useSchemaTemplates: boolean;
   /** Keep `name` in step with the file name when the note is renamed (only if `name` was empty or filled by the plugin). */
   syncName: boolean;
   /** Write `breadcrumb` from the real folder when a note is created or moved. Off unless no breadcrumb plugin is used. */
@@ -49,6 +51,7 @@ export const DEFAULT_SETTINGS: VaultSchemaSettings = {
   batchMode: true,
   onCreate: 'ask',
   createDelayMs: 1500,
+  useSchemaTemplates: true,
   syncName: true,
   breadcrumbFromFolder: false,
   promptScope: 'open',

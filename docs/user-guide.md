@@ -59,11 +59,18 @@ Settings (*Settings → Vault Schema*): the hold key, the delay (default 330 ms)
 
 In Source mode, the same suggestions appear after `key: ` and inside lists under a key.
 
+## Naming a new note, and schema templates
+
+**Naming.** A new note is not filled while you are still typing its title. Type the name and press Enter (or click away): the note is renamed first and then filled, so `name` is the name you typed. If you keep "Untitled", it is filled once you leave the title field.
+
+**Templates.** `_schema/templates/<type>.md` gives a new note of that type a starting body and, optionally, starting values. The starter pack has one for every type except `note`. The body goes in only if the note is empty; a note that already has text keeps it exactly. Starting values replace the schema defaults but never a value the note already has. Use `{{name}}`, `{{id}}`, `{{type}}`, `{{date}}`, `{{datetime}}` and `{{folder}}`. Edit a template and it reloads; a mistake in one is a warning with file and line and the rest of the schema keeps working. If your vault was created before templates existed, run **Install starter schema pack** to add the missing files (it never overwrites). Turn the feature off with **Insert the schema template into new notes**. See `_schema/REFERENCE.md`.
+
 ## New notes, renames and moves (Automation settings)
 
 | Setting | What it does | Default |
 | --- | --- | --- |
 | When a note is created in a mapped folder | **Fill automatically** adds `type`, `schema`, `id`, `name`, `status`, `created`, `modified` and the defaults; **Ask with a preview** shows them first; **Do nothing** leaves the note alone. Only new notes without an `id` are touched; notes that look like sync arrivals, notes with an ID and excluded folders are skipped | Ask with a preview |
+| Insert the schema template into new notes | Uses `_schema/templates/<type>.md` as described above | On |
 | Wait before filling a new note | Time to let a template finish first. Only missing properties are added; template values and the body are never changed | 1500 ms |
 | Keep the name property in step with the file name | After a rename, `name` follows the file name, but only if it was empty or filled by the plugin | On |
 | Set breadcrumb from the folder | Writes the real folder path to `breadcrumb` when a note is created or moved. Only for people who do not use a breadcrumb plugin | Off |

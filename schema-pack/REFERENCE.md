@@ -14,6 +14,7 @@ Schema files are plain YAML. Edit them in any editor. The plugin writes only `re
 | `modules/*.yaml` | Reusable groups of properties |
 | `vocabularies/*.yaml` | Controlled lists (tags) |
 | `types/*.yaml` | A note type: the modules it uses plus its own properties |
+| `templates/<type>.md` | Optional starting body and values for new notes of that type (see Templates) |
 
 ## registry/types.yaml
 
@@ -85,6 +86,30 @@ A vocabulary file has `vocabulary` (its name) and `terms`: a map of preferred te
 | `description` | all | Free text for people reading the file |
 
 A property name must have the same value type (and item type) in every type, because Obsidian keeps one type per property name across the vault. Enum value lists may differ between types.
+
+## Templates
+
+`templates/<type>.md` (for example `templates/kb.md`) is optional. When the plugin fills a new note of that type (fill automatically, ask with a preview, **Choose schema for this note**, or **Create note from schema**):
+
+- the template's **body** is inserted only if the note's body is empty. A note that already has any text keeps it exactly;
+- the template's **properties** (the frontmatter at the top of the template file) become starting values, but only for properties the note does not already have. They replace the schema defaults, never a value you or another template wrote.
+
+A template's properties must be properties of that type and valid for it. These are set by the plugin and are ignored if a template sets them: `type`, `schema`, `id`, `created`, `modified`, `breadcrumb`, `archived_fields`. A bad template is reported as a warning with file and line, and the schema still loads; the offending value, or the whole template, is skipped.
+
+Placeholders you can use in the body and in text values: `{{name}}` (the file name), `{{id}}`, `{{type}}`, `{{date}}` (YYYY-MM-DD), `{{datetime}}` (YYYY-MM-DDTHH:mm), `{{folder}}` (the note's folder). An unknown placeholder is left as written and reported as a warning.
+
+Example `templates/project.md`:
+
+```
+---
+priority: 3
+---
+## Goal
+
+## Milestones
+```
+
+This is separate from Obsidian's own Templates plugin and from the vault's `Templates/` folder (which is excluded from the schema). Turn the feature off with **Insert the schema template into new notes** in the plugin settings.
 
 ## Built-in property
 

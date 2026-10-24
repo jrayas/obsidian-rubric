@@ -2,6 +2,7 @@ import { TFile, getFrontMatterInfo, parseYaml } from 'obsidian';
 import type { App, Plugin } from 'obsidian';
 import { matchNote } from '../core/matcher';
 import type { MatchResult } from '../core/matcher';
+import { NAMING_PATIENCE_MS, stillBeingNamed } from '../core/naming';
 import { createAction, folderKey, shouldAskWhichSchema } from '../core/prompt-policy';
 import type { NoteEvent } from '../core/prompt-policy';
 import { checkScope } from '../core/scope';
@@ -27,6 +28,10 @@ export class NoteService {
   /** Folders asked about during this session, so two notes in one folder do not stack prompts. */
   private readonly askedThisSession = new Set<string>();
   private readonly pending = new Set<string>();
+  /** New notes whose name is still being typed: path -> when they started waiting. They are filled after the rename. */
+  private readonly awaitingName = new Map<string, number>();
+  /** Notes to treat as brand new even if the file is older than the usual window (they waited for their name). */
+  private readonly treatAsNew = new Set<string>();
   /** Set in Phase 4: write `type` into a note when the user picks a schema without remembering the folder. */
   applyType: ((file: TFile, type: string) => Promise<void>) | null = null;
   /** Set in main: fill or offer to fill a new note that matched a schema. */
@@ -73,22 +78,69 @@ export class NoteService {
 
   /** Register vault events. Call from onLayoutReady, so the initial load does not look like new notes. */
   start(): void {
-    const { vault } = this.app;
+    const { vault, workspace } = this.app;
     this.plugin.registerEvent(
       vault.on('create', (f) => {
         if (f instanceof TFile) this.later(f, 'create');
       }),
     );
     this.plugin.registerEvent(
-      vault.on('rename', (f) => {
-        if (f instanceof TFile) this.later(f, 'rename');
+      vault.on('rename', (f, oldPath) => {
+        if (!(f instanceof TFile)) return;
+        // The user finished naming the note (Enter, or leaving the title): now it can be filled.
+        if (this.awaitingName.delete(oldPath)) this.later(f, 'create', true);
+        else this.later(f, 'rename');
       }),
     );
+    // Leaving the title field without changing the name (they keep "Untitled"): fill after a short pause.
+    this.plugin.registerDomEvent(document, 'focusout', (e) => {
+      if (!(e.target instanceof HTMLElement) || !e.target.closest('.inline-title')) return;
+      window.setTimeout(() => this.releaseIdle(), 1500);
+    });
+    this.plugin.registerEvent(workspace.on('active-leaf-change', () => window.setTimeout(() => this.releaseIdle(), 1500)));
+    this.plugin.registerInterval(window.setInterval(() => this.releaseStale(), 15_000));
+  }
+
+  private titleFocused(): boolean {
+    return !!activeDocument.activeElement?.closest('.inline-title');
+  }
+
+  private isBeingNamed(file: TFile): boolean {
+    return stillBeingNamed({
+      isActive: this.app.workspace.getActiveFile()?.path === file.path,
+      titleFocused: this.titleFocused(),
+      basename: file.basename,
+    });
+  }
+
+  /** Waiting notes whose title is no longer being edited and that are no longer the open note's title in progress. */
+  private releaseIdle(): void {
+    for (const path of [...this.awaitingName.keys()]) {
+      const file = this.app.vault.getFileByPath(path);
+      if (!file) {
+        this.awaitingName.delete(path);
+        continue;
+      }
+      if (this.titleFocused() && this.app.workspace.getActiveFile()?.path === path) continue;
+      this.awaitingName.delete(path);
+      this.later(file, 'create', true);
+    }
+  }
+
+  private releaseStale(): void {
+    const now = Date.now();
+    for (const [path, since] of [...this.awaitingName]) {
+      if (now - since < NAMING_PATIENCE_MS) continue;
+      this.awaitingName.delete(path);
+      const file = this.app.vault.getFileByPath(path);
+      if (file) this.later(file, 'create', true);
+    }
   }
 
   /** Give the metadata cache a moment to read the new file before deciding. */
-  private later(file: TFile, event: NoteEvent): void {
+  private later(file: TFile, event: NoteEvent, asNew = false): void {
     if (file.extension !== 'md' || this.pending.has(file.path)) return;
+    if (asNew) this.treatAsNew.add(file.path);
     this.pending.add(file.path);
     window.setTimeout(() => {
       this.pending.delete(file.path);
@@ -99,6 +151,12 @@ export class NoteService {
   private async maybePrompt(file: TFile, event: NoteEvent): Promise<void> {
     const pack = this.schemas.pack;
     if (!pack || !this.app.vault.getFileByPath(file.path)) return;
+    const asNew = this.treatAsNew.delete(file.path);
+    // A new note is filled after it has its real name, not while the title is still being typed.
+    if (event === 'create' && !asNew && this.isBeingNamed(file)) {
+      this.awaitingName.set(file.path, Date.now());
+      return;
+    }
     const ctx = this.context(file, (await this.readFrontmatter(file)) ?? {});
     if (!ctx.match) return;
     const settings = this.getSettings();
@@ -108,7 +166,7 @@ export class NoteService {
         match: ctx.match,
         event,
         hasId: typeof fm0?.id === 'string' && fm0.id !== '',
-        ageMs: Date.now() - file.stat.ctime,
+        ageMs: asNew ? 0 : Date.now() - file.stat.ctime,
         setting: settings.onCreate,
       });
       if (action !== 'none' && this.fillNew) await this.fillNew(file, ctx.type, action);
@@ -121,7 +179,7 @@ export class NoteService {
       event,
       skippedFolders: skipped,
       hasId: typeof fm?.id === 'string' && fm.id !== '',
-      ageMs: Date.now() - file.stat.ctime,
+      ageMs: asNew ? 0 : Date.now() - file.stat.ctime,
     });
     if (!ask) return;
     await this.promptForSchema(file, ctx.match);

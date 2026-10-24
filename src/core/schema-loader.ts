@@ -1,4 +1,7 @@
+import { split } from './frontmatter';
 import { compareVersions } from './semver';
+import { parseTemplate } from './templates';
+import type { TemplateDef } from './templates';
 import { nameKey } from './normalise';
 import { YamlFile } from './yaml-file';
 import type { YamlPath } from './yaml-file';
@@ -54,6 +57,11 @@ class Loader {
 
   warn(code: string, file: string, message: string, line?: number): void {
     this.report('warning', code, file, message, line);
+  }
+
+  /** Raw text of a file, or null when it does not exist. */
+  readText(path: string): Promise<string | null> {
+    return this.source.read(path);
   }
 
   /** Read and parse; null (with a problem recorded) when missing or not valid YAML. */
@@ -544,6 +552,22 @@ export async function loadSchemaPack(source: SchemaFileSource, options: LoadOpti
     }
   }
 
+  // --- templates (optional, one per type) --------------------------------------------------
+  const templates = new Map<string, TemplateDef>();
+  for (const [name, rt] of types) {
+    const path = `templates/${name}.md`;
+    const text = await ld.readText(path);
+    if (text === null) continue;
+    const parts = split(text);
+    const yf = parts ? new YamlFile(path, parts.yaml) : null;
+    const { def, issues } = parseTemplate(rt, path, text, (k) => {
+      const line = yf?.lineOf([k]);
+      return line === undefined ? undefined : line + 1; // the opening --- is line 1
+    });
+    for (const issue of issues) ld.warn('template', path, issue.message, issue.line);
+    if (def) templates.set(name, def);
+  }
+
   // --- folders and scope ----------------------------------------------------------------
   const folders = await loadFolders(ld, new Set(typeNames));
   const scope = await loadScope(ld);
@@ -560,6 +584,7 @@ export async function loadSchemaPack(source: SchemaFileSource, options: LoadOpti
     vocabularies,
     folders,
     scope,
+    templates,
   };
   return { pack, problems: ld.problems };
 }

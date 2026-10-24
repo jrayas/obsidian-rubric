@@ -20,7 +20,7 @@ export function packFiles(): Map<string, string> {
   const files = new Map<string, string>();
   for (const p of walk(PACK_DIR)) {
     const rel = relative(PACK_DIR, p).split(sep).join('/');
-    if (rel.endsWith('.yaml')) files.set(rel, readFileSync(p, 'utf8'));
+    if (rel.endsWith('.yaml') || rel.startsWith('templates/')) files.set(rel, readFileSync(p, 'utf8'));
   }
   return files;
 }
