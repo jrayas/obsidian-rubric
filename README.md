@@ -40,6 +40,10 @@ Requires Obsidian **1.13.7 or later** (desktop only). See [docs/user-guide.md](d
 
 No command has a default hotkey.
 
+## Starter schema
+
+The starter pack has eight everyday types (note, kb, project, exercise, journal, person, resource, task) and an opt-in **lesson** type that uses the `curriculum` (domain, section, level, order, track) and `verification` modules and a `tracks` vocabulary. It ships a ready-made `maths` domain as an example of the overrides below; delete it or copy it for your own domain.
+
 ## Domain overrides
 
 A new domain (maths, physics, biology…) can change the defaults without forking the schema. Next to a default file, an optional folder named after it holds one override file per domain, named by the domain slug:
