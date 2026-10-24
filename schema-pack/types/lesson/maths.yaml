@@ -1,0 +1,11 @@
+# Example domain override: what a lesson looks like when its domain is maths.
+# Copy this file (and its siblings under modules/ and vocabularies/) and rename it for another domain.
+# The file name is the domain, and it must be one of the "domain" values in modules/curriculum.yaml.
+domain: maths
+override:                  # change values, default or description of an existing property
+  kind:
+    values: [definition, theorem, proof, example, concept]
+    default: definition
+add:                       # properties allowed only for this domain
+  prerequisite_theorems: {type: list, items: link, target: lesson}
+remove: [audience]         # properties not allowed for this domain

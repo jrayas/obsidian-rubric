@@ -86,6 +86,20 @@ A vocabulary file has `vocabulary` (its name) and `terms`: a map of preferred te
 
 A property name must have the same value type (and item type) in every type, because Obsidian keeps one type per property name across the vault. Enum value lists may differ between types.
 
+## Opt-in pieces: lessons, domains and verification
+
+The eight everyday types (note, kb, project, exercise, journal, person, resource, task) do not use these. Add a module name to a type's `uses` to switch it on.
+
+| Piece | What it is |
+| --- | --- |
+| `modules/curriculum.yaml` | `domain`, `section`, `level`, `topic`, `order`, `track`: where a note sits in a reading path. `domain` picks the override files below; every `section` value and `track` term starts with its domain and a hyphen |
+| `modules/verification.yaml` | `ai_generated`, `generated_by`, `verified`, `verified_by`, `references`: an honest record of who wrote a note and whether a person has checked it |
+| `vocabularies/tracks.yaml` | Named learning paths, every term starting with its domain |
+| `types/lesson.yaml` | A teaching note (prefix LS, folder `Lessons`) that uses both modules. A new type starts at schema version 1 |
+| `*/lesson/maths.yaml` and the other `maths.yaml` files | A ready-made example of a domain override (below): kinds that suit maths, one added property, one removed, extra sections, tags and tracks. Delete them, or copy and rename them for your own domain |
+
+To add a domain: append its name to the `domain` values in `modules/curriculum.yaml`, then add only the override files it needs.
+
 ## Domain overrides
 
 Next to a default file you can add a folder of the same name with one override file per domain, named by the domain: `types/kb.yaml` plus `types/kb/maths.yaml`, `modules/verification/maths.yaml`, `vocabularies/tags/maths.yaml`. A note whose `domain` is maths then uses the default plus that file; a note in a domain with no file uses the default. The file starts with `domain: maths` and may use `override` (change `values`, `default`, `description` of an existing property), `add` (properties allowed only for this domain) and `remove` (properties not allowed). A module file may also have `sections: [...]`, added to the module's `section` values. Core properties (`type`, `schema`, `id`, `name`, `status`, `domain`, `section`, `level`, `order`, `created`, `modified`) cannot be removed; an override cannot change a property's type; `section` and `track` values start with `<domain>-`. Vocabulary override files hold `domain:` and `terms:`; a term equal to a default term or synonym is an error. See the README for the full rules.

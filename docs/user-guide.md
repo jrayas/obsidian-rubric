@@ -96,7 +96,7 @@ These questions are asked for notes you have open. Obsidian cannot tell a change
 
 ## IDs
 
-`PREFIX-YYYY-NNNN`: NT note, KB kb, PR project, EX exercise, JR journal, PE person, RS resource, TK task. The year comes from `created` and never changes; the number counts per type per year and restarts each January. IDs are locked and immutable. A converted note keeps its old ID.
+`PREFIX-YYYY-NNNN`: NT note, KB kb, PR project, EX exercise, JR journal, PE person, RS resource, TK task, LS lesson. The year comes from `created` and never changes; the number counts per type per year and restarts each January. IDs are locked and immutable. A converted note keeps its old ID.
 
 Two notes with the same ID (for example created offline on two devices): the vault check keeps the ID on the older note and offers the newer one the next free number, with a preview. A renumbered ID is never given out again.
 

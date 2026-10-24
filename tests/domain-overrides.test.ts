@@ -5,7 +5,7 @@ import { checkNote, makeAllocator } from '../src/core/note-check';
 import type { CheckContext, NoteInput } from '../src/core/note-check';
 import type { Problem, ResolvedType, SchemaPack } from '../src/core/schema-types';
 import { loadFixture } from './helpers/domain-fixture';
-import { loadPack } from './helpers/pack';
+import { load, loadPack, packFiles } from './helpers/pack';
 
 let pack: SchemaPack;
 beforeAll(async () => {
@@ -102,16 +102,55 @@ describe('effective vocabularies', () => {
 });
 
 describe('no override folders: nothing changes', () => {
-  it('the starter pack has no domain files and every lookup returns the default', async () => {
-    const starter = await loadPack();
-    expect(starter.domainFiles.size).toBe(0);
-    expect(starter.effectiveTypes.size).toBe(0);
-    expect(starter.effectiveVocabularies.size).toBe(0);
-    for (const name of starter.typeNames) {
-      expect(typeFor(starter, name, 'physics')).toBe(starter.types.get(name));
-      expect(typeFor(starter, name)).toBe(starter.types.get(name));
+  it('a pack without override files has no domain files and every lookup returns the default', async () => {
+    const files = packFiles();
+    for (const key of [...files.keys()]) if (/^(types|modules|vocabularies)\/[^/]+\/[^/]+\.yaml$/.test(key)) files.delete(key);
+    const r = await load(files);
+    expect(r.problems).toEqual([]);
+    const plain = r.pack as SchemaPack;
+    expect(plain.domainFiles.size).toBe(0);
+    expect(plain.effectiveTypes.size).toBe(0);
+    expect(plain.effectiveVocabularies.size).toBe(0);
+    for (const name of plain.typeNames) {
+      expect(typeFor(plain, name, 'maths')).toBe(plain.types.get(name));
+      expect(typeFor(plain, name)).toBe(plain.types.get(name));
     }
-    for (const name of starter.vocabularies.keys()) expect(vocabFor(starter, name, 'physics')).toBe(starter.vocabularies.get(name));
+    for (const name of plain.vocabularies.keys()) expect(vocabFor(plain, name, 'maths')).toBe(plain.vocabularies.get(name));
+  });
+});
+
+describe('the starter pack’s example maths domain', () => {
+  let starter: SchemaPack;
+  beforeAll(async () => {
+    starter = await loadPack();
+  });
+
+  it('declares its domains and finds the example override files', () => {
+    expect(starter.domains).toEqual(['general', 'maths']);
+    expect([...starter.effectiveTypes.keys()]).toEqual(['maths/lesson']);
+    expect([...starter.effectiveVocabularies.keys()].sort()).toEqual(['maths/tags', 'maths/tracks']);
+  });
+
+  it('a maths lesson: its own kinds, an added property, one property removed, extra sections', () => {
+    const lesson = typeFor(starter, 'lesson', 'maths') as ResolvedType;
+    expect(lesson.byName.get('kind')?.values).toEqual(['definition', 'theorem', 'proof', 'example', 'concept']);
+    expect(lesson.byName.get('kind')?.default).toBe('definition');
+    expect(lesson.byName.has('prerequisite_theorems')).toBe(true);
+    expect(lesson.byName.has('audience')).toBe(false);
+    expect(lesson.byName.get('section')?.values).toEqual(['general-start-here', 'general-reference', 'maths-foundations', 'maths-algebra', 'maths-analysis']);
+    expect(lesson.byName.get('section')?.default).toBe('maths-foundations');
+  });
+
+  it('a general lesson, and every other type, keep the defaults', () => {
+    expect(typeFor(starter, 'lesson', 'general')).toBe(starter.types.get('lesson'));
+    expect(starter.types.get('lesson')?.byName.get('kind')?.values).toEqual(['concept', 'how-to', 'reference', 'glossary', 'case-study']);
+    expect(typeFor(starter, 'kb', 'maths')).toBe(starter.types.get('kb'));
+  });
+
+  it('maths tags and tracks are added to the defaults', () => {
+    expect(vocabFor(starter, 'tags', 'maths')?.lookup.get('thm')).toBe('theorem');
+    expect(vocabFor(starter, 'tracks', 'maths')?.terms.map((t) => t.term)).toEqual(['general-getting-started', 'maths-first-course']);
+    expect(starter.vocabularies.get('tags')?.lookup.has('theorem')).toBe(false);
   });
 });
 
@@ -164,6 +203,14 @@ describe('the rules', () => {
   it('a section already in the default list is an error', async () => {
     const p = await problemsWith({ 'modules/curriculum/demo.yaml': 'domain: demo\nsections: [demo-basics]\n' }, { 'modules/curriculum.yaml': (t) => t.replace('[pcb-start-here, pcb-core]', '[pcb-start-here, pcb-core, demo-basics]') });
     expect(has(p, 'section-duplicate')).toBe(true);
+  });
+
+  it('a default may be one of the same file’s own sections', async () => {
+    const r = await loadFixture({}, { 'modules/curriculum/demo.yaml': 'domain: demo\nsections: [demo-basics, demo-proofs]\noverride:\n  section:\n    default: demo-proofs\n' });
+    expect(r.problems).toEqual([]);
+    expect(typeFor(r.pack as SchemaPack, 'kb', 'demo')?.byName.get('section')?.default).toBe('demo-proofs');
+    const bad = await problemsWith({ 'modules/curriculum/demo.yaml': 'domain: demo\nsections: [demo-basics]\noverride:\n  section:\n    default: demo-elsewhere\n' });
+    expect(has(bad, 'bad-default')).toBe(true);
   });
 
   it('an override file for a domain that is not a domain value is an error, in every kind of file', async () => {

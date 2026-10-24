@@ -24,6 +24,6 @@ describe('embedded starter pack', () => {
     const files = new Map(Object.entries(STARTER_PACK));
     const r = await load(files);
     expect(r.problems).toEqual([]);
-    expect(r.pack?.typeNames).toHaveLength(8);
+    expect(r.pack?.typeNames).toHaveLength(9);
   });
 });

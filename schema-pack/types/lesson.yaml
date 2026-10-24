@@ -1,0 +1,20 @@
+type: lesson
+description: A teaching note that sits in a domain's reading path (domain, section, level and order).
+uses: [base, findability, taxonomy, relations, curriculum, verification]
+overrides:
+  status:
+    values: [draft, review, published, outdated, archived]
+    default: draft
+properties:
+  kind:
+    type: enum
+    values: [concept, how-to, reference, glossary, case-study]
+    default: concept
+  audience:
+    type: enum
+    values: [self, team, public]
+    default: self
+  confidence:
+    type: enum
+    values: [low, medium, high]
+    default: medium

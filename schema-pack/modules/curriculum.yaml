@@ -1,0 +1,38 @@
+module: curriculum
+description: Where a note sits in a reading path (domain, section, level and order). Opt-in, so a type lists it under "uses".
+properties:
+  domain:
+    type: enum
+    required: true
+    values: [general, maths]
+    default: general
+    description: The knowledge domain. Append a value here to add a domain, then add an override folder for it if it needs different values. Never rename one.
+  section:
+    type: enum
+    required: true
+    values: [general-start-here, general-reference]
+    default: general-start-here
+    description: Subject area. Every value starts with its domain and a hyphen. A domain adds its own with "sections" in modules/curriculum/<domain>.yaml.
+  level:
+    type: enum
+    required: true
+    values: [beginner, intermediate, advanced]
+    default: beginner
+    description: Who the note is for.
+  topic:
+    type: string
+    description: Short free-text subtopic.
+  order:
+    type: integer
+    required: true
+    min: 1
+    default: 10
+    description: Reading order within a section. Use gaps of 10.
+  track:
+    type: list
+    items: term
+    vocabulary: tracks
+    strict: true
+    normalise: true
+    default: []
+    description: Named learning paths this note belongs to.

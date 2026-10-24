@@ -9,9 +9,12 @@ modules:
   relations: modules/relations.yaml
   provenance: modules/provenance.yaml
   review: modules/review.yaml
+  curriculum: modules/curriculum.yaml
+  verification: modules/verification.yaml
 
 vocabularies:
   tags: vocabularies/tags.yaml
+  tracks: vocabularies/tracks.yaml
 
 # prefix: letters used in readable IDs (PREFIX-YYYY-NNNN)
 # version: the `schema` number written into notes of this type
@@ -24,3 +27,4 @@ types:
   person:   { file: types/person.yaml,   prefix: PE, version: 2 }
   resource: { file: types/resource.yaml, prefix: RS, version: 2 }
   task:     { file: types/task.yaml,     prefix: TK, version: 2 }
+  lesson:   { file: types/lesson.yaml,   prefix: LS, version: 1 }

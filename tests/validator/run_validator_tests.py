@@ -106,6 +106,7 @@ CASES = [
     ('section without the domain prefix', {'modules/curriculum/demo.yaml': 'domain: demo\nsections: [pcb-extra]\n'}, 'must start with demo-'),
     ('overridden section values without the prefix', {'modules/curriculum/demo.yaml': 'domain: demo\noverride:\n  section:\n    values: [pcb-core]\n'}, 'must start with demo-'),
     ('section already in the default list', {'modules/curriculum/demo.yaml': 'domain: demo\nsections: [demo-basics]\n', 'modules/curriculum.yaml': lambda t: t.replace('[pcb-start-here, pcb-core]', '[pcb-start-here, pcb-core, demo-basics]')}, 'already in the default list'),
+    ('default that is not among the values or the file\'s sections', {'modules/curriculum/demo.yaml': 'domain: demo\nsections: [demo-basics]\noverride:\n  section:\n    default: demo-elsewhere\n'}, 'is not one of its values'),
     ('override file for a domain that is not a domain value', {'types/kb/ghost.yaml': 'domain: ghost\nremove: [standards]\n'}, 'not one of the domain values'),
     ('override file for an unknown domain, vocabulary', {'vocabularies/tags/ghost.yaml': 'domain: ghost\nterms: {}\n'}, 'not one of the domain values'),
     ('file says another domain', {KB: 'domain: pcb\nremove: [standards]\n'}, 'says pcb'),
@@ -132,6 +133,11 @@ for label, changes, expect in CASES:
     code, out = run(root)
     check('%-62s -> %s' % (label, expect), code == 1 and any(expect in e for e in errors(out)), out)
     shutil.rmtree(root)
+
+root = fresh('sections-default')
+edit(root, {'modules/curriculum/demo.yaml': 'domain: demo\nsections: [demo-basics, demo-proofs]\noverride:\n  section:\n    default: demo-proofs\n'})
+code, out = run(root)
+check('a default that is one of the same file\'s sections is accepted', code == 0 and not errors(out), out)
 
 # ------------------------------------------------------------------------------------------------ backwards compatibility
 print('no override folders: nothing changes')

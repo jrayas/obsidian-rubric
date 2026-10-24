@@ -1,0 +1,4 @@
+# Example: learning paths for the maths domain. Every term starts with "maths-".
+domain: maths
+terms:
+  maths-first-course: {}

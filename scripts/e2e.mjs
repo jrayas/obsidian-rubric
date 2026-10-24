@@ -109,7 +109,7 @@ await check('P1 starter pack installs through the command and loads without prob
   await waitFor(() => clickButton('Create files'), 'the confirm dialog');
   await waitFor(() => ev(`${P}.schemas.pack !== null`), 'pack to load');
   eq(await ev(`${P}.schemas.status.problems.length`), 0, 'problems');
-  eq(await ev(`${P}.schemas.pack.typeNames.length`), 8, 'types');
+  eq(await ev(`${P}.schemas.pack.typeNames.length`), 9, 'types');
   // running it again creates nothing and never overwrites
   await write('_schema/types/note.yaml', (await read('_schema/types/note.yaml')) + '# edited\n');
   await ev(`app.commands.executeCommandById('${PLUGIN_ID}:install-starter-schemas'); 0`);
@@ -140,7 +140,7 @@ await check('P1 a hidden .schema folder is read and watched by polling', async (
     const copy = async (from, to) => { await ad.mkdir(to).catch(() => {}); const l = await ad.list(from); for (const f of l.files) await ad.write(to + '/' + f.split('/').pop(), await ad.read(f)); for (const d of l.folders) await copy(d, to + '/' + d.split('/').pop()); };
     await copy('_schema', '.schema'); await ad.rmdir('_schema', true);
     ${P}.settings.schemaFolder = '.schema'; await ${P}.saveSettings(); await ${P}.schemas.reload('manual'); return 0; })()`);
-  eq(await ev(`({ hidden: ${P}.schemas.status.detection.hidden, types: ${P}.schemas.pack.typeNames.length })`), { hidden: true, types: 8 }, 'hidden load');
+  eq(await ev(`({ hidden: ${P}.schemas.status.detection.hidden, types: ${P}.schemas.pack.typeNames.length })`), { hidden: true, types: 9 }, 'hidden load');
   const orig = await read('.schema/modules/review.yaml');
   await write('.schema/modules/review.yaml', orig.replace('default: 6-months', 'default: 9-months'));
   await waitFor(() => ev(`${P}.schemas.status.problems.some(p => p.code === 'bad-default')`), 'poll to notice the break', 6000);

@@ -58,11 +58,35 @@ describe('shipped schema pack', () => {
     expect(pack).not.toBeNull();
   });
 
-  it('has the eight types, six modules and the tags vocabulary', async () => {
+  it('has the eight spec types plus lesson, eight modules and the tags and tracks vocabularies', async () => {
     const pack = await loadPack();
-    expect(pack.typeNames).toEqual(['note', 'kb', 'project', 'exercise', 'journal', 'person', 'resource', 'task']);
-    expect([...pack.modules.keys()]).toEqual(['base', 'findability', 'taxonomy', 'relations', 'provenance', 'review']);
-    expect([...pack.vocabularies.keys()]).toEqual(['tags']);
+    expect(pack.typeNames).toEqual(['note', 'kb', 'project', 'exercise', 'journal', 'person', 'resource', 'task', 'lesson']);
+    expect([...pack.modules.keys()]).toEqual(['base', 'findability', 'taxonomy', 'relations', 'provenance', 'review', 'curriculum', 'verification']);
+    expect([...pack.vocabularies.keys()]).toEqual(['tags', 'tracks']);
+  });
+
+  // Added after the spec, opt-in: the eight spec types above do not use the curriculum or verification modules.
+  it('resolves lesson to the property list and order of its modules', async () => {
+    const pack = await loadPack();
+    expect(pack.types.get('lesson')?.properties.map((p) => p.name)).toEqual([
+      ...BASE, ...FIND, ...TAX, ...REL,
+      'domain', 'section', 'level', 'topic', 'order', 'track',
+      'ai_generated', 'generated_by', 'verified', 'verified_by', 'references',
+      'kind', 'audience', 'confidence', ...END,
+    ]);
+    const status = pack.types.get('lesson')?.byName.get('status');
+    expect(status?.values).toEqual(['draft', 'review', 'published', 'outdated', 'archived']);
+    expect(status?.default).toBe('draft');
+  });
+
+  it('keeps the eight spec types free of the opt-in modules, so their notes and property lists are unchanged', async () => {
+    const pack = await loadPack();
+    for (const name of Object.keys(EXPECTED)) {
+      const uses = pack.types.get(name)?.uses ?? [];
+      expect(uses, name).not.toContain('curriculum');
+      expect(uses, name).not.toContain('verification');
+      expect(pack.types.get(name)?.byName.has('domain'), name).toBe(false);
+    }
   });
 
   for (const [type, names] of Object.entries(EXPECTED)) {
@@ -86,11 +110,11 @@ describe('shipped schema pack', () => {
     }
   });
 
-  it('uses the ID prefixes from the spec and schema version 2', async () => {
+  it('uses the ID prefixes from the spec and schema version 2 (lesson is new: LS, version 1)', async () => {
     const pack = await loadPack();
     const prefixes = Object.fromEntries([...pack.types.values()].map((t) => [t.name, t.prefix]));
-    expect(prefixes).toEqual({ note: 'NT', kb: 'KB', project: 'PR', exercise: 'EX', journal: 'JR', person: 'PE', resource: 'RS', task: 'TK' });
-    for (const t of pack.types.values()) expect(t.version).toBe(2);
+    expect(prefixes).toEqual({ note: 'NT', kb: 'KB', project: 'PR', exercise: 'EX', journal: 'JR', person: 'PE', resource: 'RS', task: 'TK', lesson: 'LS' });
+    for (const t of pack.types.values()) expect(t.version, t.name).toBe(t.name === 'lesson' ? 1 : 2);
   });
 
   it('offers the registry type names as the values of `type`', async () => {

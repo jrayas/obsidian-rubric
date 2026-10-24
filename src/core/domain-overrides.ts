@@ -75,6 +75,7 @@ export function applyDomainToType(base: ResolvedType, domain: string, files: Dom
       else props.splice(i, 1);
     }
 
+    const changed: { target: PropertyDef; line: number | undefined }[] = [];
     for (const [name, change] of f.override) {
       const target = props.find((p) => p.name === name && inScope(p));
       if (!target) {
@@ -94,10 +95,8 @@ export function applyDomainToType(base: ResolvedType, domain: string, files: Dom
       }
       if (change.default !== undefined) target.default = change.default;
       if (change.description !== undefined) target.description = change.description;
-      if (change.values || change.default !== undefined) {
-        const bad = checkDefault(target, target.default, target.values);
-        if (bad) ld.error('bad-default', f.file, `Property “${name}” for domain “${domain}”: ${bad}`, change.line);
-      }
+      // Checked once the whole file is applied: a default may be one of the file's own `sections`.
+      if (change.values || change.default !== undefined) changed.push({ target, line: change.line });
     }
 
     if (f.sections.length > 0) {
@@ -112,6 +111,10 @@ export function applyDomainToType(base: ResolvedType, domain: string, files: Dom
         }
         target.values = values;
       }
+    }
+    for (const { target, line } of changed) {
+      const bad = checkDefault(target, target.default, target.values);
+      if (bad) ld.error('bad-default', f.file, `Property “${target.name}” for domain “${domain}”: ${bad}`, line);
     }
 
     for (const a of f.add) {

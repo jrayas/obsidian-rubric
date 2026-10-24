@@ -17,6 +17,14 @@ import journal from '../../schema-pack/types/journal.yaml';
 import person from '../../schema-pack/types/person.yaml';
 import resource from '../../schema-pack/types/resource.yaml';
 import task from '../../schema-pack/types/task.yaml';
+import curriculum from '../../schema-pack/modules/curriculum.yaml';
+import verification from '../../schema-pack/modules/verification.yaml';
+import tracks from '../../schema-pack/vocabularies/tracks.yaml';
+import lesson from '../../schema-pack/types/lesson.yaml';
+import lessonMaths from '../../schema-pack/types/lesson/maths.yaml';
+import curriculumMaths from '../../schema-pack/modules/curriculum/maths.yaml';
+import tagsMaths from '../../schema-pack/vocabularies/tags/maths.yaml';
+import tracksMaths from '../../schema-pack/vocabularies/tracks/maths.yaml';
 import reference from '../../schema-pack/REFERENCE.md';
 
 /** Path inside the schema folder -> file text. */
@@ -39,5 +47,13 @@ export const STARTER_PACK: Readonly<Record<string, string>> = {
   'types/person.yaml': person,
   'types/resource.yaml': resource,
   'types/task.yaml': task,
+  'modules/curriculum.yaml': curriculum,
+  'modules/verification.yaml': verification,
+  'vocabularies/tracks.yaml': tracks,
+  'types/lesson.yaml': lesson,
+  'types/lesson/maths.yaml': lessonMaths,
+  'modules/curriculum/maths.yaml': curriculumMaths,
+  'vocabularies/tags/maths.yaml': tagsMaths,
+  'vocabularies/tracks/maths.yaml': tracksMaths,
   'REFERENCE.md': reference,
 };
