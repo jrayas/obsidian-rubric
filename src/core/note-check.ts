@@ -249,7 +249,7 @@ export function checkNote(ctx: CheckContext, note: NoteInput, allocate: (prefix:
   if (baseType) for (const v of domainViolations(baseType, type, fm)) add(2, v.code, 'problem', v.message);
   // The folder names a domain (Knowledge/maths/ is maths) that is not the note's `domain`. A warning: keeping notes in
   // domain folders is a convention, and the plugin never moves a file. The fix sets the property to match the folder.
-  const folderDomain = domainOf(fm) !== undefined && type.byName.has('domain') ? domainFromFolder(ctx.pack.domains, note.path) : undefined;
+  const folderDomain = domainOf(fm) !== undefined && type.byName.has('domain') ? domainFromFolder(ctx.pack.domainFolder, note.path) : undefined;
   if (folderDomain !== undefined && folderDomain !== domainOf(fm)) {
     add(
       2,

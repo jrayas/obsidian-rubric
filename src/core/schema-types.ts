@@ -29,7 +29,7 @@ export interface PropertyDef {
   required: boolean;
   default?: unknown;
   values?: string[];
-  valuesFrom?: 'type' | 'registry';
+  valuesFrom?: 'type' | 'registry' | 'domains';
   min?: number;
   max?: number;
   pattern?: string;
@@ -61,6 +61,8 @@ export interface ModuleDef {
   name: string;
   file: string;
   description?: string;
+  /** Modules a type must also list under `uses` when it uses this one. */
+  requires: string[];
   properties: PropertyDef[];
 }
 
@@ -121,6 +123,16 @@ export interface ScopeConfig {
   include: string[];
 }
 
+/** One domain in `registry/domains.yaml`. */
+export interface DomainRegistryEntry {
+  /** Two capital letters used in `unique_id`; absent: this domain gets no unique ID. */
+  prefix?: string;
+  /** The folder name that means this domain (default: the domain's own name). */
+  folder: string;
+  description?: string;
+  line?: number;
+}
+
 /** What one domain override file may change about one existing property. */
 export interface DomainChange {
   values?: string[];
@@ -154,7 +166,13 @@ export interface DomainVocabulary {
 }
 
 export interface SchemaPack {
-  /** The values of the `domain` property: the domains that may have override files. */
+  /** The domain registry (`registry/domains.yaml`), or null when the domains come from the `domain` property's own values. */
+  domainRegistry: Map<string, DomainRegistryEntry> | null;
+  /** The domain a note gets when it has none and no folder names one. */
+  defaultDomain: string | undefined;
+  /** Domain -> the folder name that means it. Every domain has one (its own name unless the registry says otherwise). */
+  domainFolder: Map<string, string>;
+  /** The domains that may have override files: the registry's, or the values of the `domain` property: the domains that may have override files. */
   domains: string[];
   /** Override files found, by domain slug. */
   domainFiles: Map<string, { types: Map<string, DomainFile>; modules: Map<string, DomainFile>; vocabularies: Map<string, DomainVocabulary> }>;

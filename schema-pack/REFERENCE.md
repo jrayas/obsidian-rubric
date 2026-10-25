@@ -10,7 +10,8 @@ Schema files are plain YAML. Edit them in any editor.
 
 ```
 _schema/
-  registry/  types.yaml  folders.yaml  scope.yaml     what exists, which folder is which type, which notes count
+  registry/  types.yaml  domains.yaml  folders.yaml  scope.yaml
+                                                      what exists, the domains, which folder is which type, which notes count
   modules/   <module>.yaml                            reusable groups of properties
              <module>/<domain>.yaml                   a domain's changes to a module
   types/     <type>.yaml                              a note type = modules + its own properties
@@ -58,7 +59,7 @@ remove:   [audience]                                                          # 
 | Add a tag | Add a term under `terms:` in `vocabularies/tags.yaml` (or the domain's tags file) |
 | Add a property to one type | Put it under `properties:` in the type file |
 | Add a property to many types | Put it in a module and list the module under `uses:` |
-| Add a domain | Append to `domain.values`, give it a prefix, then add override files only where it differs |
+| Add a domain | One line in `registry/domains.yaml`, then override files only where it differs |
 | Make a property required | `required: true`, ideally with a `default:` so new notes are complete |
 | Lock a value the plugin sets | `locked: true`, `generated: true` |
 | See what a new note looks like | Open `preview/<type>.yaml` (or `preview/<type>/<domain>.yaml`) |
@@ -68,6 +69,7 @@ remove:   [audience]                                                          # 
 | Path | Purpose |
 | --- | --- |
 | `registry/types.yaml` | Format version, minimum plugin version, pack version, paths of modules and vocabularies, the list of types with ID prefix and schema version |
+| `registry/domains.yaml` | The knowledge domains, registered like types: prefix, folder name and description of each, and the default |
 | `registry/folders.yaml` | Matching mode and root folder → type mapping |
 | `registry/scope.yaml` | Which notes are managed |
 | `modules/*.yaml` | Reusable groups of properties |
@@ -84,7 +86,7 @@ The schema folder is `_schema` by default. A name starting with a dot (`.schema`
 
 | File | Written by |
 | --- | --- |
-| `registry/types.yaml`, `modules/**`, `types/**`, `vocabularies/**` | You. The plugin never changes them, except one term added to a vocabulary file when you click *Add to vocabulary* (into the note's domain file when it has one) |
+| `registry/types.yaml`, `registry/domains.yaml`, `modules/**`, `types/**`, `vocabularies/**` | You. The plugin never changes them, except one term added to a vocabulary file when you click *Add to vocabulary* (into the note's domain file when it has one) |
 | `registry/folders.yaml`, `registry/scope.yaml` | You, or the plugin when you change a folder mapping or scope rule in settings or answer the "which schema?" prompt. Comments are kept |
 | The starter pack | The command **Install starter schema pack**, which only creates files that are missing and never overwrites |
 | `preview/**` | The plugin only. Rewritten when the schema changes; never read back |
@@ -101,6 +103,28 @@ The schema folder is `_schema` by default. A name starting with a dot (`.schema`
 | `modules` | Map of module name → file path (relative to the schema folder) |
 | `vocabularies` | Map of vocabulary name → file path |
 | `types` | Map of type name → `{ file, prefix, version }`. `prefix` is two capital letters used in IDs and unique across types. `version` is the number written to `schema` in notes; a note with a lower number is offered a migration, a note with a higher one is read-only |
+
+### registry/domains.yaml
+
+The domains, registered like types. Optional: without it the domains come from the `domain` property's own `values` (and `prefixes`), as in earlier packs.
+
+```yaml
+default: general           # the domain of a note that has none and is not in a domain folder
+domains:
+  general:  { prefix: GE, description: Everything that has no domain of its own. }
+  maths:    { prefix: MA }
+  pcb:      { prefix: PC, folder: pcb }
+```
+
+| Key | Meaning |
+| --- | --- |
+| `default` | A listed domain. Used for a note that has no `domain` and is not in a domain folder. Absent: the first domain listed |
+| `domains` | Map of domain name → `{ prefix, folder, description }` (or `{}`). A name is a lowercase slug (letters, digits, single hyphens): it is a file name, a folder name and the start of section values. Never rename one |
+| `prefix` | Two capital letters, unique across the domains, used in `unique_id` (`KB-MA-2026-0001`). **Optional**: a domain without one gets no unique ID. Declared, not guessed from the word (physics and philosophy would both be `PH`) |
+| `folder` | The folder name that means this domain below a type's root folder (default: the domain's own name). One folder name, no slash; unique across domains, ignoring case and accents |
+| `description` | Free text for people |
+
+The `domain` property takes its values, its default and the prefixes from this file with `values_from: domains`. The override folders (`types/kb/maths.yaml`) are keyed by these names, and a file for a name that is not listed here is an error.
 
 ### registry/folders.yaml
 
@@ -130,7 +154,8 @@ An excluded note gets no suggestions, no picker, no validation, no automation an
 | --- | --- |
 | `module` | Its name (should match the registry) |
 | `description` | Optional text for people |
-| `properties` | Map of property name → [attributes](#property-attributes) |
+| `requires` | Optional list of modules a type must also list under `uses` when it uses this one (`curriculum` requires `domain`). The type lists them itself, so the order of its properties stays its own; a type that omits one gets an error naming both |
+| `properties` | Map of property name → [attributes](#property-attributes). A module with none is an error (a file saved over a module would otherwise vanish silently) |
 
 **Type file**
 
@@ -176,7 +201,7 @@ The value checks report one of: `type` (wrong kind), `enum` (not an allowed valu
 | `required` | all | Must be present. Missing required properties are found by the vault check and added with their defaults when a note is filled |
 | `default` | all | Value used when a note is created. `today` is allowed for `date`. A property is written at creation when it is `required` or has a `default` |
 | `values` | `enum` | Allowed values, in menu order. A domain may replace them |
-| `values_from` | `enum` | `type` = the values come from the type's `overrides` (used by `status`); `registry` = the values are the type names (used by `type`) |
+| `values_from` | `enum` | `type` = the values come from the type's `overrides` (used by `status`); `registry` = the values are the type names (used by `type`); `domains` = the values, the default and the prefixes come from `registry/domains.yaml` (used by `domain`) |
 | `min`, `max` | `integer` | Limits |
 | `pattern` | `string` | A regular expression the value must match |
 | `vocabulary` | list of `term` | Name of the controlled list |
@@ -189,7 +214,7 @@ The value checks report one of: `type` (wrong kind), `enum` (not an allowed valu
 | `position: end` | all | Always sorts after every other property, in declared order |
 | `allow_heading` | `link` | The link may include a heading |
 | `target` | `link`, list of `link` | Link suggestions are limited to notes of this type |
-| `prefixes` | `enum` (the `domain` property) | Maps each value to a two-letter prefix: `{ general: GE, maths: MA }`. Two capital letters, unique across the values, keys must be values. Declared, not guessed from the word (physics and philosophy would both be `PH`). Used by `unique_id`; a value with no prefix gets no unique ID |
+| `prefixes` | `enum` (the `domain` property) | The earlier form, for a pack with **no** `registry/domains.yaml`: maps each value to a two-letter prefix, `{ general: GE, maths: MA }` (two capital letters, unique, keys must be values). With a registry the prefixes live there, and having both is an error |
 | `description` | all | Free text for people reading the file |
 
 Rules that are easy to trip over:
@@ -209,7 +234,7 @@ A note's properties are written in this order: the modules in the order of `uses
 | --- | --- | --- |
 | `schema` | locked, generated | The schema version the note was written against |
 | `id` | locked, generated, immutable | The global ID `PREFIX-YYYY-NNNN` |
-| `unique_id` | locked, generated | The domain-level ID `TYPE-DOMAIN-YEAR-NNNN` (types that use `curriculum`) |
+| `unique_id` | locked, generated | The domain-level ID `TYPE-DOMAIN-YEAR-NNNN` (types that use the `domain` module) |
 | `created` | locked, generated, immutable, `position: end` | Local time, set once, `YYYY-MM-DDTHH:mm` |
 | `modified` | locked, generated, `position: end` | Local time of the last change; the only value written without asking. Moves, breadcrumb rewrites and the plugin's own writes do not change it |
 | `breadcrumb` | locked, `managed_by: external` | Written by a breadcrumb plugin if you use one; this plugin never writes it unless you turn on **Set breadcrumb from the folder** |
@@ -225,7 +250,7 @@ A note's properties are written in this order: the modules in the order of `uses
 | Counter | per type and year | per type, domain and year |
 | Changes | **Never.** A converted note keeps its old `id` | **Issued again** when the note's domain or type changes; the old one goes to `archived_fields` |
 | Use it for | Links and references | Reading ("the 42nd maths note this year") |
-| Where | Every type | Types that use `curriculum`, for domains that have a prefix |
+| Where | Every type | Types that use the `domain` module, for domains that have a prefix |
 
 How numbers are chosen: one more than the highest in use for that prefix and year, worked out from the notes themselves. There is no counter file. A year comes from `created` and a new year starts again at `0001`. A value given up by renumbering or reissuing is never handed out again.
 
@@ -233,11 +258,11 @@ Two notes with the same ID or unique ID (for example created offline on two devi
 
 ## Domains and overrides
 
-A **domain** is a value of the `domain` property (module `curriculum`): `maths`, `physics`, `pcb`... A note's `domain` selects extra files that adjust the schema for it **without forking it**. The effective schema for a note is the **default plus the override file named for its domain**. No override file means the default applies, so a vault with no override folders behaves exactly as it always did.
+A **domain** is an entry in `registry/domains.yaml` and a value of the `domain` property (module `domain`): `maths`, `physics`, `pcb`... A note's `domain` selects extra files that adjust the schema for it **without forking it**. The effective schema for a note is the **default plus the override file named for its domain**. No override file means the default applies, so a vault with no override folders behaves exactly as it always did.
 
 ### Where a note's domain comes from
 
-A note's domain is its own `domain` property. When a note has none, the plugin takes it from the **folder**: the first folder below the root that is a domain value, ignoring case and accents. `Knowledge/maths/Limits.md` and `Knowledge/maths/algebra/Groups.md` are in `maths`; `Knowledge/Limits.md` and `Knowledge/Problems/x.md` are in no domain, so they get the property's default (`general`). The root folder itself is the type's (`maths/Limits.md` is not in the maths domain).
+A note's domain is its own `domain` property. When a note has none, the plugin takes it from the **folder**: the first folder below the root that is a registered domain's `folder` (its own name unless the registry says otherwise), ignoring case and accents. `Knowledge/maths/Limits.md` and `Knowledge/maths/algebra/Groups.md` are in `maths`; `Knowledge/Limits.md` and `Knowledge/Problems/x.md` are in no domain, so they get the registry's `default` domain (`general`). The root folder itself is the type's (`maths/Limits.md` is not in the maths domain). A domain's `folder` in the registry can differ from its name (`maths` with `folder: Mathematics` means `Knowledge/Mathematics/`).
 
 This applies when the plugin **fills** a note (an automatic fill, **Choose schema for this note**, a conversion) and in **Create note from schema**, whose folder list offers each domain's folder (`Knowledge/maths`) for a type that has a domain. The note is completed with that domain's defaults: its section, kinds, added properties and the `unique_id` prefix. A note that already has a `domain` keeps it, whatever the folder says.
 
@@ -273,7 +298,7 @@ Vocabulary files are `domain:` plus `terms:`, in the same shape as the default v
 
 ### Rules
 
-- The file name is the domain slug, it must be one of the `domain` values, and the file must say `domain: <slug>` too.
+- The file name is the domain slug, it must be a registered domain, and the file must say `domain: <slug>` too.
 - A **type** file may name any property of the type. A **module** file may only name properties of that module and applies to every type that uses it. Module files apply first (in the order of the type's `uses`), then the type file.
 - Within a file the order is: remove, override, sections, add. One property cannot appear under two verbs in one file. Removing a property twice (in a module file and then again in the type file) is an error: the second finds nothing to remove.
 - `override` can change only `values` (replacing the list, and only on an enum), `default` and `description`. Changing `type`, or any other key, is an error. A default is checked after the whole file is applied, so it may be one of the file's own `sections`.
@@ -284,7 +309,7 @@ Vocabulary files are `domain:` plus `terms:`, in the same shape as the default v
 - Every `section` value and every `track` term for a domain starts with `<domain>-`.
 - A vocabulary term or synonym that equals a default term or synonym is an error, and the default wins.
 - A property added in two domains must have the same value type in both (and as everywhere else, across all types).
-- A domain with no prefix on the `domain` property gets no `unique_id`; a type with a `unique_id` property whose `domain` has no `prefixes` is an error.
+- A domain with no `prefix` in the registry gets no `unique_id`; a type with a `unique_id` property when no domain at all has a prefix is an error.
 
 ### What a note is checked against
 
@@ -294,10 +319,9 @@ The existing `overrides:` key in a **type** file is a different thing: it adjust
 
 ### Add a domain
 
-1. Append the name to `domain.values` in `modules/curriculum.yaml`.
-2. Add its two-letter prefix under `domain.prefixes` (unique, declared, not guessed).
-3. Add override files only where it differs from the default. Section values and track terms start with `<domain>-`.
-4. Save. Reload happens by itself; problems name the file and line.
+1. Add a line to `registry/domains.yaml`: `physics: { prefix: PY }`. The prefix is optional (no prefix, no unique IDs); a `folder` is optional (default: the name).
+2. Add override files only where it differs from the default. Section values and track terms start with `<domain>-`.
+3. Save. Reload happens by itself; problems name the file and line.
 
 ### The preview folder
 
@@ -312,29 +336,30 @@ The starter pack (**Install starter schema pack** creates any file that is missi
 | Type | Prefix | Schema | Folder | Modules used | Status values (default first) | Its own properties |
 | --- | --- | --- | --- | --- | --- | --- |
 | `note` | NT | 2 | `Notes` | `base`, `findability`, `relations` | draft, in-progress, evergreen, archived | `confidence` |
-| `kb` | KB | 2 | `Knowledge`, `Wiki` | `base`, `findability`, `relations`, `provenance`, `review`, `pathways`, `curriculum`, `verification` | draft, review, published, outdated, archived | `kind`, `audience`, `confidence` |
+| `kb` | KB | 2 | `Knowledge`, `Wiki` | `base`, `findability`, `relations`, `provenance`, `review`, `pathways`, `domain`, `curriculum`, `verification` | draft, review, published, outdated, archived | `kind`, `audience`, `confidence` |
 | `resource` | RS | 2 | `Resources` | `base`, `findability`, `relations` | to-consume, in-progress, done, abandoned | `resource_type`, `creator`, `url`, `published`, `rating`, `takeaways`, `progress_percent`, `progress_started`, `progress_finished` |
 | `project` | PR | 2 | `Projects` | `base`, `findability`, `relations` | planning, idea, active, on-hold, done, cancelled | `priority`, `start`, `deadline`, `outcome`, `stakeholders` |
 | `task` | TK | 2 | `Tasks` | `base`, `findability`, `relations` | todo, doing, waiting, done, cancelled | `priority`, `project`, `context`, `effort`, `scheduled`, `due`, `completed`, `depends_on`, `recurrence_rule`, `recurrence_until` |
-| `exercise` | EX | 1 | `Exercises` | `base`, `findability`, `relations`, `review`, `pathways`, `curriculum`, `verification` | draft, review, published, outdated, archived | `difficulty`, `time_minutes`, `tests`, `answer_verified`, `confidence` |
-| `scenario` | SC | 1 | `Scenarios` | `base`, `findability`, `relations`, `review`, `pathways`, `curriculum`, `verification` | draft, review, published, outdated, archived | `decision_type`, `difficulty`, `time_minutes`, `tests`, `senior_signal`, `answer_verified`, `confidence` |
-| `example` | EG | 1 | `Examples` | `base`, `findability`, `relations`, `review`, `pathways`, `curriculum`, `verification` | draft, review, published, outdated, archived | `demonstrates`, `difficulty`, `confidence` |
+| `exercise` | EX | 1 | `Exercises` | `base`, `findability`, `relations`, `review`, `pathways`, `domain`, `curriculum`, `verification` | draft, review, published, outdated, archived | `difficulty`, `time_minutes`, `tests`, `answer_verified`, `confidence` |
+| `scenario` | SC | 1 | `Scenarios` | `base`, `findability`, `relations`, `review`, `pathways`, `domain`, `curriculum`, `verification` | draft, review, published, outdated, archived | `decision_type`, `difficulty`, `time_minutes`, `tests`, `senior_signal`, `answer_verified`, `confidence` |
+| `example` | EG | 1 | `Examples` | `base`, `findability`, `relations`, `review`, `pathways`, `domain`, `curriculum`, `verification` | draft, review, published, outdated, archived | `demonstrates`, `difficulty`, `confidence` |
 | `journal` | JR | 2 | `Journal` | `base`, `findability`, `relations` | open, closed | `date`, `period`, `mood`, `energy`, `location`, `highlights` |
 | `person` | PE | 2 | `People` | `base`, `findability`, `relations` | active, dormant, archived | `relationship`, `organisation`, `role`, `location`, `birthday`, `last_contacted`, `follow_up`, `contact_email`, `contact_phone`, `contact_website`, `contact_social`, `met_date`, `met_where` |
 | `workout` | WK | 1 | `Workouts` | `base`, `findability`, `relations` | draft, tested, reliable, archived | `category`, `kind`, `measure`, `equipment`, `muscles_primary`, `muscles_secondary`, `technique`, `mistakes` |
 
 ### Modules
 
-| Module | Properties |
-| --- | --- |
-| `base` | `type`, `schema`, `id`, `name`, `status`, `created`, `modified` |
-| `findability` | `aliases`, `description`, `keywords`, `tags`, `language` |
-| `relations` | `parent`, `related`, `supersedes`, `superseded_by` |
-| `review` | `review_cycle`, `review_last`, `review_next` |
-| `provenance` | `source_title`, `source_author`, `source_url`, `source_accessed` |
-| `verification` | `ai_generated`, `generated_by`, `verified`, `verified_by`, `references` |
-| `pathways` | `prerequisites`, `next`, `companion` |
-| `curriculum` | `domain`, `unique_id`, `section`, `level`, `topic`, `order`, `track` |
+| Module | Requires | Properties |
+| --- | --- | --- |
+| `base` |  | `type`, `schema`, `id`, `name`, `status`, `created`, `modified` |
+| `findability` |  | `aliases`, `description`, `keywords`, `tags`, `language` |
+| `relations` |  | `parent`, `related`, `supersedes`, `superseded_by` |
+| `review` |  | `review_cycle`, `review_last`, `review_next` |
+| `provenance` |  | `source_title`, `source_author`, `source_url`, `source_accessed` |
+| `verification` |  | `ai_generated`, `generated_by`, `verified`, `verified_by`, `references` |
+| `pathways` |  | `prerequisites`, `next`, `companion` |
+| `domain` |  | `domain`, `unique_id` |
+| `curriculum` | `domain` | `section`, `level`, `topic`, `order`, `track` |
 
 ### Vocabularies
 
@@ -372,7 +397,7 @@ Every property in the pack, with where it is defined. Values are the default lis
 | `depends_on` | list of link | type `task` |  | `[]` |
 | `description` | string | module `findability` |  |  |
 | `difficulty` | beginner \| intermediate \| advanced \| senior | type `exercise`, type `scenario`, type `example` | yes | `"beginner"` |
-| `domain` | general \| maths \| physics \| pcb \| embedded | module `curriculum` | yes | `"general"` |
+| `domain` | one of the domains | module `domain` | yes | `"general"` |
 | `due` | date | type `task` |  |  |
 | `effort` | string | type `task` |  |  |
 | `energy` | whole number 1–5 | type `journal` |  |  |
@@ -447,8 +472,8 @@ Every property in the pack, with where it is defined. Values are the default lis
 | `tools_needed` | list of string | domain `pcb` (type `exercise`) |  |  |
 | `topic` | string | module `curriculum` |  |  |
 | `track` | list of term (tracks) | module `curriculum` |  | `[]` |
-| `type` | note \| kb \| resource \| project \| task \| exercise \| scenario \| example \| journal \| person \| workout | module `base` | yes |  |
-| `unique_id` | string | module `curriculum` |  |  |
+| `type` | one of the types | module `base` | yes |  |
+| `unique_id` | string | module `domain` |  |  |
 | `units` | string | domain `physics` (type `kb`) |  |  |
 | `url` | url | type `resource` |  |  |
 | `verified` | boolean | module `verification` |  | `false` |
@@ -456,15 +481,15 @@ Every property in the pack, with where it is defined. Values are the default lis
 
 ### Domains
 
-Declared on the `domain` property (module `curriculum`). `general` has no override files: it is the default.
+Registered in `registry/domains.yaml`. `general` has no override files: it is the default.
 
-| Domain | Prefix | Sections it adds (first is the default) | Override files |
-| --- | --- | --- | --- |
-| `general` | GE | none | none |
-| `maths` | MA | `maths-foundations`, `maths-algebra`, `maths-analysis`, `maths-statistics` | `modules/curriculum/maths.yaml`, `types/kb/maths.yaml`, `types/exercise/maths.yaml`, `vocabularies/tags/maths.yaml`, `vocabularies/tracks/maths.yaml` |
-| `physics` | PY | `physics-mechanics`, `physics-waves-optics`, `physics-electromagnetism`, `physics-thermal` | `modules/curriculum/physics.yaml`, `types/kb/physics.yaml`, `vocabularies/tags/physics.yaml`, `vocabularies/tracks/physics.yaml` |
-| `pcb` | PC | `pcb-foundations`, `pcb-layout-routing`, `pcb-power-thermal`, `pcb-high-speed`, `pcb-manufacturing`, `pcb-reference` | `modules/curriculum/pcb.yaml`, `types/kb/pcb.yaml`, `types/exercise/pcb.yaml`, `types/scenario/pcb.yaml`, `vocabularies/tags/pcb.yaml`, `vocabularies/tracks/pcb.yaml` |
-| `embedded` | EM | `embedded-foundations`, `embedded-peripherals`, `embedded-rtos`, `embedded-debugging` | `modules/curriculum/embedded.yaml`, `types/kb/embedded.yaml`, `types/scenario/embedded.yaml`, `vocabularies/tags/embedded.yaml`, `vocabularies/tracks/embedded.yaml` |
+| Domain | Prefix | Folder | Sections it adds (first is the default) | Override files | Description |
+| --- | --- | --- | --- | --- | --- |
+| `general` (default) | GE | `general` | none | none | Everything that has no domain of its own. |
+| `maths` | MA | `maths` | `maths-foundations`, `maths-algebra`, `maths-analysis`, `maths-statistics` | `modules/curriculum/maths.yaml`, `types/kb/maths.yaml`, `types/exercise/maths.yaml`, `vocabularies/tags/maths.yaml`, `vocabularies/tracks/maths.yaml` | Mathematics. |
+| `physics` | PY | `physics` | `physics-mechanics`, `physics-waves-optics`, `physics-electromagnetism`, `physics-thermal` | `modules/curriculum/physics.yaml`, `types/kb/physics.yaml`, `vocabularies/tags/physics.yaml`, `vocabularies/tracks/physics.yaml` | Physics. |
+| `pcb` | PC | `pcb` | `pcb-foundations`, `pcb-layout-routing`, `pcb-power-thermal`, `pcb-high-speed`, `pcb-manufacturing`, `pcb-reference` | `modules/curriculum/pcb.yaml`, `types/kb/pcb.yaml`, `types/exercise/pcb.yaml`, `types/scenario/pcb.yaml`, `vocabularies/tags/pcb.yaml`, `vocabularies/tracks/pcb.yaml` | Printed circuit board design. |
+| `embedded` | EM | `embedded` | `embedded-foundations`, `embedded-peripherals`, `embedded-rtos`, `embedded-debugging` | `modules/curriculum/embedded.yaml`, `types/kb/embedded.yaml`, `types/scenario/embedded.yaml`, `vocabularies/tags/embedded.yaml`, `vocabularies/tracks/embedded.yaml` | Embedded systems and firmware. |
 
 #### What each domain changes
 
@@ -558,6 +583,10 @@ The settings page and the vault check list schema problems as `file:line message
 | `name-mismatch` | A file says another name than the registry (a warning for modules and vocabularies) |
 | `folders-mode`, `folders-shape`, `folders-unknown-type`, `folders-order`, `folder-conflict` | Problems in `folders.yaml`; `folders-order` and `folder-conflict` are warnings |
 | `scope-mode`, `scope-shape` | Problems in `scope.yaml` |
+| `domains-shape`, `domains-name`, `domains-folder`, `domains-default` | Problems in `registry/domains.yaml`: not a map or no domains, a name that is not a slug, a folder that is not one name or is used twice, a default that is not listed. A bad or repeated prefix is `prefixes` |
+| `domains-missing` | A property takes its values from `registry/domains.yaml`, which does not exist |
+| `module-requires` | A type uses a module without a module it requires |
+| `module-empty` | A module file has no properties |
 
 **Properties**
 
@@ -568,20 +597,20 @@ The settings page and the vault check list schema problems as `file:line message
 | `list-items` | A list has no valid `items` |
 | `enum-values`, `values-from`, `values-from-type` | An enum has no values, `values_from` is wrong, or a type does not give the values `values_from: type` needs |
 | `number-limit`, `pattern`, `boolean-attribute`, `managed-by`, `position` | An attribute has a bad value |
-| `prefixes` | A domain prefix is not two capital letters, is used twice, or is for a value the property does not have |
+| `prefixes` | A domain prefix is not two capital letters, is used twice, is for a value the property does not have, or is on the property as well as in the registry |
 | `bad-default` | A default is not valid for its property |
 | `duplicate-property` | Two modules, or a module and a type, define the same property |
 | `overrides-shape`, `override-unknown` | The type's `overrides` is malformed, or names a property the type does not have |
 | `vocabulary-missing`, `vocabulary-unknown`, `vocabulary-shape`, `vocabulary-clash` | A list of terms has no vocabulary or an unknown one; a vocabulary file is malformed; a word is used for two terms |
 | `type-conflict` | A property name has different value types in different types or domains |
-| `unique-id-prefixes` | A type has `unique_id` but its `domain` property has no `prefixes` |
+| `unique-id-prefixes` | A type has `unique_id` but no domain has a prefix |
 | `unknown-attribute` | An attribute the plugin does not know (a warning) |
 
 **Domain override files**
 
 | Code | Meaning |
 | --- | --- |
-| `override-domain-unknown` | A file for a domain that is not a `domain` value |
+| `override-domain-unknown` | A file for a domain that is not registered. When no domains are defined at all it is one error naming the first file and the count, not one per file |
 | `domain-missing`, `domain-mismatch` | The file does not say `domain: <slug>`, or says another |
 | `override-shape`, `override-unknown-key` | The file or an entry has the wrong shape, or an unknown key |
 | `override-type` | An override tries to change a property's `type` |
@@ -609,6 +638,8 @@ The settings page and the vault check list schema problems as `file:line message
 | Per-domain sections | `modules/curriculum/<domain>.yaml` with `sections: [<domain>-...]` and optionally `override: { section: { default: <domain>-... } }` |
 | Per-domain tags or tracks | `vocabularies/tags/<domain>.yaml`, `vocabularies/tracks/<domain>.yaml` (tracks start with `<domain>-`) |
 | Move a note to another domain | Change its `domain` and accept the new `unique_id`. If you keep notes in domain folders, move the file yourself (the plugin never moves files); if only the folder changed, **Check vault** offers to set the domain to match |
+| A domain with no unique IDs | Leave out its `prefix` in `registry/domains.yaml` |
+| Notes of a domain in a differently named folder | `folder:` in its registry entry |
 | Stop the plugin acting while you write the schema | Turn Rubric off (status bar, settings, or the command). Check vault still works |
 
 ## Limits worth knowing

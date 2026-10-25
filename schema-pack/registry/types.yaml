@@ -11,6 +11,7 @@ modules:
   provenance: modules/provenance.yaml
   verification: modules/verification.yaml
   pathways: modules/pathways.yaml
+  domain: modules/domain.yaml
   curriculum: modules/curriculum.yaml
 
 vocabularies:

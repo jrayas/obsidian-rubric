@@ -1,4 +1,5 @@
-import { allPropertyOwners, loadDomains } from './domain-loader';
+import { allPropertyOwners, declaredDomains, loadDomains } from './domain-loader';
+import { loadDomainRegistry } from './domain-registry';
 import { compareVersions } from './semver';
 import { nameKey } from './normalise';
 import { SUPPORTED_FORMAT } from './schema-types';
@@ -107,6 +108,9 @@ export async function loadSchemaPack(source: SchemaFileSource, options: LoadOpti
     ld.error('plugin-too-old', REG, `This pack needs plugin version ${minPlugin} or newer (running ${options.pluginVersion}).`, reg.file.lineOf(['min_plugin_version']));
   }
 
+  // --- the domain registry (optional) -----------------------------------------------------
+  const domainReg = await loadDomainRegistry(ld);
+
   // --- modules -------------------------------------------------------------------------
   const modules = new Map<string, ModuleDef>();
   const moduleFiles = new Map<string, string>();
@@ -126,14 +130,27 @@ export async function loadSchemaPack(source: SchemaFileSource, options: LoadOpti
     if (m.data.module !== undefined && m.data.module !== name) {
       ld.warn('name-mismatch', p, `File says module "${show(m.data.module)}" but the registry calls it "${name}"`, m.file.lineOf(['module']));
     }
+    const requires = m.data.requires === undefined ? [] : asStringList(m.data.requires);
+    if (requires === null) ld.error('module-shape', p, '"requires" must be a list of module names', m.file.lineOf(['requires']));
     const def: ModuleDef = {
       name,
       file: p,
+      requires: requires ?? [],
       properties: parseProperties(ld, m.file, m.data, name),
     };
     if (typeof m.data.description === 'string') def.description = m.data.description;
+    // A module that lost its content (for example another file was saved over it) would otherwise vanish silently.
+    if (def.properties.length === 0 && (m.data.properties === undefined || m.data.properties === null || (isObj(m.data.properties) && Object.keys(m.data.properties).length === 0))) {
+      ld.error('module-empty', p, `Module "${name}" has no properties. A module file needs "module: ${name}" and a "properties" map`, 1);
+    }
     modules.set(name, def);
     moduleFiles.set(name, p);
+  }
+
+  for (const m of modules.values()) {
+    for (const need of m.requires) {
+      if (moduleReg[need] === undefined) ld.error('unknown-module', m.file, `Module "${m.name}" requires "${need}", which is not in the registry`, 1);
+    }
   }
 
   // --- vocabularies --------------------------------------------------------------------
@@ -204,6 +221,14 @@ export async function loadSchemaPack(source: SchemaFileSource, options: LoadOpti
     if (!uses.includes('base')) {
       ld.error('type-uses', entry.file, 'Every type must use the "base" module', t.file.lineOf(['uses']));
     }
+    // A module may name the modules it needs; the type lists them itself, so the order of its properties stays its own.
+    for (const m of uses) {
+      for (const need of modules.get(m)?.requires ?? []) {
+        if (!uses.includes(need)) {
+          ld.error('module-requires', entry.file, `Module "${m}" requires "${need}": add "${need}" to uses${moduleReg[need] === undefined ? ' (and to the registry)' : ''}`, t.file.lineOf(['uses']));
+        }
+      }
+    }
     const overrides = parseOverrides(ld, t.file, t.data);
     const own = parseProperties(ld, t.file, t.data, undefined);
     if (!usable || typeof prefix !== 'string' || typeof version !== 'number') continue;
@@ -249,6 +274,18 @@ export async function loadSchemaPack(source: SchemaFileSource, options: LoadOpti
         if (p.default === undefined) p.default = p.values[0];
       }
       if (p.valuesFrom === 'registry') p.values = [...typeNames];
+      if (p.valuesFrom === 'domains') {
+        if (!domainReg) {
+          ld.error('domains-missing', p.source.file, `"${p.name}" takes its values from registry/domains.yaml, which does not exist`, p.source.line);
+          continue;
+        }
+        if (p.prefixes) ld.error('prefixes', p.source.file, `Property "${p.name}": prefixes belong in registry/domains.yaml when the values come from it`, p.source.line);
+        p.values = [...domainReg.names];
+        if (p.default === undefined) p.default = domainReg.defaultDomain;
+        const prefixes = Object.fromEntries([...domainReg.entries].filter(([, e]) => e.prefix !== undefined).map(([n, e]) => [n, e.prefix as string]));
+        if (Object.keys(prefixes).length > 0) p.prefixes = prefixes;
+        else delete p.prefixes;
+      }
       if (p.type === 'list' && p.items === 'term') {
         if (!p.vocabulary) {
           ld.error('vocabulary-missing', entry.file, `Property "${p.name}" is a list of terms and needs a "vocabulary"`, p.source.line);
@@ -266,8 +303,8 @@ export async function loadSchemaPack(source: SchemaFileSource, options: LoadOpti
     // `position: end` fields go last, in their declared order.
     const ordered = [...list.filter((p) => p.position !== 'end'), ...list.filter((p) => p.position === 'end')];
     // A unique ID is made from the domain's prefix, so the type must declare prefixes on its `domain` property.
-    if (ordered.some((p) => p.name === 'unique_id') && !ordered.find((p) => p.name === 'domain')?.prefixes) {
-      ld.error('unique-id-prefixes', entry.file, 'This type has a "unique_id" property, so its "domain" property needs "prefixes" (two capital letters for each domain)', t.file.lineOf(['uses']));
+    if (ordered.some((p) => p.name === 'unique_id') && Object.keys(ordered.find((p) => p.name === 'domain')?.prefixes ?? {}).length === 0) {
+      ld.error('unique-id-prefixes', entry.file, 'This type has a "unique_id" property, so at least one domain needs a prefix (two capital letters, in registry/domains.yaml or under "prefixes" on the "domain" property)', t.file.lineOf(['uses']));
     }
     const rt: ResolvedType = {
       name,
@@ -284,7 +321,10 @@ export async function loadSchemaPack(source: SchemaFileSource, options: LoadOpti
   }
 
   // --- per-domain overrides --------------------------------------------------------------
-  const domainOut = await loadDomains(ld, { source, typeFiles, moduleFiles, vocabularyFiles, modules, vocabularies, types });
+  const domainList = domainReg ? domainReg.names : declaredDomains(types);
+  const domainOut = await loadDomains(ld, { source, typeFiles, moduleFiles, vocabularyFiles, modules, vocabularies, types, domains: domainList });
+  const domainFolder = new Map(domainList.map((d) => [d, domainReg?.entries.get(d)?.folder ?? d]));
+  const legacyDefault = [...types.values()].map((t) => t.byName.get('domain')?.default).find((v): v is string => typeof v === 'string');
 
   // --- property type conflicts across types (and across each domain's effective types) -------
   const shapes = new Map<string, { sig: string; type: string; file: string; line?: number }>();
@@ -319,6 +359,9 @@ export async function loadSchemaPack(source: SchemaFileSource, options: LoadOpti
     folders,
     scope,
     ...domainOut,
+    domainRegistry: domainReg ? new Map(domainReg.entries) : null,
+    defaultDomain: domainReg?.defaultDomain ?? legacyDefault,
+    domainFolder,
   };
   return { pack, problems: ld.problems };
 }

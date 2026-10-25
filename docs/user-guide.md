@@ -117,7 +117,7 @@ Two notes with the same ID (for example created offline on two devices): the vau
 
 ### The unique ID (types with a domain)
 
-A type that uses the `curriculum` module also has `unique_id`: `TYPE-DOMAIN-YEAR-NNNN`, for example `KB-MA-2026-0001` (a knowledge note in maths). It is separate from `id`, which stays the one global identity and never changes. The unique ID is a readable label with its own counter per type, domain and year, so "the 42nd maths lesson this year" is easy to see. Each domain's two-letter prefix is declared next to the `domain` values in the schema (`prefixes: { maths: MA }`); a domain with no prefix gets no unique ID.
+A type that uses the `domain` module also has `unique_id`: `TYPE-DOMAIN-YEAR-NNNN`, for example `KB-MA-2026-0001` (a knowledge note in maths). It is separate from `id`, which stays the one global identity and never changes. The unique ID is a readable label with its own counter per type, domain and year, so "the 42nd maths lesson this year" is easy to see. Each domain's two-letter prefix is declared in `registry/domains.yaml` (`maths: { prefix: MA }`); a domain with no prefix gets no unique ID.
 
 - New notes get one when they are created or filled, from the note's domain.
 - When a note's **domain** changes (or its **type**, in a conversion), the plugin offers to issue it again, with a preview. The old value is kept in `archived_fields` and never handed out again. Turn the question off with **Ask when the domain changes**.

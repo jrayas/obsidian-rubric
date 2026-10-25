@@ -31,7 +31,7 @@ describe('the shipping pack', () => {
 
   it('has the approved types, modules and vocabularies, and nothing else', () => {
     expect(pack.typeNames).toEqual(['note', 'kb', 'resource', 'project', 'task', 'exercise', 'scenario', 'example', 'journal', 'person', 'workout']);
-    expect([...pack.modules.keys()]).toEqual(['base', 'findability', 'relations', 'review', 'provenance', 'verification', 'pathways', 'curriculum']);
+    expect([...pack.modules.keys()]).toEqual(['base', 'findability', 'relations', 'review', 'provenance', 'verification', 'pathways', 'domain', 'curriculum']);
     expect([...pack.vocabularies.keys()]).toEqual(['tags', 'tracks']);
     expect(pack.modules.has('taxonomy')).toBe(false); // no breadcrumb: the pack works without a breadcrumb plugin
   });

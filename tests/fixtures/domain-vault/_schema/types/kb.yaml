@@ -1,6 +1,6 @@
 type: kb
 description: A written knowledge-base note.
-uses: [base, findability, curriculum, verification]
+uses: [base, findability, domain, curriculum, verification]
 overrides:
   status:
     values: [draft, review, published]

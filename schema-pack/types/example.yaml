@@ -1,6 +1,6 @@
 type: example
 description: A worked example applying a concept to concrete numbers or a concrete case.
-uses: [base, findability, relations, review, pathways, curriculum, verification]
+uses: [base, findability, relations, review, pathways, domain, curriculum, verification]
 overrides:
   status:
     values: [draft, review, published, outdated, archived]

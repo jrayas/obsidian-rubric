@@ -1,6 +1,6 @@
 type: exercise
 description: A question to attempt, with a hidden hint and a hidden answer.
-uses: [base, findability, relations, review, pathways, curriculum, verification]
+uses: [base, findability, relations, review, pathways, domain, curriculum, verification]
 overrides:
   status:
     values: [draft, review, published, outdated, archived]

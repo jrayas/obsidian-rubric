@@ -115,11 +115,11 @@ export function parseProperty(
       values = list;
     }
   }
-  let valuesFrom: 'type' | 'registry' | undefined;
+  let valuesFrom: 'type' | 'registry' | 'domains' | undefined;
   if (raw.values_from !== undefined) {
-    if (raw.values_from === 'type' || raw.values_from === 'registry') valuesFrom = raw.values_from;
+    if (raw.values_from === 'type' || raw.values_from === 'registry' || raw.values_from === 'domains') valuesFrom = raw.values_from;
     else {
-      ld.error('values-from', file, `Property "${name}": "values_from" must be "type" or "registry"`, at('values_from'));
+      ld.error('values-from', file, `Property "${name}": "values_from" must be "type", "registry" or "domains"`, at('values_from'));
       ok = false;
     }
   }

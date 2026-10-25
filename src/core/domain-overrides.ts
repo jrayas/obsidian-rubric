@@ -34,13 +34,16 @@ export function domainOf(fm: Record<string, unknown> | null | undefined): string
 /**
  * The domain a note's folder names: the first folder below the root that is a domain value, ignoring case and accents
  * (`Knowledge/maths/Limits.md` is in maths; so is `Knowledge/maths/algebra/Groups.md`). Undefined when no folder is.
- * `path` is a note's path; a folder path needs a file name added.
+ * `folders` maps each domain to the folder name that means it (`pack.domainFolder`; the registry may name another folder
+ * than the domain's own). `path` is a note's path; a folder path needs a file name added.
  */
-export function domainFromFolder(domains: readonly string[], path: string): string | undefined {
-  const folders = path.split('/').filter((s) => s.length > 0).slice(0, -1);
-  for (const segment of folders.slice(1)) {
-    const hit = domains.find((d) => nameKey(d) === nameKey(segment));
-    if (hit !== undefined) return hit;
+export function domainFromFolder(folders: ReadonlyMap<string, string> | readonly string[], path: string): string | undefined {
+  // domain -> the folder name that means it (a list of names means each domain's own name)
+  const byDomain: [string, string][] = Array.isArray(folders) ? (folders as readonly string[]).map((d) => [d, d]) : [...(folders as ReadonlyMap<string, string>)];
+  const segments = path.split('/').filter((s) => s.length > 0).slice(0, -1);
+  for (const segment of segments.slice(1)) {
+    const hit = byDomain.find(([, folder]) => nameKey(folder) === nameKey(segment));
+    if (hit !== undefined) return hit[0];
   }
   return undefined;
 }

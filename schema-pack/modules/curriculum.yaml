@@ -1,19 +1,7 @@
 module: curriculum
-description: Where a note sits in a reading path (domain, section, level and order). A domain can change the defaults without forking the schema; see types/kb/ for examples.
+description: Where a note sits in a reading path (section, level and order). A domain can change the defaults without forking the schema; see modules/curriculum/ and types/kb/ for examples.
+requires: [domain]
 properties:
-  domain:
-    type: enum
-    required: true
-    values: [general, maths, physics, pcb, embedded]
-    default: general
-    prefixes: {general: GE, maths: MA, physics: PY, pcb: PC, embedded: EM}
-    description: The knowledge domain. Append a value to add a domain, give it a two-letter prefix under prefixes (unique, declared and not guessed from the word), then add override files for it if it needs different values. Never rename one.
-  unique_id:
-    type: string
-    pattern: '^[A-Z]{2}-[A-Z]{2}-\d{4}-\d{4,}$'
-    locked: true
-    generated: true
-    description: Readable ID within a domain, TYPE-DOMAIN-YEAR-NNNN, with its own counter per type, domain and year. Set by the plugin. Issued again when the note's domain changes, and the old one is kept in archived_fields. Link to a note by its id, never by this.
   section:
     type: enum
     required: true

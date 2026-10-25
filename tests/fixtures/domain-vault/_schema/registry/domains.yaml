@@ -1,0 +1,4 @@
+default: pcb
+domains:
+  pcb:  { prefix: PC }
+  demo: { prefix: DM }

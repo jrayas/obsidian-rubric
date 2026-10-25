@@ -63,7 +63,7 @@ export class CreateNoteModal extends Modal {
     const pack = this.plugin.schemas.pack;
     const hasDomain = pack?.types.get(this.type)?.byName.has('domain') === true;
     // A type with a domain also offers each domain's folder: the folder decides the note's domain.
-    const mapped = this.foldersFor(this.type).flatMap((f) => (hasDomain && pack ? [f, ...pack.domains.map((dom) => `${f}/${dom}`)] : [f]));
+    const mapped = this.foldersFor(this.type).flatMap((f) => (hasDomain && pack ? [f, ...[...pack.domainFolder.values()].map((dom) => `${f}/${dom}`)] : [f]));
     s.setDesc(hasDomain ? 'A folder named after a domain sets the note’s domain.' : '');
     s.addDropdown((d) => {
       for (const f of mapped) d.addOption(f, f);
@@ -96,7 +96,7 @@ export class CreateNoteModal extends Modal {
     if (!pack || !base) return;
     const path = this.pathFor();
     // The domain comes from the folder (Knowledge/maths is maths), with that domain's defaults.
-    const domain = base.byName.has('domain') ? domainFromFolder(pack.domains, `${this.folder}/${this.name}.md`) : undefined;
+    const domain = base.byName.has('domain') ? domainFromFolder(pack.domainFolder, `${this.folder}/${this.name}.md`) : undefined;
     const type = domain ? (typeFor(pack, base.name, domain) ?? base) : base;
     try {
       const file = await plugin.ids.exclusive(async () => {

@@ -67,7 +67,7 @@ _schema/vocabularies/tags/maths.yaml       extra tags for maths
 _schema/vocabularies/tracks/maths.yaml     extra tracks for maths
 ```
 
-The effective schema for a note is the default plus the override file for the note's `domain` property. No override file means the default applies, so a vault without override folders behaves exactly as before. The `domain` values come from the schema's own `domain` property; a file for a domain that is not one of them is an error. The file name is the slug, and the file must say `domain: <slug>` too.
+The effective schema for a note is the default plus the override file for the note's `domain` property. No override file means the default applies, so a vault without override folders behaves exactly as before. The domains are registered in `registry/domains.yaml` (a prefix, a folder name and a description each, and the default; a pack without that file takes them from the `domain` property's own values); a file for a domain that is not registered is an error. The file name is the slug, and the file must say `domain: <slug>` too.
 
 **Type and module files** have three verbs, nothing else (no inheritance, no archetypes):
 

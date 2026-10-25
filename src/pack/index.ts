@@ -1,5 +1,6 @@
 // The starter schema pack, embedded as text so a release needs only main.js, manifest.json and styles.css.
 // Generated from schema-pack/ by scripts/gen-pack-index.mjs; do not edit by hand.
+import registryDomains from '../../schema-pack/registry/domains.yaml';
 import registryFolders from '../../schema-pack/registry/folders.yaml';
 import registryScope from '../../schema-pack/registry/scope.yaml';
 import registryTypes from '../../schema-pack/registry/types.yaml';
@@ -9,6 +10,7 @@ import modulesCurriculumEmbedded from '../../schema-pack/modules/curriculum/embe
 import modulesCurriculumMaths from '../../schema-pack/modules/curriculum/maths.yaml';
 import modulesCurriculumPcb from '../../schema-pack/modules/curriculum/pcb.yaml';
 import modulesCurriculumPhysics from '../../schema-pack/modules/curriculum/physics.yaml';
+import modulesDomain from '../../schema-pack/modules/domain.yaml';
 import modulesFindability from '../../schema-pack/modules/findability.yaml';
 import modulesPathways from '../../schema-pack/modules/pathways.yaml';
 import modulesProvenance from '../../schema-pack/modules/provenance.yaml';
@@ -48,6 +50,7 @@ import REFERENCE from '../../schema-pack/REFERENCE.md';
 
 /** Path inside the schema folder -> file text. */
 export const STARTER_PACK: Readonly<Record<string, string>> = {
+  'registry/domains.yaml': registryDomains,
   'registry/folders.yaml': registryFolders,
   'registry/scope.yaml': registryScope,
   'registry/types.yaml': registryTypes,
@@ -57,6 +60,7 @@ export const STARTER_PACK: Readonly<Record<string, string>> = {
   'modules/curriculum/maths.yaml': modulesCurriculumMaths,
   'modules/curriculum/pcb.yaml': modulesCurriculumPcb,
   'modules/curriculum/physics.yaml': modulesCurriculumPhysics,
+  'modules/domain.yaml': modulesDomain,
   'modules/findability.yaml': modulesFindability,
   'modules/pathways.yaml': modulesPathways,
   'modules/provenance.yaml': modulesProvenance,

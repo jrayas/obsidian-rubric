@@ -29,6 +29,8 @@ export interface DomainInput {
   modules: Map<string, ModuleDef>;
   vocabularies: Map<string, Vocabulary>;
   types: Map<string, ResolvedType>;
+  /** The domains that may have override files. */
+  domains: string[];
 }
 
 export type DomainOutput = Pick<SchemaPack, 'domains' | 'domainFiles' | 'effectiveTypes' | 'effectiveVocabularies'>;
@@ -233,7 +235,7 @@ function parseDomainVocabulary(ld: Loader, yf: YamlFile, data: unknown, name: st
 /** Read the override files (if any) and compute every effective type and vocabulary. */
 export async function loadDomains(ld: Loader, input: DomainInput): Promise<DomainOutput> {
   const { source, types, modules, vocabularies } = input;
-  const domains = declaredDomains(types);
+  const domains = input.domains;
   const domainFiles: DomainOutput['domainFiles'] = new Map();
   const bucket = (domain: string) => {
     let b = domainFiles.get(domain);
@@ -249,14 +251,18 @@ export async function loadDomains(ld: Loader, input: DomainInput): Promise<Domai
     const names = await source.list(overrideDir(file));
     return names.filter((n) => /\.yaml$/i.test(n)).map((n) => n.replace(/\.yaml$/i, '')).sort();
   };
+  // Override files found while no domains are defined at all are one problem, not one per file.
+  const orphans: string[] = [];
   const known = (slug: string, path: string): boolean => {
     if (domains.includes(slug)) return true;
+    if (domains.length === 0) {
+      orphans.push(path);
+      return false;
+    }
     ld.error(
       'override-domain-unknown',
       path,
-      domains.length > 0
-        ? `“${slug}” is not one of the domain values (${domains.join(', ')}). Add it to the “${DOMAIN_PROPERTY}” property first, or rename this file`
-        : `No property called “${DOMAIN_PROPERTY}” has values, so there are no domains to override`,
+      `“${slug}” is not one of the domains (${domains.join(', ')}). Add it to registry/domains.yaml (or the “${DOMAIN_PROPERTY}” property's values) first, or rename this file`,
     );
     return false;
   };
@@ -294,6 +300,14 @@ export async function loadDomains(ld: Loader, input: DomainInput): Promise<Domai
       const dv = parseDomainVocabulary(ld, r.file, r.data, name, slug);
       if (dv) bucket(slug).vocabularies.set(name, dv);
     }
+  }
+
+  if (orphans.length > 0) {
+    ld.error(
+      'override-domain-unknown',
+      orphans[0] as string,
+      `${orphans.length} override file${orphans.length === 1 ? '' : 's'} found (the first is this one), but no domains are defined. List them in registry/domains.yaml, or check that the module with the “${DOMAIN_PROPERTY}” property still has its content`,
+    );
   }
 
   // Vocabularies used by a `track` property need domain-prefixed terms.

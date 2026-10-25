@@ -124,7 +124,7 @@ export class NoteActions {
     // A note with no domain takes it from its folder (Knowledge/maths/ is maths), and is completed with that domain's
     // defaults: its section, kinds and added properties.
     const pack = plugin.schemas.pack;
-    const folderDomain = domainOf(loaded.fm) === undefined && pack ? domainFromFolder(pack.domains, file.path) : undefined;
+    const folderDomain = domainOf(loaded.fm) === undefined && pack ? domainFromFolder(pack.domainFolder, file.path) : undefined;
     if (folderDomain && pack) type = typeFor(pack, type.name, folderDomain) ?? type;
     const plan = planCompletion(loaded.fm, type, {
       name: file.basename,

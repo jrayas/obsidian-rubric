@@ -1,6 +1,6 @@
 type: kb
 description: A knowledge-base note, placed in a domain and a reading path.
-uses: [base, findability, relations, provenance, review, pathways, curriculum, verification]
+uses: [base, findability, relations, provenance, review, pathways, domain, curriculum, verification]
 overrides:
   status:
     values: [draft, review, published, outdated, archived]

@@ -3,6 +3,7 @@ min_plugin_version: 0.1.0
 modules:
   base: modules/base.yaml
   findability: modules/findability.yaml
+  domain: modules/domain.yaml
   curriculum: modules/curriculum.yaml
   verification: modules/verification.yaml
 vocabularies:

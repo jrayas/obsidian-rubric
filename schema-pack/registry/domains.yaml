@@ -1,0 +1,12 @@
+# The knowledge domains, registered like types. The plugin never writes this file.
+#   prefix       two capital letters used in unique_id (KB-MA-2026-0001). A domain without one gets no unique ID
+#   folder       the folder name that means this domain, below a type's root folder (default: the domain's own name)
+#   description  free text for people
+# To add a domain: add a line here, then add override files only where it differs (see REFERENCE.md).
+default: general           # the domain of a note that has none and is not in a domain folder
+domains:
+  general:  { prefix: GE, description: Everything that has no domain of its own. }
+  maths:    { prefix: MA, description: Mathematics. }
+  physics:  { prefix: PY, description: Physics. }
+  pcb:      { prefix: PC, description: Printed circuit board design. }
+  embedded: { prefix: EM, description: Embedded systems and firmware. }

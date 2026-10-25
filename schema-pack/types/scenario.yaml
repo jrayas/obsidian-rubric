@@ -1,6 +1,6 @@
 type: scenario
 description: A real-world situation needing a decision, with a hidden answer and reasoning.
-uses: [base, findability, relations, review, pathways, curriculum, verification]
+uses: [base, findability, relations, review, pathways, domain, curriculum, verification]
 overrides:
   status:
     values: [draft, review, published, outdated, archived]
