@@ -194,6 +194,16 @@ append_case('a module removed from the registry', {'registry/types.yaml': lambda
 append_case('a vocabulary term removed (still checked file by file)', {'vocabularies/tags.yaml': lambda t: t.replace('  power: {}\n', '')}, 'power removed')
 append_case('min_plugin_version lowered', {'registry/types.yaml': lambda t: t.replace('min_plugin_version: 0.1.0', 'min_plugin_version: 0.0.1')}, 'min_plugin_version lowered') if False else None
 
+# a description is documentation, not a constraint
+append_case('a description change is allowed', {'modules/curriculum.yaml': lambda t: t.replace('description: Every value starts with its domain and a hyphen.', 'description: Every value starts with its domain and a hyphen (changed).')}, '', ok=True)
+
+# the unique_id counter in the ledger
+root = fresh('ledger')
+(root / '_meta' / 'ids.json').write_text('{"KB": {"2026": 30}, "EX": {"2026": 30}, "KB-PC": {"2026": 30}, "KB-DM": {"2026": 1}, "EX-PC": {"2026": 30}, "EX-DM": {"2026": 30}}')
+code, out = run(root)
+check('a unique_id above its ledger counter is an error                    -> unique_id beyond ledger', code == 1 and any('unique_id beyond ledger' in e and 'Triangle inequality' in e for e in errors(out)), out)
+shutil.rmtree(root)
+
 # allowed: growth and restructuring
 append_case('a new optional property is allowed', {'types/kb.yaml': lambda t: t + '  note_to_self:\n    type: string\n'}, '', ok=True)
 append_case('a new enum value is allowed', {'types/kb.yaml': lambda t: t.replace('values: [concept, how-to, reference]', 'values: [concept, how-to, reference, glossary]')}, '', ok=True)
