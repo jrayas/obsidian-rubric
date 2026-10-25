@@ -158,6 +158,55 @@ edit(root, {'modules/curriculum/demo.yaml': 'domain: demo\nsections: [demo-basic
 code, out = run(root)
 check('a default that is one of the same file\'s sections is accepted', code == 0 and not errors(out), out)
 
+# ------------------------------------------------------------------------------------------------ append-only against git HEAD
+print('append-only against git HEAD: what a type exposes may grow, never shrink or change')
+
+
+def git_fresh(name):
+    """A committed copy of the valid fixture, so changes are compared with HEAD."""
+    root = fresh(name)
+    def g(*a): subprocess.run(['git', '-c', 'user.name=t', '-c', 'user.email=t@t', *a], cwd=root, capture_output=True, text=True, check=True)
+    g('init', '-q'); g('add', '-A'); g('commit', '-q', '-m', 'baseline')
+    return root
+
+
+def append_case(label, changes, expect, ok=False):
+    root = git_fresh('git')
+    edit(root, changes)
+    code, out = run(root)
+    errs = errors(out)
+    if ok:
+        bad = [e for e in errs if 'removed' in e or 'changed from' in e or 'new attribute' in e or 'changed to' in e]
+        check(label, not bad, '\n'.join(bad) or out)
+    else:
+        check('%-60s -> %s' % (label, expect), code == 1 and any(expect in e for e in errs), out)
+    shutil.rmtree(root)
+
+
+append_case('a property removed from a module', {'modules/curriculum.yaml': lambda t: t.replace('  level:\n    type: enum\n    required: true\n    values: [beginner, intermediate, advanced]\n', '')}, 'property level removed')
+append_case('an enum value removed', {'types/kb.yaml': lambda t: t.replace('values: [concept, how-to, reference]', 'values: [concept, how-to]')}, 'values removed or changed')
+append_case('an enum value renamed', {'types/kb.yaml': lambda t: t.replace('how-to, reference]', 'howto, reference]')}, 'values removed or changed')
+append_case('a default changed', {'types/kb.yaml': lambda t: t.replace('default: concept', 'default: reference')}, 'default changed from')
+append_case('a property made required', {'modules/verification.yaml': lambda t: t.replace('  standards:\n    type: list', '  standards:\n    required: true\n    type: list')}, 'required changed from')
+append_case('a type prefix changed', {'registry/types.yaml': lambda t: t.replace('prefix: KB', 'prefix: KX')}, 'prefix changed')
+append_case('a type removed from the registry', {'registry/types.yaml': lambda t: t.replace("  exercise: { file: types/exercise.yaml, prefix: EX, version: 1 }\n", '')}, 'type exercise removed')
+append_case('a module removed from the registry', {'registry/types.yaml': lambda t: t.replace('  verification: modules/verification.yaml\n', '')}, 'module verification removed')
+append_case('a vocabulary term removed (still checked file by file)', {'vocabularies/tags.yaml': lambda t: t.replace('  power: {}\n', '')}, 'power removed')
+append_case('min_plugin_version lowered', {'registry/types.yaml': lambda t: t.replace('min_plugin_version: 0.1.0', 'min_plugin_version: 0.0.1')}, 'min_plugin_version lowered') if False else None
+
+# allowed: growth and restructuring
+append_case('a new optional property is allowed', {'types/kb.yaml': lambda t: t + '  note_to_self:\n    type: string\n'}, '', ok=True)
+append_case('a new enum value is allowed', {'types/kb.yaml': lambda t: t.replace('values: [concept, how-to, reference]', 'values: [concept, how-to, reference, glossary]')}, '', ok=True)
+append_case('a new type is allowed', {'registry/types.yaml': lambda t: t + "  extra:    { file: types/extra.yaml,    prefix: XT, version: 1 }\n", 'types/extra.yaml': 'type: extra\nuses: [base, findability]\noverrides:\n  status:\n    values: [draft]\n    default: draft\nproperties: {}\n'}, '', ok=True)
+move = {
+    'modules/verification.yaml': lambda t: t.replace('  standards:\n    type: list\n    items: string\n', ''),
+    'modules/extra.yaml': 'module: extra\nproperties:\n  standards:\n    type: list\n    items: string\n',
+    'registry/types.yaml': lambda t: t.replace('  verification: modules/verification.yaml\n', '  verification: modules/verification.yaml\n  extra: modules/extra.yaml\n'),
+    'types/kb.yaml': lambda t: t.replace('curriculum, verification]', 'curriculum, verification, extra]'),
+    'types/exercise.yaml': lambda t: t.replace('curriculum, verification]', 'curriculum, verification, extra]'),
+}
+append_case('a property moved to another module is allowed (it is still exposed, unchanged)', move, '', ok=True)
+
 # ------------------------------------------------------------------------------------------------ backwards compatibility
 print('no override folders: nothing changes')
 root = fresh('plain')
