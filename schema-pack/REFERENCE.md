@@ -235,6 +235,14 @@ Two notes with the same ID or unique ID (for example created offline on two devi
 
 A **domain** is a value of the `domain` property (module `curriculum`): `maths`, `physics`, `pcb`... A note's `domain` selects extra files that adjust the schema for it **without forking it**. The effective schema for a note is the **default plus the override file named for its domain**. No override file means the default applies, so a vault with no override folders behaves exactly as it always did.
 
+### Where a note's domain comes from
+
+A note's domain is its own `domain` property. When a note has none, the plugin takes it from the **folder**: the first folder below the root that is a domain value, ignoring case and accents. `Knowledge/maths/Limits.md` and `Knowledge/maths/algebra/Groups.md` are in `maths`; `Knowledge/Limits.md` and `Knowledge/Problems/x.md` are in no domain, so they get the property's default (`general`). The root folder itself is the type's (`maths/Limits.md` is not in the maths domain).
+
+This applies when the plugin **fills** a note (an automatic fill, **Choose schema for this note**, a conversion) and in **Create note from schema**, whose folder list offers each domain's folder (`Knowledge/maths`) for a type that has a domain. The note is completed with that domain's defaults: its section, kinds, added properties and the `unique_id` prefix. A note that already has a `domain` keeps it, whatever the folder says.
+
+The vault check warns when a note's folder names a domain that is not its `domain` (`domain-folder`) and offers to set the property to match. It never moves a file. Keeping notes in domain folders is a convention, not a rule.
+
 ### The three verbs
 
 Override files sit next to the file they change, in a folder of the same name, one file per domain, named by the domain:
@@ -502,7 +510,7 @@ Notes outside the managed scope get no suggestions, no picker, no checks, no pro
 | --- | --- |
 | Rubric is **off** (the default on a fresh install) | Nothing changes a note and nothing asks about one. Schema loading, the problem list, Check vault (read only), option lists, the previews, and adding a vocabulary term still work. Turn it on from the status bar, the settings page or **Toggle automation on or off** |
 | A note is edited | `modified` is stamped about a second and a half after you stop changing it. Moves, breadcrumb rewrites and the plugin's own writes do not count |
-| A note is created in a mapped folder | After it has its real name, it is filled (type, schema, id, unique id, name, status, created, modified, defaults), asked about, or left alone, as set in **When a note is created in a mapped folder** |
+| A note is created in a mapped folder | After it has its real name, it is filled (type, schema, id, unique id, name, status, created, modified, defaults), asked about, or left alone, as set in **When a note is created in a mapped folder**. A note in a domain folder (`Knowledge/maths/`) gets that domain and its defaults |
 | A note is renamed or moved | `name` follows the file name if it was empty or filled by the plugin; `breadcrumb` follows the folder only if you turned that on. Moving never changes `modified` |
 | `type` changes, or a move changes the breadcrumb's first segment | A preview, then a conversion. Values that no longer apply go to `archived_fields`; the `id` is kept; the `unique_id` is issued again |
 | `domain` changes | A preview, then a new `unique_id` (the old one kept in `archived_fields`) |
@@ -518,7 +526,7 @@ Notes that arrive through sync never prompt; the vault check covers them.
 | # | Check | Codes |
 | --- | --- | --- |
 | 1 | Required properties missing (including `created`, listed as *estimated* when taken from the file's creation time) | `missing-id`, `missing-created`, `missing-required` |
-| 2 | Values outside their rules (enum, min/max, pattern, type, format); a `section` or `track` not starting with the domain; a property the domain removed | `value-enum`, `value-type`, `value-min`, `value-max`, `value-pattern`, `value-format`, `value-link`, `value-heading`, `domain-prefix`, `removed-property`, `invalid-yaml` |
+| 2 | Values outside their rules (enum, min/max, pattern, type, format); a `section` or `track` not starting with the domain; a property the domain removed | `value-enum`, `value-type`, `value-min`, `value-max`, `value-pattern`, `value-format`, `value-link`, `value-heading`, `domain-prefix`, `removed-property`, `domain-folder`, `invalid-yaml` |
 | 3 | IDs: duplicate, malformed or old-style `id`; a missing, mismatched, malformed or duplicate `unique_id` | `duplicate-id`, `malformed-id`, `old-id`, `id-year`, `missing-unique-id`, `unique-id-mismatch`, `malformed-unique-id`, `duplicate-unique-id` |
 | 4 | Tag synonyms, unknown tags, tags typed in the body that are not in the vocabulary | `tag-synonym`, `tag-unknown`, `body-tag-synonym`, `body-tag-unknown` |
 | 5 | `name` that does not match the file name | `name-mismatch` |
@@ -600,7 +608,7 @@ The settings page and the vault check list schema problems as `file:line message
 | Drop a field in one domain | `remove: [name]` (not a core property) |
 | Per-domain sections | `modules/curriculum/<domain>.yaml` with `sections: [<domain>-...]` and optionally `override: { section: { default: <domain>-... } }` |
 | Per-domain tags or tracks | `vocabularies/tags/<domain>.yaml`, `vocabularies/tracks/<domain>.yaml` (tracks start with `<domain>-`) |
-| Move a note to another domain | Change its `domain` and accept the new `unique_id`. If you keep notes in domain folders, move the file yourself; the plugin never moves files |
+| Move a note to another domain | Change its `domain` and accept the new `unique_id`. If you keep notes in domain folders, move the file yourself (the plugin never moves files); if only the folder changed, **Check vault** offers to set the domain to match |
 | Stop the plugin acting while you write the schema | Turn Rubric off (status bar, settings, or the command). Check vault still works |
 
 ## Limits worth knowing

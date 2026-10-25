@@ -78,6 +78,10 @@ A new note is not filled while you are still typing its title. Type the name and
 
 For each type the plugin writes a read-only file, for example `_schema/preview/kb.yaml`, showing exactly what a new note of that type starts with: the properties in order, their starting values, and after each one a comment saying what is allowed (for example the status values). Properties that are not written until used are listed below as comments. Where a **domain** changes a type, a second file, `_schema/preview/kb/pcb.yaml`, shows how a new note of that type starts in that domain, with a line saying what the domain adds, removes and changes. The files are generated from the schema and rewritten whenever the schema changes, so they never go stale; files for a type or domain that no longer exists are removed. Nothing is read back from them, so editing one has no effect (change the schema files instead). The folder is ignored by the schema reload. Turn it off with **Write property previews to the schema folder**.
 
+## Domains and folders
+
+A note's `domain` decides which override files apply to it. When a note has no domain, Rubric takes it from the folder: the first folder below the root that is a domain, so a note filled or created in `Knowledge/maths/` is in the maths domain and gets maths's section, kinds and unique ID prefix. **Create note from schema** lists each domain's folder (`Knowledge/maths`) for types that have a domain. Notes in other folders get `general`. **Check vault** warns when a note's folder and its `domain` disagree and offers to set the property to match; it never moves a file. See `_schema/REFERENCE.md`, *Where a note's domain comes from*.
+
 ## New notes, renames and moves (Automation settings)
 
 | Setting | What it does | Default |

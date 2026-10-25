@@ -76,6 +76,8 @@ export interface CompletionOptions {
   fileCreated?: Date;
   /** Gives the note its unique ID when its type has one and its domain has a prefix. */
   allocateUnique?: AllocateUnique;
+  /** The domain to give a note that has none (from its folder), instead of the `domain` property's default. */
+  domain?: string;
 }
 
 export interface CompletionPlan {
@@ -113,6 +115,11 @@ export function planCompletion(fm: Frontmatter, type: ResolvedType, o: Completio
       case 'modified':
         added.modified = formatLocal(o.now);
         break;
+      case 'domain': {
+        const v = o.domain ?? defaultValue(def, o.now);
+        if (v !== undefined) added.domain = v;
+        break;
+      }
       case UNIQUE_ID: {
         const scope = o.allocateUnique ? uniqueScope(type, has('domain') ? fm.domain : added.domain) : null;
         if (scope && o.allocateUnique) added.unique_id = o.allocateUnique(scope.typePrefix, scope.domainPrefix, year);

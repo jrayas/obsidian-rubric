@@ -2,6 +2,7 @@ import { Notice } from 'obsidian';
 import type { TFile } from 'obsidian';
 import { planConversion } from '../core/convert';
 import { planCompletion } from '../core/create';
+import { domainFromFolder, domainOf, typeFor } from '../core/domain-overrides';
 import { UNIQUE_ID, applyUniqueId, planUniqueId } from '../core/unique-id';
 import { desiredOrder, editFrontmatter, readFrontmatter } from '../core/frontmatter';
 import type { Frontmatter } from '../core/frontmatter';
@@ -120,10 +121,16 @@ export class NoteActions {
     const loaded = await this.load(file);
     if (!loaded) return false;
     const allocated: string[] = [];
+    // A note with no domain takes it from its folder (Knowledge/maths/ is maths), and is completed with that domain's
+    // defaults: its section, kinds and added properties.
+    const pack = plugin.schemas.pack;
+    const folderDomain = domainOf(loaded.fm) === undefined && pack ? domainFromFolder(pack.domains, file.path) : undefined;
+    if (folderDomain && pack) type = typeFor(pack, type.name, folderDomain) ?? type;
     const plan = planCompletion(loaded.fm, type, {
       name: file.basename,
       now: new Date(),
       fileCreated: new Date(file.stat.ctime),
+      ...(folderDomain ? { domain: folderDomain } : {}),
       allocateId: (year) => {
         const id = plugin.ids.allocate(type.prefix, year);
         allocated.push(id);

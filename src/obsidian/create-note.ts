@@ -1,5 +1,6 @@
 import { Modal, Notice, Setting, normalizePath } from 'obsidian';
 import { newNoteFrontmatter } from '../core/create';
+import { domainFromFolder, typeFor } from '../core/domain-overrides';
 import { checkFileName } from '../core/fs-names';
 import { editFrontmatter } from '../core/frontmatter';
 import type RubricPlugin from '../main';
@@ -59,7 +60,11 @@ export class CreateNoteModal extends Modal {
     const s = this.folderSetting;
     if (!s) return;
     s.controlEl.empty();
-    const mapped = this.foldersFor(this.type);
+    const pack = this.plugin.schemas.pack;
+    const hasDomain = pack?.types.get(this.type)?.byName.has('domain') === true;
+    // A type with a domain also offers each domain's folder: the folder decides the note's domain.
+    const mapped = this.foldersFor(this.type).flatMap((f) => (hasDomain && pack ? [f, ...pack.domains.map((dom) => `${f}/${dom}`)] : [f]));
+    s.setDesc(hasDomain ? 'A folder named after a domain sets the note’s domain.' : '');
     s.addDropdown((d) => {
       for (const f of mapped) d.addOption(f, f);
       d.addOption('', 'Vault root');
@@ -86,14 +91,18 @@ export class CreateNoteModal extends Modal {
       return;
     }
     const { plugin } = this;
-    const type = plugin.schemas.pack?.types.get(this.type);
-    if (!type) return;
+    const pack = plugin.schemas.pack;
+    const base = pack?.types.get(this.type);
+    if (!pack || !base) return;
     const path = this.pathFor();
+    // The domain comes from the folder (Knowledge/maths is maths), with that domain's defaults.
+    const domain = base.byName.has('domain') ? domainFromFolder(pack.domains, `${this.folder}/${this.name}.md`) : undefined;
+    const type = domain ? (typeFor(pack, base.name, domain) ?? base) : base;
     try {
       const file = await plugin.ids.exclusive(async () => {
         const now = new Date();
         const id = plugin.ids.allocate(type.prefix, now.getFullYear());
-        const fm = newNoteFrontmatter(type, { name: this.name, id, now, allocateUnique: (tp, dp, year) => plugin.ids.allocateUnique(tp, dp, year) });
+        const fm = newNoteFrontmatter(type, { name: this.name, id, now, allocateUnique: (tp, dp, year) => plugin.ids.allocateUnique(tp, dp, year), ...(domain ? { domain } : {}) });
         const text = editFrontmatter('', (draft) => {
           for (const [k, v] of Object.entries(fm)) draft[k] = v;
         }).text;

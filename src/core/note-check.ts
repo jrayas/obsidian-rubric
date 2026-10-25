@@ -4,7 +4,7 @@
  * text it was prepared from, so what is shown is what is written. Nothing here changes anything.
  */
 import { defaultValue } from './convert';
-import { domainOf, domainViolations, vocabFor } from './domain-overrides';
+import { domainFromFolder, domainOf, domainViolations, vocabFor } from './domain-overrides';
 import { desiredOrder, editFrontmatter, readFrontmatter } from './frontmatter';
 import type { Frontmatter } from './frontmatter';
 import { convertOldId, parseId, parseOldId, planRenumbering, nextId, yearOf } from './ids';
@@ -247,6 +247,18 @@ export function checkNote(ctx: CheckContext, note: NoteInput, allocate: (prefix:
   // Reported only: the plugin never deletes a value, and which prefix is right is the author's call.
   const baseType = ctx.pack.types.get(type.name);
   if (baseType) for (const v of domainViolations(baseType, type, fm)) add(2, v.code, 'problem', v.message);
+  // The folder names a domain (Knowledge/maths/ is maths) that is not the note's `domain`. A warning: keeping notes in
+  // domain folders is a convention, and the plugin never moves a file. The fix sets the property to match the folder.
+  const folderDomain = domainOf(fm) !== undefined && type.byName.has('domain') ? domainFromFolder(ctx.pack.domains, note.path) : undefined;
+  if (folderDomain !== undefined && folderDomain !== domainOf(fm)) {
+    add(
+      2,
+      'domain-folder',
+      'warning',
+      `the note is in a “${folderDomain}” folder but its domain is “${String(fm.domain)}”. Setting the domain to ${folderDomain} also changes which sections, kinds and unique ID fit.`,
+      [fmFix(`Set domain to ${folderDomain}`, note.text, type, (d) => void (d.domain = folderDomain))],
+    );
+  }
 
   // 3. IDs --------------------------------------------------------------------------------------------------------
   if (has('id')) {
