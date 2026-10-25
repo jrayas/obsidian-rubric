@@ -1,6 +1,6 @@
 # The registry: which modules, vocabularies and types exist. The plugin never writes this file.
 format: 1                  # version of this schema language (not of your notes)
-min_plugin_version: 0.1.0  # oldest plugin that understands this pack
+min_plugin_version: 0.2.0  # oldest plugin that understands this pack
 pack_version: 1            # version of this starter pack, so an update can say what is new
 
 modules:

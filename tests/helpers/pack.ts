@@ -7,7 +7,7 @@ import type { LoadResult, SchemaFileSource, SchemaPack } from '../../src/core/sc
 export const PACK_DIR = join(__dirname, '..', 'fixtures', 'rule-pack');
 /** The pack that ships with the plugin. */
 export const SHIPPED_DIR = join(__dirname, '..', '..', 'schema-pack');
-export const PLUGIN_VERSION = '0.1.0';
+export const PLUGIN_VERSION = '0.2.0';
 
 function walk(dir: string, out: string[] = []): string[] {
   for (const name of readdirSync(dir)) {
