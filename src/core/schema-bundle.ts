@@ -110,7 +110,7 @@ export function diffFiles(current: ReadonlyMap<string, string>, target: Readonly
     else out.changed.push(path);
   }
   for (const path of current.keys()) if (!target.has(path)) out.removed.push(path);
-  for (const list of Object.values(out)) list.sort();
+  for (const list of [out.added, out.changed, out.removed, out.same]) list.sort();
   return out;
 }
 
