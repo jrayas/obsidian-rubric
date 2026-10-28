@@ -1,4 +1,4 @@
-import { Notice, TFile } from 'obsidian';
+import { Notice, Platform, TFile } from 'obsidian';
 import { formatLocal, decideStamp, fingerprint } from '../core/timestamps';
 import type { NoteState } from '../core/timestamps';
 import { readFrontmatter } from '../core/frontmatter';
@@ -45,6 +45,12 @@ export class ModifiedStamper {
       this.baseline.delete(f.path);
       this.cancel(f.path);
     }));
+    if (Platform.isMobile) {
+      // Reading every note when the app starts is too much for a phone. Take a note's baseline when it is opened instead,
+      // so an edit made here is still stamped; a change that arrives through sync has no baseline and is left to the device that made it.
+      p.registerEvent(this.plugin.app.workspace.on('file-open', (f) => { if (f) void this.remember(f); }));
+      return;
+    }
     void this.scan();
   }
 

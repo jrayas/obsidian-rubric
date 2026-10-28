@@ -185,3 +185,8 @@
   font-family: var(--font-monospace);
   font-size: var(--font-smaller);
 }
+
+.rubric-choice-hint {
+  display: block;
+  color: var(--text-muted);
+}

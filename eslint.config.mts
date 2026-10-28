@@ -36,4 +36,11 @@ export default defineConfig(
     },
   },
   ...obsidianmd.configs.recommended,
+  {
+    // The tests run in Node and are never part of the plugin bundle, so the rule that keeps Node modules out of a
+    // mobile-capable plugin applies to src/ only.
+    files: ['tests/**/*.ts'],
+    languageOptions: { globals: { ...globals.node } },
+    rules: { 'obsidianmd/no-nodejs-modules': 'off' },
+  },
 );

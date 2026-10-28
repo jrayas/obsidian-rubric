@@ -1,4 +1,4 @@
-import { Notice, PluginSettingTab } from 'obsidian';
+import { Notice, Platform, PluginSettingTab } from 'obsidian';
 import type { App, SettingDefinitionItem } from 'obsidian';
 import { DEFAULT_SCHEMA_FOLDER, HIDDEN_SCHEMA_FOLDER, isInSchemaFolder } from '../core/folder-detect';
 import { nameKey } from '../core/normalise';
@@ -206,7 +206,19 @@ export class RubricSettingTab extends PluginSettingTab {
       scopeList('include'),
       {
         type: 'group',
+        heading: 'On phones and tablets',
+        visible: () => Platform.isMobile,
+        items: [
+          {
+            name: 'Properties area features',
+            desc: 'The hold key, the ▾ button and autocomplete in the property field are off here. To pick a value, run the command “Show all options for this property” or “Choose a property to edit” (add it to the mobile toolbar in Obsidian’s settings), then choose the property and the value. Typing in Source mode still suggests schema values.',
+          },
+        ],
+      },
+      {
+        type: 'group',
         heading: 'Properties area',
+        visible: () => !Platform.isMobile,
         items: [
           { name: 'Click', desc: 'Click into a value for autocomplete from the note’s schema.' },
           {

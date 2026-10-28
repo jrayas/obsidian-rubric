@@ -811,4 +811,15 @@ export function holdKeyLabel(key: string): string {
   return HOLD_LABEL[key] ?? key;
 }
 
+/**
+ * Show a vault path in the system file manager (Finder or Explorer). Obsidian has no documented call for it, so this uses
+ * `app.showInFolder` when the app has it (desktop only). Returns false when it cannot, so the caller can say where the folder is.
+ */
+export function showInFileManager(app: App, path: string): boolean {
+  const show = (app as unknown as { showInFolder?: (p: string) => void }).showInFolder;
+  if (!Platform.isDesktopApp || Platform.isMobile || typeof show !== 'function') return false;
+  show.call(app, path);
+  return true;
+}
+
 export { lockNote };

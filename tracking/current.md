@@ -1,6 +1,14 @@
 # Current
 
-## Latest task (2026-10-28): retired IDs list, schema presets, zip export, 0.4.0 — done, committed locally, **not pushed**
+## Latest task (2026-10-29): mobile-lite, 0.5.0 — done, committed locally, **not pushed**
+
+`isDesktopOnly` is now false (D-88, D-89). Built: Properties layer never installed on mobile (saved `commandsOnly` untouched), phone note in settings, command **Choose a property to edit** (`src/obsidian/property-chooser.ts`, also the fallback of **Show all options** when nothing is focused, on every platform), no start-up note scan on mobile (baseline on `file-open`), no keyboard pop-up in the picker, Electron removed (show-in-folder through `app.showInFolder`, feature-detected in `properties-layer.ts`). `tests/mobile-portable.test.ts` checks every file in `src/`; ESLint's Node-module rule is off for `tests/` only. New real-app suite `npm run e2e:mobile` (8 checks, Obsidian's mobile emulation).
+
+Checked: 663 unit tests, typecheck, lint (0 warnings), build; `npm run e2e` 94 of 94; `npm run e2e:mobile` 8 of 8; one emulation screenshot of the property chooser. Found by the mobile suite: two settings groups with one heading collided (fixed). **Not verified: a real phone or tablet** (layout at phone width, touch, large vaults, hidden `.schema` folder, handing the zip to another app); `docs/release-checklist.md` has the device steps. Not tested: Windows, Obsidian 1.13.7.
+
+---
+
+## Earlier task (2026-10-28): retired IDs list, schema presets, zip export, 0.4.0 (pushed with 0.3.0 on 2026-10-29) — done, committed locally, **not pushed**
 
 Built: `src/core/retired-ids.ts`, `schema-bundle.ts`, `zip.ts` (pure, tested); `src/obsidian/schema-presets.ts`, a text prompt in `modals.ts`, three settings groups (Schema presets and export, Saved presets, Retired IDs), commands Save schema as preset / Apply schema preset / Export schema as zip. Decisions D-84 to D-86. Settings definitions are cached until `update()`, so every change calls `plugin.refreshSettings()`.
 

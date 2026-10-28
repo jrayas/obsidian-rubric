@@ -1,5 +1,5 @@
 import { domainOf, typeFor } from './core/domain-overrides';
-import { Notice, Plugin, normalizePath } from 'obsidian';
+import { Notice, Platform, Plugin, normalizePath } from 'obsidian';
 import type { TFile } from 'obsidian';
 import { STARTER_PACK } from './pack';
 import { SchemaService } from './obsidian/schema-service';
@@ -17,7 +17,8 @@ import { ModifiedStamper } from './obsidian/modified-stamper';
 import { NoteActions } from './obsidian/note-actions';
 import { OptionPickerModal } from './obsidian/picker-modal';
 import { PreviewWriter } from './obsidian/preview-writer';
-import { PropertiesLayer } from './obsidian/properties-layer';
+import { choosePropertyToEdit } from './obsidian/property-chooser';
+import { PropertiesLayer, showInFileManager } from './obsidian/properties-layer';
 import { RegistryStore } from './obsidian/registry-store';
 import { SchemaPresets } from './obsidian/schema-presets';
 import { SchemaValueSuggest } from './obsidian/source-suggest';
@@ -171,6 +172,11 @@ export default class RubricPlugin extends Plugin {
       },
     });
     this.addCommand({
+      id: 'choose-property',
+      name: 'Choose a property to edit',
+      callback: () => void choosePropertyToEdit(this),
+    });
+    this.addCommand({
       id: 'show-all-options',
       name: 'Show all options for this property',
       callback: () => this.showAllOptions(),
@@ -261,7 +267,8 @@ export default class RubricPlugin extends Plugin {
 
   /** Install or remove the Properties-area layer to match the "commands only" setting. */
   syncLayer(): void {
-    if (this.settings.commandsOnly) this.layer.uninstall();
+    // On a phone or tablet there is no hold key and the Properties area differs, so the layer is never installed there; the saved setting is left alone, as it syncs to the desktop.
+    if (this.settings.commandsOnly || Platform.isMobile) this.layer.uninstall();
     else this.layer.install();
   }
 
@@ -316,7 +323,7 @@ export default class RubricPlugin extends Plugin {
     if (this.layer.installed && this.layer.toggleFocused()) return;
     const target = propertyUnderFocus(this.app);
     if (!target) {
-      new Notice('Click into a property first.');
+      void choosePropertyToEdit(this);
       return;
     }
     new OptionPickerModal(this, target.file, target.key).open();
@@ -325,15 +332,7 @@ export default class RubricPlugin extends Plugin {
   /** Show the schema folder in the system file manager (Finder or Explorer). */
   openSchemaFolder(): void {
     const folder = this.schemas.folder;
-    const adapter = this.app.vault.adapter as { getFullPath?: (p: string) => string };
-    const full = adapter.getFullPath?.(normalizePath(folder));
-    const req = (window as unknown as { require?: (m: string) => { shell?: { openPath(p: string): Promise<string> } } }).require;
-    const shell = req?.('electron')?.shell;
-    if (full && shell) {
-      void shell.openPath(full);
-    } else {
-      new Notice(`Schema folder: ${folder}`);
-    }
+    if (!showInFileManager(this.app, normalizePath(folder))) new Notice(`The schema folder is "${folder}" in your vault.`);
   }
 
   /** Create the starter pack files that do not exist yet. Never overwrites. Asks first. */

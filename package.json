@@ -1,6 +1,6 @@
 {
   "name": "rubric",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "private": true,
   "description": "Schema-driven properties, validation and migration for Obsidian notes.",
   "type": "module",
@@ -18,7 +18,8 @@
     "vault:create": "node scripts/create-test-vault.mjs",
     "debug:launch": "node scripts/debug-launch.mjs",
     "debug": "node scripts/debug.mjs",
-    "e2e": "npm run build && node scripts/e2e.mjs"
+    "e2e": "npm run build && node scripts/e2e.mjs",
+    "e2e:mobile": "npm run build && node scripts/e2e-mobile.mjs"
   },
   "devDependencies": {
     "@codemirror/state": "6.7.6",

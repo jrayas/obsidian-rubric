@@ -26,12 +26,13 @@ It is described as **governance-ready**, not as a compliance system: locks are a
 
 Rubric starts **off** on a fresh install, so you can write and change your schema without it touching a note. When the schema is ready, turn it on from the status bar, the settings page or the command **Toggle automation on or off**.
 
-Requires Obsidian **1.13.7 or later** (desktop only). See [docs/user-guide.md](docs/user-guide.md) for details.
+Requires Obsidian **1.13.7 or later**. Full features on macOS and Windows; a lighter **mobile-lite** set on iOS and Android (no Properties-area hold key; pick values with the command **Choose a property to edit**). See [docs/user-guide.md](docs/user-guide.md) for details.
 
 ## Commands
 
 | Command | What it does |
 | --- | --- |
+| Choose a property to edit | Pick a property of the open note from a list, then its value; works without a focused property, so it is the way to do it on a phone |
 | Show all options for this property | Latches the option list for the focused property (assign a hotkey in Obsidian's Hotkeys settings); opens a picker window if the Properties-area features are off |
 | Toggle automation on or off | The master switch. Rubric is **off** on a fresh install so you can write your schema first; the status bar item does the same |
 | Check vault | Runs the eleven checks and opens the report |

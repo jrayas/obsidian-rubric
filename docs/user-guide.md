@@ -6,8 +6,9 @@ For someone installing and using Rubric. (Developers: start at [README.md](READM
 
 | Requirement | Reason |
 | --- | --- |
-| Obsidian desktop 1.13.7 or later | The Properties-area technique the plugin relies on is documented by an existing community plugin as working from 1.13.7; settings use the declarative settings API that arrived in 1.13. Only 1.14.4 was available for testing |
-| macOS or Windows | Mobile has no hold-key and a different Properties area. The manifest says `isDesktopOnly: true` |
+| Obsidian 1.13.7 or later (desktop; phone and tablet in a lighter form) | The Properties-area technique the plugin relies on is documented by an existing community plugin as working from 1.13.7; settings use the declarative settings API that arrived in 1.13. Only 1.14.4 was available for testing |
+| macOS or Windows for the full experience | The hold key and the Properties-area features need a desktop keyboard and Obsidian's desktop Properties area |
+| iOS or Android (mobile-lite) | The manifest says `isDesktopOnly: false`. Schemas, matching, IDs, `modified`, the vault check, presets and export work; the Properties-area features are off. See [On a phone or tablet](#on-a-phone-or-tablet) |
 
 ## Install
 
@@ -168,6 +169,18 @@ The vault check offers it per note, and **Migrate all `<type>` notes** for sever
 
 **Create note from schema**: pick a type, a name and a folder. The name must work on both macOS and Windows (no `/ \ : * ? " < > |`, no trailing dot or space, no reserved names like `CON`). The note gets an ID, `created`, `modified` and every default. The plugin never writes `breadcrumb`.
 
+## On a phone or tablet
+
+Rubric loads on iOS and Android in a lighter form (version 0.5.0 onwards).
+
+**Works:** reading and checking your schema files, the problem list, matching and scope, readable IDs, `modified` stamping, **Check vault** with its previews and fixes, retired IDs, schema presets, the zip export, and Source-mode suggestions for property values.
+
+**Different or off:** there is no hold key, no ▾ button and no autocomplete inside the Properties area, and the settings that belong to them are hidden. To pick a value, run **Choose a property to edit** (or **Show all options for this property** with nothing focused): choose the property, then the value, and it is saved at once. Add the command to Obsidian's mobile toolbar in *Settings → Mobile* for one tap. The status bar item does not exist on mobile; use the settings page or the command **Toggle automation on or off**.
+
+**Also different:** to save phone battery and memory Rubric does not read every note when the app starts. A note gets its `modified` baseline when you open it, so an edit you make there is stamped; a change that arrives through sync is not stamped on the phone (the device that made it stamps it). **Check vault** reads every note and can take a while on a large vault. **Open schema folder** shows the folder name instead of opening a file manager.
+
+**Not verified:** layout at real phone widths, touch gestures, a hidden `.schema` folder on mobile, large vaults, and the zip export's file hand-off (the zip is written to the top folder of the vault; use your file app or a sync tool to take it elsewhere).
+
 ## Troubleshooting
 
 | Symptom | What to check |
@@ -183,6 +196,6 @@ The vault check offers it per note, and **Migrate all `<type>` notes** for sever
 ## Limits
 
 - Locks are advisory. The vault check reports changes; it does not prevent them.
-- Mobile is not supported.
+- On a phone or tablet only the lighter feature set below works; it has been tried in Obsidian's mobile emulation on a Mac, not on a real device.
 - The Properties-area features depend on undocumented internals and may stop working after an Obsidian update; the commands and the picker window do not.
 - Not verified: Windows (including that Alt does not move focus to the menu bar), Obsidian 1.13.7, the real breadcrumb plugin, real sync between devices, hidden-folder sync.

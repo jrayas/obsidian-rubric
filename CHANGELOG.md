@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.5.0 (2026-10-29)
+
+### Added
+- **Mobile-lite: Rubric now loads on iOS and Android** (`isDesktopOnly` is false). Works: schema loading and checking, matching, IDs, `modified`, Check vault, retired IDs, presets, zip export and Source-mode suggestions. The Properties-area features (hold key, ▾ button, autocomplete in the field) are never installed on mobile, and their settings are replaced by a note. The saved "Commands only" setting is left alone because it syncs to the desktop.
+- **Choose a property to edit**: pick a property of the open note from a list (with its current value), then its value. It needs no focused property and no keyboard, so it works on a phone; on desktop, **Show all options for this property** now opens it when no property is focused (it used to say "Click into a property first").
+- `npm run e2e:mobile`: eight real-app checks in Obsidian's mobile emulation.
+
+### Changed
+- On mobile Rubric does not read every note at start-up. A note's `modified` baseline is taken when it is opened, so an edit made there is stamped; a change that arrives through sync is not stamped on the phone.
+- The picker window does not focus its filter field on mobile (no keyboard pop-up).
+- **Open schema folder** no longer calls Electron. On desktop it uses Obsidian's own show-in-folder when it exists; otherwise (and on mobile) it shows the folder name.
+- Found by the mobile checks: two settings groups with the same heading collided, so the settings page logged a warning; the phone note now has its own heading.
+
+### Not verified
+- A real phone or tablet: layout at phone widths, touch, large vaults, a hidden `.schema` folder, handing the zip to another app. `docs/release-checklist.md` has the manual steps.
+- Windows, Obsidian 1.13.7.
+
 ## 0.4.0 (2026-10-28)
 
 ### Added

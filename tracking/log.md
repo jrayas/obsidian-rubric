@@ -32,3 +32,4 @@
 - 2026-10-28 15:40 — Body access layer 0.3.0 finished: 564 unit tests, typecheck/lint/build clean, e2e 91/91 on Obsidian 1.14.4. Decisions D-79 to D-83. Not pushed. Next: retired-ID list, schema presets, zip export (agreed, not started).
 - 2026-10-28 16:19 — Release 0.4.0: retired ID list in settings, schema presets (named copies of the schema folder, preview + backup), zip export. 584 unit tests, lint/typecheck/build clean, e2e 94/94 on Obsidian 1.14.4. D-84 to D-86. Not pushed.
 - 2026-10-29 00:25 — Author changed to Anthirayas in manifest.json, package.json and LICENSE (D-87). GitHub URLs left as they were.
+- 2026-10-29 00:39 — Release 0.5.0 mobile-lite: isDesktopOnly false, Properties layer off on mobile, Choose a property to edit, no start-up scan on mobile, Electron removed. 663 unit tests, lint 0 warnings, e2e 94/94, e2e:mobile 8/8 (emulation only). D-88, D-89. Not pushed; real-device steps in the release checklist.

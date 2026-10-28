@@ -1,4 +1,4 @@
-import { Modal } from 'obsidian';
+import { Modal, Platform } from 'obsidian';
 import type { TFile } from 'obsidian';
 import type RubricPlugin from '../main';
 import { OptionListView } from './option-list';
@@ -32,7 +32,8 @@ export class OptionPickerModal extends Modal {
       text: `${loaded.type.name} · ${loaded.list.mode === 'multi' ? 'tick several; each change saves at once' : 'pick one; it saves at once'}`,
     });
     const view = new OptionListView(contentEl, loaded.list, { onPick: (v) => session.pick(v) }, { filterable: true, label: this.key });
-    view.focus();
+    // On a phone, focusing the filter field would pop up the keyboard before you have looked at the list.
+    if (!Platform.isMobile) view.focus();
   }
 
   onClose(): void {

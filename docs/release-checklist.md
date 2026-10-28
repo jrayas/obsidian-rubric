@@ -8,6 +8,7 @@ Run before every release. Platform-specific items are marked **Mac** or **Window
 - [ ] `npm run typecheck` and `npm run lint` pass with no warnings (ESLint with the Obsidian rules, and stylelint on `styles.css`).
 - [ ] `npm run build` produces `main.js`; no `eval`, `new Function`, `innerHTML`, `fetch`, `XMLHttpRequest` or `localStorage` in it (the e2e suite checks).
 - [ ] `npm run e2e` passes in an isolated Obsidian (all checks).
+- [ ] `npm run e2e:mobile` passes (Obsidian's mobile emulation, which reloads the window).
 
 ## Manual checklist for each Obsidian release (Mac and Windows)
 
@@ -31,6 +32,20 @@ From the spec's test plan. Mark with the Obsidian version and platform.
 - [ ] Holding Alt does not move focus to a menu bar (if it does, document the alternative key; the **Hold key** setting can choose Shift, Control or Command/Windows).
 - [ ] A folder name typed with accents on Mac still matches on Windows.
 - [ ] A file name with a character illegal on Windows is rejected on create.
+
+## Manual checklist on a real phone or tablet (iOS and Android)
+
+Not yet run on a device; the automated mobile suite only uses Obsidian's emulation on a Mac.
+
+- [ ] The plugin enables (no "desktop only" refusal) and the status shows the schema loaded; **Reload schemas** works.
+- [ ] A vault with a few thousand notes opens without a long freeze or a crash (no start-up scan).
+- [ ] **Choose a property to edit** opens a readable list; tapping a property and then a value saves it; the keyboard does not appear until you tap the filter field.
+- [ ] The settings page is usable at phone width: the phone note shows, the hold-key settings do not, lists and presets can be tapped.
+- [ ] Open a note, edit it, wait: `modified` is stamped once. An edit made on the other device and synced in is not stamped here.
+- [ ] **Check vault** finishes on a large vault; a preview window fits the screen and its buttons are reachable.
+- [ ] **Save schema as preset**, **Apply schema preset** (preview readable) and **Export schema as zip** work; the zip can be reached from the file app.
+- [ ] A hidden `.schema` folder is read (or the setting to use `_schema` is clear).
+- [ ] Toggle automation from the command and the settings page.
 
 ## Release
 

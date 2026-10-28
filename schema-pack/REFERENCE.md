@@ -711,6 +711,6 @@ The settings page and the vault check list schema problems as `file:line message
 - Locks are advisory. Nothing stops another tool changing a locked property; the vault check reports it.
 - Comments inside a note's frontmatter may be lost when the plugin rewrites it. Put explanations here, in the schema files.
 - The Properties-area features (hold Option for the list, the ▾ button, autocomplete in the property field) use undocumented Obsidian internals and may stop working after an Obsidian update; the commands and the picker window do not.
-- Mobile is not supported. The body access layer avoids desktop-only code so that it can run there later, but this has not been tried.
+- On a phone or tablet only a lighter set works (no Properties-area features; use **Choose a property to edit**). It has been tried in Obsidian's mobile emulation, not on a real device. See the user guide.
 - Body access has no features yet, and it follows Obsidian's own idea of a heading, which differs from CommonMark in places (a line of text over `---` is a heading only when it is a single line).
 - The plugin never deletes data, never moves or renames files, and never writes `breadcrumb` unless you turn that on.
