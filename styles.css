@@ -179,3 +179,9 @@
 .rubric-status-off {
   color: var(--text-warning);
 }
+
+.rubric-body-notice {
+  white-space: pre-wrap;
+  font-family: var(--font-monospace);
+  font-size: var(--font-smaller);
+}

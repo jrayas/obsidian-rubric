@@ -175,7 +175,7 @@ await check('P2 a new note in an unknown folder asks which schema; Apply with re
   await waitFor(() => choiceShown(), 'the schema prompt', 5000);
   const title = await ev(`[...activeDocument.querySelectorAll('.modal')].pop().querySelector('.modal-title').textContent`);
   eq(title, 'No schema for Inbox/', 'prompt title');
-  eq(await ev(`[...activeDocument.querySelectorAll('.rubric-choice')].length`), 9, 'choices (8 types + leave unmanaged)');
+  eq(await ev(`[...activeDocument.querySelectorAll('.rubric-choice')].length`), 10, 'choices (9 types in the rule pack + leave unmanaged)');
   await ev(`[...activeDocument.querySelectorAll('.rubric-choice input')][1].click(); 0`);
   await sleep(100);
   await clickButton('Apply');
@@ -1597,6 +1597,211 @@ await check('P8 stress: 24 hold and release cycles, pointer away or on the list,
   }
   eq(stuck, [], 'cycles that left the list open');
   await ev(`${P}.watcher.enabled = true; ${P}.layer.releaseSafety = false; 0`);
+});
+
+// ---------------------------------------------------------------- Phase 8: body access
+// The layer is internal: nothing in Rubric edits a body. These checks register a throwaway handler and call the file API directly.
+const GOLDEN = JSON.parse(readFileSync(join(ROOT, 'tests', 'fixtures', 'body', 'obsidian-headings.json'), 'utf8'));
+const FM8 = '---\ntype: task\nid: TK-2026-0099\ncreated: 2026-10-20T14:32\nmodified: 2026-10-20T14:32\n---\n';
+const BODY8 = '# Heading\n- item\n\n## Sub\ntext\n';
+const taskYaml = await read('_schema/types/task.yaml');
+const setBodyKeys = async (yaml) => {
+  await write('_schema/types/task.yaml', taskYaml + yaml);
+  await ev(`${P}.schemas.reload('manual').then(() => 0)`);
+};
+const bodyOpen = (path, cursor) =>
+  ev(`(async () => { const f = app.vault.getFileByPath(${JSON.stringify(path)}); const leaf = app.workspace.getLeaf('tab'); await leaf.openFile(f); app.workspace.setActiveLeaf(leaf, { focus: true });
+    await new Promise(r => setTimeout(r, 500)); const ed = app.workspace.activeEditor.editor; ed.focus(); ${cursor ? `ed.setCursor(${JSON.stringify(cursor)});` : ''} return ed.getValue(); })()`);
+const editorText = () => ev(`app.workspace.activeEditor.editor.getValue()`);
+const setEditor = (text, cursor) => ev(`(() => { const ed = app.workspace.activeEditor.editor; ed.setValue(${JSON.stringify(text)}); ed.setCursor(${JSON.stringify(cursor)}); ed.focus(); return 0; })()`);
+const modKey = process.platform === 'darwin' ? 4 : 2;
+const undoKey = async () => {
+  for (const type of ['keyDown', 'keyUp']) await client.send('Input.dispatchKeyEvent', { type, key: 'z', code: 'KeyZ', windowsVirtualKeyCode: 90, nativeVirtualKeyCode: 90, modifiers: modKey });
+  await sleep(350);
+};
+const dismissNotices = () => ev(`[...activeDocument.querySelectorAll('.notice')].forEach(n => n.remove()); 0`);
+
+await check('P8 the body key: a bad shape keeps the last good copy, an unknown key only warns, a good one opts the type in', async () => {
+  try {
+    await setBodyKeys('\nbody: nope\n');
+    await waitFor(() => ev(`${P}.schemas.status.usingLastGood`), 'last-good flag after body-shape');
+    const bad = await ev(`${P}.schemas.status.problems.find(p => p.code === 'body-shape')`);
+    assert(bad && bad.severity === 'error' && bad.file === 'types/task.yaml' && bad.line > 1, `body-shape problem: ${JSON.stringify(bad)}`);
+    eq(await ev(`!!${P}.schemas.pack`), true, 'pack kept');
+    await setBodyKeys('\nbody:\n  enabled: true\n  template: x\n');
+    await waitFor(() => ev(`!${P}.schemas.status.usingLastGood && ${P}.schemas.pack.types.get('task').body.enabled === true`), 'task to opt in');
+    const warn = await ev(`${P}.schemas.status.problems.find(p => p.code === 'body-unknown-key')`);
+    assert(warn && warn.severity === 'warning' && /template/.test(warn.message) && warn.line > 1, `warning: ${JSON.stringify(warn)}`);
+    eq(await ev(`${P}.schemas.pack.types.get('kb').body.enabled`), false, 'a type without the key');
+  } finally {
+    await setBodyKeys('\nbody:\n  enabled: true\n');
+    await waitFor(() => ev(`!${P}.schemas.status.usingLastGood && ${P}.schemas.status.problems.length === 0`), 'clean reload');
+  }
+});
+
+await check('P8 with no handler registered, Enter in a list behaves as before', async () => {
+  await write('Tasks/Body One.md', FM8 + BODY8);
+  await waitFor(() => ev(`!!app.vault.getFileByPath('Tasks/Body One.md')`), 'note');
+  await bodyOpen('Tasks/Body One.md', { line: 7, ch: 6 });
+  await press('Enter', 'Enter', 13);
+  await sleep(300);
+  eq((await editorText()).includes('- item\n- \n'), true, 'Obsidian continued the list');
+});
+
+await check('P8 the demo command is hidden until the debug setting is on, then shows type, opt-in, switch and heading tree', async () => {
+  await write('Tasks/Body Demo.md', FM8 + BODY8);
+  await waitFor(() => ev(`!!app.vault.getFileByPath('Tasks/Body Demo.md')`), 'note');
+  await sleep(1800);
+  await bodyOpen('Tasks/Body Demo.md');
+  const cmd = `app.commands.commands['${PLUGIN_ID}:body-show-sections']`;
+  eq(await ev(`!!${cmd}`), true, 'command registered');
+  eq(await ev(`${cmd}.checkCallback(true)`), false, 'hidden with the debug setting off');
+  await ev(`${P}.settings.debugBodyAccess = true; ${P}.settings.allowBodyEdits = false; 0`);
+  eq(await ev(`${cmd}.checkCallback(true)`), true, 'visible with the debug setting on');
+  await ev(`${cmd}.checkCallback(false); 0`);
+  await sleep(300);
+  let text = await ev(`[...activeDocument.querySelectorAll('.rubric-body-notice')].map(n => n.textContent).join('|')`);
+  assert(/Type: task/.test(text) && /body\.enabled: on/.test(text), `type lines: ${text}`);
+  assert(/Body edits: blocked, the setting “Allow Rubric to edit note bodies” is off/.test(text), `switch line: ${text}`);
+  assert(/# Heading {2}· {2}lines 7–11/.test(text) && / {2}## Sub {2}· {2}lines 10–11/.test(text), `tree: ${text}`);
+  await dismissNotices();
+  await ev(`${P}.settings.allowBodyEdits = true; 0`);
+  await ev(`${cmd}.checkCallback(false); 0`);
+  await sleep(300);
+  text = await ev(`[...activeDocument.querySelectorAll('.rubric-body-notice')].map(n => n.textContent).join('|')`);
+  assert(/Body edits: allowed/.test(text), `allowed line: ${text}`);
+  await dismissNotices();
+  await bodyOpen('Knowledge/Body Kb.md').catch(() => 0);
+});
+
+await check('P8 the heading tree agrees with Obsidian’s own on every recorded edge case', async () => {
+  await write('Tasks/Body Golden.md', '---\ntype: task\n---\n' + GOLDEN.lines.join('\n') + '\n');
+  const mine = await waitFor(
+    () => ev(`(async () => { const f = app.vault.getFileByPath('Tasks/Body Golden.md'); if (!f || !app.metadataCache.getFileCache(f)?.headings) return null;
+      const t = await ${P}.body.getSections(f); return { mine: t.flat.map(s => [s.level, s.text, s.line]), obsidian: app.metadataCache.getFileCache(f).headings.map(h => [h.level, h.heading, h.position.start.line]) }; })()`),
+    'metadata cache for the golden note',
+    8000,
+  );
+  eq(mine.mine, mine.obsidian, 'headings (level, text, line)');
+});
+
+await check('P8 a handler claims Enter only where it may: switch on, opted-in type, body text, one undo step', async () => {
+  await ev(`window.__e2eBody = { calls: [] }; window.__e2eDbg = []; const o = console.debug; console.debug = (...a) => { window.__e2eDbg.push(a.join(' ')); o(...a); };
+    window.__e2eOff = ${P}.body.handlers.register({ id: 'e2e', keys: ['Enter'], handle(ctx) { window.__e2eBody.calls.push({ type: ctx.type.name, section: ctx.section && ctx.section.text, depth: ctx.list && ctx.list.depth, line: ctx.cursor.line });
+      ctx.tx.insertAfterLine(ctx.cursor.line, 'CLAIMED'); return 'claim'; } }); 0`);
+  const calls = () => ev(`window.__e2eBody.calls.length`);
+  const orig = FM8 + BODY8;
+  try {
+    await bodyOpen('Tasks/Body One.md');
+    // kill switch off
+    await ev(`${P}.settings.allowBodyEdits = false; 0`);
+    await setEditor(orig, { line: 7, ch: 6 });
+    await press('Enter', 'Enter', 13);
+    await sleep(300);
+    eq(await calls(), 0, 'handler calls with the setting off');
+    eq((await editorText()).includes('- item\n- \n'), true, 'Obsidian handled the key');
+    // master switch off
+    await ev(`${P}.settings.allowBodyEdits = true; ${P}.settings.enabled = false; 0`);
+    await setEditor(orig, { line: 7, ch: 6 });
+    await press('Enter', 'Enter', 13);
+    await sleep(300);
+    eq(await calls(), 0, 'handler calls with Rubric off');
+    await ev(`${P}.settings.enabled = true; 0`);
+    // on: claimed, once, with the right context
+    await setEditor(orig, { line: 7, ch: 6 });
+    await press('Enter', 'Enter', 13);
+    await sleep(300);
+    eq(await calls(), 1, 'handler calls with everything on');
+    eq(await ev(`window.__e2eBody.calls[0]`), { type: 'task', section: 'Heading', depth: 0, line: 7 }, 'context');
+    eq(await editorText(), FM8 + '# Heading\n- item\nCLAIMED\n\n## Sub\ntext\n', 'the claimed key: one line inserted, no list continuation');
+    const log = await ev(`window.__e2eDbg.filter(l => /e2e changed/.test(l))`);
+    assert(log.length === 1 && /Tasks\/Body One\.md \(\+8 −0 characters\)/.test(log[0]), `debug log: ${JSON.stringify(log)}`);
+    // one undo step takes the whole edit back
+    await undoKey();
+    eq(await editorText(), orig, 'after one undo');
+    // not claimed in a fence, or in a type that has not opted in. (The frontmatter cannot be tested here: Obsidian folds it in
+    // the editor, so a cursor placed in it lands on the first body line. The rule is covered by tests/body-handlers.test.ts.)
+    const fenced = FM8 + '# Heading\n```\ncode line\n```\n';
+    await setEditor(fenced, { line: 8, ch: 4 });
+    await press('Enter', 'Enter', 13);
+    await sleep(300);
+    eq(await calls(), 1, 'handler calls after Enter in a code fence');
+    await write('Knowledge/Body Kb.md', '---\ntype: kb\n---\n# H\n- item\n');
+    await waitFor(() => ev(`!!app.vault.getFileByPath('Knowledge/Body Kb.md')`), 'kb note');
+    await bodyOpen('Knowledge/Body Kb.md', { line: 4, ch: 6 });
+    await press('Enter', 'Enter', 13);
+    await sleep(300);
+    eq(await calls(), 1, 'handler calls in a type without body.enabled');
+  } finally {
+    await ev(`window.__e2eOff(); ${P}.settings.allowBodyEdits = false; ${P}.settings.debugBodyAccess = false; 0`);
+  }
+});
+
+await check('P8 the file API: writes under a heading, keeps CRLF and the frontmatter, reports no change, obeys both switches, stamps modified', async () => {
+  const crlf = (s) => s.replace(/\n/g, '\r\n');
+  const original = crlf(FM8 + BODY8);
+  await write('Tasks/Body Api.md', original);
+  await waitFor(() => ev(`!!app.vault.getFileByPath('Tasks/Body Api.md')`), 'note');
+  const call = (expr) => ev(`(async () => { const f = app.vault.getFileByPath('Tasks/Body Api.md'); return await ${P}.body.${expr}; })()`);
+  await ev(`${P}.settings.allowBodyEdits = true; 0`);
+  try {
+    const r1 = await call(`insertAtSection(f, 'Heading', '- api line', 'end', { by: 'e2e-api' })`);
+    eq(r1.status, 'written', 'status');
+    const after = await read('Tasks/Body Api.md');
+    eq(after.startsWith(crlf(FM8)), true, 'frontmatter bytes kept');
+    eq(after, crlf(FM8 + '# Heading\n- item\n- api line\n\n## Sub\ntext\n'), 'text after the insert');
+    eq(/(^|[^\r])\n/.test(after), false, 'no lone LF in a CRLF note');
+    // modified follows (D-79): the stamper treats the write as an edit
+    await waitFor(() => read('Tasks/Body Api.md').then((t) => !/modified: 2026-10-20T14:32/.test(t)), 'modified to be stamped', 7000);
+    // nothing to change: no write, no modify event
+    const settled = await read('Tasks/Body Api.md');
+    await ev(`window.__mods = 0; window.__modOff = app.vault.on('modify', f => { if (f.path === 'Tasks/Body Api.md') window.__mods++; }); 0`);
+    const r2 = await call(`insertAtSection(f, 'Heading', '', 'end', { by: 'e2e-api' })`);
+    const r3 = await call(`editBody(f, b => b, { by: 'e2e-api' })`);
+    await sleep(800);
+    eq([r2.status, r3.status], ['unchanged', 'unchanged'], 'statuses');
+    eq(await ev(`window.__mods`), 0, 'modify events for an unchanged body');
+    eq(await read('Tasks/Body Api.md'), settled, 'file after unchanged calls');
+    await ev(`app.vault.offref(window.__modOff); 0`);
+    // refusals leave the file alone
+    eq((await call(`insertAtSection(f, 'Nope', 'x', 'start', { by: 'e2e-api' })`)).reason, 'heading-not-found', 'missing heading');
+    const stale = await call(`setBody(f, 'replacement\\n', { by: 'e2e-api', expectedBody: 'not the body' })`);
+    eq(stale, { status: 'refused', reason: 'conflict' }, 'stale expectedBody');
+    await ev(`${P}.settings.allowBodyEdits = false; 0`);
+    eq(await call(`insertAtSection(f, 'Heading', 'x', 'start', { by: 'e2e-api' })`), { status: 'refused', reason: 'body-edits-off' }, 'kill switch');
+    await ev(`${P}.settings.allowBodyEdits = true; ${P}.settings.enabled = false; 0`);
+    eq(await call(`insertAtSection(f, 'Heading', 'x', 'start', { by: 'e2e-api' })`), { status: 'refused', reason: 'rubric-off' }, 'master switch');
+    await ev(`${P}.settings.enabled = true; 0`);
+    eq(await read('Tasks/Body Api.md'), settled, 'file after the refusals');
+    // reading is never gated
+    await ev(`${P}.settings.allowBodyEdits = false; 0`);
+    eq(await call(`getLines(f)`).then((l) => l.length), 6, 'lines read with the setting off');
+  } finally {
+    await ev(`${P}.settings.allowBodyEdits = false; ${P}.settings.enabled = true; 0`);
+  }
+});
+
+await check('P8 a file write to a note that is open, with unsaved typing in it, keeps both and is one undo step', async () => {
+  await write('Tasks/Body Open.md', FM8 + BODY8);
+  await waitFor(() => ev(`!!app.vault.getFileByPath('Tasks/Body Open.md')`), 'note');
+  await bodyOpen('Tasks/Body Open.md');
+  // The stamp of `modified` that follows any edit is its own undo step (as after typing); switch it off so one undo is the body edit.
+  await ev(`${P}.settings.allowBodyEdits = true; ${P}.settings.stampModified = false; 0`);
+  try {
+    await ev(`(() => { const cm = app.workspace.activeEditor.editor.cm; cm.dispatch({ changes: { from: cm.state.doc.length, insert: 'TYPED\\n' }, userEvent: 'input.type' }); return 0; })()`);
+    const r = await ev(`(async () => { const f = app.vault.getFileByPath('Tasks/Body Open.md'); return await ${P}.body.insertAtSection(f, 'Sub', 'api', 'start', { by: 'e2e-open' }); })()`);
+    eq(r.status, 'written', 'status');
+    await sleep(3500);
+    const disk = await read('Tasks/Body Open.md');
+    const editor = await editorText();
+    assert(editor.includes('TYPED') && editor.includes('## Sub\napi\n'), `editor lost something: ${JSON.stringify(editor)}`);
+    eq(disk.replace(/modified: .*/, ''), editor.replace(/modified: .*/, ''), 'disk and editor agree');
+    await undoKey();
+    const undone = await editorText();
+    assert(!undone.includes('## Sub\napi\n') && undone.includes('TYPED'), `one undo should remove the api line and keep the typing: ${JSON.stringify(undone)}`);
+  } finally {
+    await ev(`${P}.settings.allowBodyEdits = false; ${P}.settings.stampModified = true; 0`);
+  }
 });
 
 // ---------------------------------------------------------------- summary

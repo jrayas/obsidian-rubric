@@ -48,7 +48,7 @@ describe('REFERENCE.md covers the pack', () => {
 describe('REFERENCE.md lists every code', () => {
   it('every schema problem code the loaders can report', () => {
     const codes = new Set<string>();
-    for (const f of ['src/core/loader-base.ts', 'src/core/schema-loader.ts', 'src/core/domain-loader.ts', 'src/core/domain-overrides.ts']) {
+    for (const f of ['src/core/loader-base.ts', 'src/core/schema-loader.ts', 'src/core/domain-loader.ts', 'src/core/domain-overrides.ts', 'src/core/body-config.ts']) {
       for (const m of read(f).matchAll(/\b(?:error|warn)\(\s*'([a-z-]+)'/g)) codes.add(m[1] as string);
     }
     expect(codes.size).toBeGreaterThan(40);
@@ -63,5 +63,20 @@ describe('REFERENCE.md lists every code', () => {
     for (const m of read('src/core/domain-overrides.ts').matchAll(/code: '([a-z-]+)'/g)) codes.add(m[1] as string);
     for (const c of ['enum', 'type', 'min', 'max', 'pattern', 'format', 'link', 'heading']) codes.add(`value-${c}`);
     for (const c of codes) expect(reference.includes(`\`${c}\``), `check code ${c}`).toBe(true);
+  });
+});
+
+describe('REFERENCE.md describes body access', () => {
+  it('names the key, the setting, the commands and the keys, and says that no behaviour ships yet', () => {
+    for (const word of ['body', 'enabled', 'Allow Rubric to edit note bodies', 'Log body access', 'Body access: show sections']) {
+      expect(reference.includes(word), word).toBe(true);
+    }
+    for (const word of ['Enter', 'Tab', 'Shift-Tab', 'start', 'end', 'after', 'before']) expect(has(word), word).toBe(true);
+    expect(reference).toMatch(/no body behaviour ships yet/i);
+  });
+
+  it('lists the keys the handler hook offers and every insert position', async () => {
+    const { BODY_KEYS } = await import('../src/core/body-handlers');
+    for (const k of BODY_KEYS) expect(has(k), k).toBe(true);
   });
 });

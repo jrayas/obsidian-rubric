@@ -99,6 +99,9 @@ The code uses `Platform.isMacOS` for the default hold key (`Alt` is the same DOM
 | `tags.ts`, `convert.ts`, `create.ts` | Rule 6, rule 8, creation and completion of a note |
 | `migrate.ts`, `note-check.ts`, `preview.ts` | Schema 1 to 2; the eleven checks with previewed fixes; diff lines |
 | `fs-names.ts` | File-name rules for macOS and Windows, case collisions |
+| `note-text.ts`, `note-sections.ts`, `body-edit.ts` | Body access: split and join a note byte for byte; the heading tree and the regions that are not prose (fences, math, comments), matching Obsidian; insert whole lines at a heading |
+| `body-config.ts`, `body-gate.ts` | The `body:` key of a type file (`body-shape`, `body-unknown-key`); who may change a body (both switches, scope, type opted in, schema not newer) |
+| `body-service.ts`, `body-handlers.ts`, `body-report.ts` | Reading and writing a body through injected ports (so it is tested without an app); the handler registry and the pipeline that decides whether a key reaches a handler; text for the demo command |
 
 `src/obsidian/` (adapters)
 
@@ -113,4 +116,15 @@ The code uses `Platform.isMacOS` for the default hold key (`Alt` is the same DOM
 | `modified-stamper.ts`, `change-watcher.ts`, `known-index.ts`, `id-service.ts` | Stamping with the loop guard; tag/status/convert prompts and batch conversion; the first-seen index; ID allocation |
 | `note-actions.ts`, `create-note.ts`, `preview-modal.ts`, `modals.ts` | Convert and complete a note; create from schema; previews and choices |
 | `vault-check.ts`, `vault-check-view.ts` | Scan, apply fixes, the report window with batch migration |
+| `body-access.ts`, `body-editor.ts`, `body-demo.ts` | The body layer on Obsidian: ports onto `vault.cachedRead` and `WriteQueue.process`; the one CodeMirror keymap (`Prec.highest`, Enter, Tab, Shift-Tab) that feeds keys to the handlers and applies a claim as one transaction; the debug command |
 | `main.ts` | Wiring, commands, lifecycle |
+
+## Body access (0.3.0)
+
+An internal layer that lets later features read and edit a note's body. Nothing uses it yet (D-79).
+
+- **Two doors.** The *file API* (`BodyService`, reached as `plugin.body`) reads and edits any note's body through `WriteQueue.process`, which is `vault.process` on the note's own write chain. The *editor hook* (`bodyEditorExtension`, registered once) lets handlers claim a key while the user types, and applies what they record as one CodeMirror transaction.
+- **One gate.** `bodyGate` decides both: master switch, the setting "Allow Rubric to edit note bodies", managed scope (the schema folder is out), a resolved type with `body.enabled`, a schema not newer than the plugin. Reads are never gated.
+- **Safe by construction.** Inserts only (a rewrite needs `mayRewrite`), the frontmatter string is passed through untouched, new lines use the note's line ending, an unchanged result writes nothing, `setBody` needs `expectedBody`. The rules live in `src/core` and are tested without an app; the Obsidian side only supplies the ports.
+- **Why `vault.process` also for open notes, and a plain `dispatch` for the hook:** the spike of 2026-10-28 (D-80, D-81) showed that `vault.process` on an open note keeps unsaved typing and enters the editor's history as one step, and that a `Prec.highest` keymap runs before Obsidian's list handling.
+- **Mobile.** None of the new files import `properties-layer`, `electron` or `node:*` (a test checks it). `isDesktopOnly` stays true; nothing here has been tried on mobile.

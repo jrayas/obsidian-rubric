@@ -1,10 +1,14 @@
 # Current
 
-## Task in progress (2026-10-28): body access layer, 0.3.0
+## Latest task (2026-10-28): body access layer, 0.3.0 — done, committed locally, **not pushed**
 
-Plan approved with the defaults: kill switch off by default, `body-shape` is an error, insert positions `start|end|after|before`, Rubric's own body writes are not hidden from the stamper (`modified` follows), real-app spike and e2e allowed.
+What exists: an internal layer to read and edit a note's body (`src/core/note-text|note-sections|body-edit|body-config|body-gate|body-service|body-handlers|body-report.ts`, `src/obsidian/body-access|body-editor|body-demo.ts`, `WriteQueue.process`). **No body behaviour ships.** Kill switch "Allow Rubric to edit note bodies" and "Log body access" are off by default; `body: { enabled }` in type files is parsed (`body-shape` error, `body-unknown-key` warning). Decisions D-79 to D-83.
 
-Steps: (0) real-app spike, (1) core text/sections/edit + tests, (2) `body:` schema key + tests, (3) settings + gate, (4) `BodyAccess` + `WriteQueue.process`, (5) handler registry + CM6 extension, (6) demo command + debug log, (7) e2e, docs, 0.3.0, changelog. Nothing is built yet; the notes below are the previous task.
+Checked: 564 unit tests, typecheck, lint, production build clean; `npm run e2e` 91 of 91 on Obsidian 1.14.4 (macOS), including 7 new Phase 8 checks. Not covered: Windows, mobile, Obsidian 1.13.7, a real IME, `npm run test:validator` (needs the vault's validator, untouched by this task).
+
+Found on the way: the e2e suite expected 8 types in the schema prompt but the rule pack has had 9 since the `lesson` type (corrected to 10 choices); in a real Obsidian a cursor placed in the folded frontmatter lands on the first body line; the `modified` stamp after a body write is its own undo step (D-83). Phases 2/3/9 pointer checks failed once each in single runs and passed on rerun (GUI timing); no code of theirs changed.
+
+**Next, agreed with the user, not started:** (1) a settings list of retired IDs to review and release, (2) schema presets = named copies of the whole schema folder, applied back with a preview and a backup, (3) export the schema as one zip. The user's message was cut off after "and", so ask whether anything else was meant.
 
 ---
 

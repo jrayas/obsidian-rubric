@@ -4,7 +4,7 @@ Everything about the schema files in one place, so you can look things up quickl
 
 Schema files are plain YAML. Edit them in any editor.
 
-**Contents:** [Cheat sheet](#cheat-sheet) · [Folder layout](#folder-layout) · [Who writes what](#who-writes-what) · [Registry files](#registry-files) · [Modules, types, vocabularies](#modules-types-and-vocabularies) · [Value types](#value-types) · [Property attributes](#property-attributes) · [Property order](#property-order) · [Built-in and locked properties](#built-in-and-locked-properties) · [IDs](#ids) · [Domains and overrides](#domains-and-overrides) · [The shipped pack](#the-shipped-pack) · [How a note finds its schema](#how-a-note-finds-its-schema) · [What the plugin does](#what-the-plugin-does) · [Vault check](#vault-check) · [Problem codes](#schema-problem-codes) · [Recipes](#recipes) · [Limits](#limits-worth-knowing)
+**Contents:** [Cheat sheet](#cheat-sheet) · [Folder layout](#folder-layout) · [Who writes what](#who-writes-what) · [Registry files](#registry-files) · [Modules, types, vocabularies](#modules-types-and-vocabularies) · [Value types](#value-types) · [Property attributes](#property-attributes) · [Property order](#property-order) · [Built-in and locked properties](#built-in-and-locked-properties) · [IDs](#ids) · [Domains and overrides](#domains-and-overrides) · [The shipped pack](#the-shipped-pack) · [How a note finds its schema](#how-a-note-finds-its-schema) · [What the plugin does](#what-the-plugin-does) · [Body access](#body-access) · [Vault check](#vault-check) · [Problem codes](#schema-problem-codes) · [Recipes](#recipes) · [Limits](#limits-worth-knowing)
 
 ## Cheat sheet
 
@@ -166,6 +166,7 @@ An excluded note gets no suggestions, no picker, no validation, no automation an
 | `uses` | Module names, in order. Must include `base`. The note's [property order](#property-order) follows this list |
 | `overrides` | Changes to a module property for this type only (in every domain). May change `values`, `default`, `required`. Used to give `status` its values and default |
 | `properties` | The type's own properties |
+| `body` | Opts the type in to [body access](#body-access): `body: { enabled: true }`. Absent, or `enabled: false`, means off. **Reserved: no body behaviour ships yet**, so turning it on changes nothing today. Keys other than `enabled` are a warning (`body-unknown-key`) so a pack can name keys that a later version understands; a `body` that is not a map, or an `enabled` that is not true or false, is an error (`body-shape`). Read from the type file only; a domain override file cannot change it |
 
 **Vocabulary file**
 
@@ -541,8 +542,48 @@ Notes outside the managed scope get no suggestions, no picker, no checks, no pro
 | `domain` changes | A preview, then a new `unique_id` (the old one kept in `archived_fields`) |
 | A tag is a synonym, unknown, or `status` is not allowed | A prompt (open notes by default). Prompts can be switched off |
 | A schema file is invalid | One notice naming the file and line; the last good copy stays in use |
+| A note's body | Nothing in Rubric edits it. The [body access layer](#body-access) is only there for later features |
 
 Notes that arrive through sync never prompt; the vault check covers them.
+
+## Body access
+
+**Status: no body behaviour ships yet.** Rubric manages a note's properties. The body access layer is an internal foundation that lets later features read and edit the body of a note safely. Nothing in this version edits a body, so with the setting below off, or with no type opted in, Rubric behaves exactly as before.
+
+**Who may change a body.** All of these must hold, checked in this order; the first that fails is the reason a write or a handler is refused:
+
+| # | Rule |
+| --- | --- |
+| 1 | Rubric is on (the master switch) |
+| 2 | The setting **Allow Rubric to edit note bodies** is on (off by default) |
+| 3 | The note is managed: inside the scope in `registry/scope.yaml` and not in the schema folder |
+| 4 | A schema matches the note |
+| 5 | Its type has `body: { enabled: true }` |
+| 6 | The note is not on a newer schema than the plugin knows (those are read-only) |
+
+Reading a body is never refused. The setting **Log body access** writes one line to the developer console for each body change or refusal (which handler, which note, how many characters) and adds the command **Body access: show sections**: the active note's type, whether `body.enabled` is on, whether body edits are allowed and why not, and its heading tree with line ranges.
+
+**What a handler can do.** A handler is code that registers for a key and sees a keypress in the body of an opted-in note before Obsidian does. It can only be registered by code; there is nothing to write in the schema except `enabled`.
+
+- Keys: `Enter`, `Tab`, `Shift-Tab`. Deleting keys are not offered.
+- It is told the note's type, the cursor line and column, the line, whether anything is selected, the list item the line starts (marker, task box, depth: a tab or the tab size in spaces is one level) and the innermost section (heading text, level, line).
+- It answers **claim** (the key is handled; Obsidian does not see it) or **pass** (the next handler, then Obsidian, gets it). The first claim wins.
+- It records edits through a transaction: insert text at the cursor or another place, insert whole lines after a line, move the cursor. Everything it records is applied together as **one undo step**.
+- It may only insert. Replacing or deleting existing text needs the handler to have been registered as allowed to rewrite, and the edit is then explicit. Edits that fall outside the note or overlap are dropped; a handler that fails is skipped and the key goes on to Obsidian.
+- It is **not** run while an input method (IME) is composing, with several cursors, in the frontmatter, or inside a code fence, a `$$` math block or a `%%` comment.
+
+**What the file API can do.** For features that act on a note that is not being typed in: read the body, its lines and its sections; replace the body only if it is still what the caller read; change the body with a function that sees it as it is at that moment; or insert text at a heading. Every write is one atomic read-modify-write, never touches the frontmatter, keeps the note's line endings, reports "nothing changed" instead of writing an identical file, and is done even when the note is open with unsaved typing (both are kept; it is one undo step). A body write counts as an edit, so `modified` is stamped afterwards as for your own typing; in an open note that stamp is its own undo step, so undo twice to take back a body write once `modified` has been stamped.
+
+Insert positions relative to a heading, always as whole lines and never inside a code block:
+
+| Position | Where |
+| --- | --- |
+| `start` | The line under the heading |
+| `end` | After the last line of the section's own text, before its first sub-heading |
+| `after` | After the last line of the whole section, sub-sections included |
+| `before` | The line above the heading |
+
+**What counts as a heading** follows Obsidian: `#` to `######` headings (up to three spaces of indent, a space after the hashes, optional closing hashes), and a line of text over `===` or `---` (only for a single line of text). Lines inside code fences (```` ``` ```` or `~~~`, a closing fence must be as long as the opening one), `$$` math blocks, `%%` comments and indented code are not headings.
 
 ## Vault check
 
@@ -587,6 +628,13 @@ The settings page and the vault check list schema problems as `file:line message
 | `domains-missing` | A property takes its values from `registry/domains.yaml`, which does not exist |
 | `module-requires` | A type uses a module without a module it requires |
 | `module-empty` | A module file has no properties |
+
+**Body access**
+
+| Code | Meaning |
+| --- | --- |
+| `body-shape` | `body` in a type file is not a map, or `body.enabled` is not true or false (error) |
+| `body-unknown-key` | A key under `body` other than `enabled`. It has no effect (a warning) |
 
 **Properties**
 
@@ -647,5 +695,6 @@ The settings page and the vault check list schema problems as `file:line message
 - Locks are advisory. Nothing stops another tool changing a locked property; the vault check reports it.
 - Comments inside a note's frontmatter may be lost when the plugin rewrites it. Put explanations here, in the schema files.
 - The Properties-area features (hold Option for the list, the ▾ button, autocomplete in the property field) use undocumented Obsidian internals and may stop working after an Obsidian update; the commands and the picker window do not.
-- Mobile is not supported.
+- Mobile is not supported. The body access layer avoids desktop-only code so that it can run there later, but this has not been tried.
+- Body access has no features yet, and it follows Obsidian's own idea of a heading, which differs from CommonMark in places (a line of text over `---` is a heading only when it is a single line).
 - The plugin never deletes data, never moves or renames files, and never writes `breadcrumb` unless you turn that on.

@@ -6,6 +6,9 @@ import { SchemaService } from './obsidian/schema-service';
 import { confirm } from './obsidian/modals';
 import { NoteService } from './obsidian/note-service';
 import { AutoSync } from './obsidian/auto-sync';
+import { BodyAccess } from './obsidian/body-access';
+import { showBodySections } from './obsidian/body-demo';
+import { bodyEditorExtension } from './obsidian/body-editor';
 import { ChangeWatcher } from './obsidian/change-watcher';
 import { openCreateNote } from './obsidian/create-note';
 import { IdService } from './obsidian/id-service';
@@ -39,6 +42,8 @@ export default class RubricPlugin extends Plugin {
   previews!: PreviewWriter;
   actions!: NoteActions;
   vocabulary!: VocabularyStore;
+  /** Reads and edits note bodies; holds the body handlers. Nothing uses it yet. */
+  body!: BodyAccess;
   private stamper!: ModifiedStamper;
   watcher!: ChangeWatcher;
   private readonly shownOnce = new Set<string>();
@@ -57,6 +62,8 @@ export default class RubricPlugin extends Plugin {
     this.layer = new PropertiesLayer(this);
     this.ids = new IdService(this.app, () => this.settings);
     this.actions = new NoteActions(this);
+    this.body = new BodyAccess(this);
+    this.registerEditorExtension(bodyEditorExtension(this));
     this.vocabulary = new VocabularyStore(this.app, this.schemas);
     this.known = new KnownIndex(this);
     this.autoSync = new AutoSync(this);
@@ -127,6 +134,16 @@ export default class RubricPlugin extends Plugin {
       name: 'Create note from schema',
       callback: () => {
         if (this.requireOn()) openCreateNote(this);
+      },
+    });
+    this.addCommand({
+      id: 'body-show-sections',
+      name: 'Body access: show sections',
+      checkCallback: (checking) => {
+        const file = this.app.workspace.getActiveFile();
+        if (!this.settings.debugBodyAccess || !file || file.extension !== 'md') return false;
+        if (!checking) void showBodySections(this);
+        return true;
       },
     });
     this.addCommand({

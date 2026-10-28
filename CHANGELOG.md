@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.3.0 (2026-10-28)
+
+### Added
+- **A body access layer (internal).** A small, tested foundation that lets later features read and edit the body of a note safely. **No body behaviour ships in this version**: nothing in Rubric edits a body yet, and with the new setting off, or no type opted in, Rubric behaves exactly as in 0.2.0.
+  - *Reading*: the body, its lines and its heading tree with line ranges. Headings are found the way Obsidian finds them (not inside code fences, `$$` math, `%%` comments or indented code; setext headings count).
+  - *Writing*: replace the body only if it is still what the caller read, change it with a function that sees it as it is at that moment, or insert whole lines at a heading (`start`, `end`, `after`, `before`). Every write is one atomic `vault.process`, never touches the frontmatter, keeps CRLF, writes nothing when nothing changes, and works on a note that is open with unsaved typing (both are kept; it is one undo step). `modified` is stamped afterwards as for your own typing (in an open note that stamp is its own undo step, as after typing).
+  - *Handlers*: a keymap registered once lets code claim `Enter`, `Tab` or `Shift-Tab` in the body of an opted-in note. A handler sees the type, cursor line, list depth and section, and records edits as one undo step. It may only insert unless it is registered as allowed to rewrite. Handlers do not run during IME composition, with several cursors, in the frontmatter, or in a code fence, math block or comment.
+- **`body:` in type files**, reserved and checked, with no behaviour yet: `body: { enabled: true }` opts a type in. A key other than `enabled` is the warning `body-unknown-key` (so a pack can name keys a later version understands); a `body` that is not a map, or an `enabled` that is not true or false, is the error `body-shape` and the last good copy stays in use. A type with no `body:` is off.
+- **Setting "Allow Rubric to edit note bodies"** (off by default): the kill switch. Off, no handler runs and no body is written; reading is always allowed. A body is also only edited when Rubric is on, the note is managed (not excluded, not in the schema folder), its type has opted in and its schema is not newer than the plugin knows.
+- **Setting "Log body access"** (off by default): logs which handler changed which note to the developer console and adds the command **Body access: show sections** (the active note's type, whether `body.enabled` is on, and its heading tree with line ranges).
+- `schema-pack/REFERENCE.md` documents the `body` key, both problem codes, the settings and a "Body access" section.
+
+### Upgrading
+- `_schema/REFERENCE.md` in your vault is not overwritten (**Install starter schema pack** creates only missing files). To read the new section, delete that one file and run the command, or copy it from the repository.
+- Not tested: Windows, mobile, Obsidian 1.13.7, a real input method (IME) composing in the editor, the real breadcrumb plugin and real sync.
+
 ## 0.2.0 (2026-10-25)
 
 ### Added
