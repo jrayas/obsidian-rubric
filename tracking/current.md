@@ -1,5 +1,11 @@
 # Current
 
+## Task in progress (2026-10-28): retired IDs list, schema presets, zip export — 0.4.0
+
+Agreed with the user: (1) a settings list of retired IDs to review and release (honest about the effect: numbering is highest used or retired plus one, so releasing frees a number only when nothing higher of that type and year is in use), (2) presets = named copies of the whole schema folder, kept in the plugin folder, applied back with a preview and an automatic backup preset, (3) export of the schema folder as one zip. Plan of steps: pure cores (retired report, schema bundle/preset file, zip writer) with tests; Obsidian side (`schema-presets.ts`, settings group, commands); e2e checks; REFERENCE.md, docs, 0.4.0. The previous task (body access 0.3.0) is finished and committed; its summary follows.
+
+---
+
 ## Latest task (2026-10-28): body access layer, 0.3.0 — done, committed locally, **not pushed**
 
 What exists: an internal layer to read and edit a note's body (`src/core/note-text|note-sections|body-edit|body-config|body-gate|body-service|body-handlers|body-report.ts`, `src/obsidian/body-access|body-editor|body-demo.ts`, `WriteQueue.process`). **No body behaviour ships.** Kill switch "Allow Rubric to edit note bodies" and "Log body access" are off by default; `body: { enabled }` in type files is parsed (`body-shape` error, `body-unknown-key` warning). Decisions D-79 to D-83.
