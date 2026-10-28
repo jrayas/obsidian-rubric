@@ -11,6 +11,8 @@ export interface WriteOutcome {
   changes: KeyChange[];
   /** Set when the frontmatter could not be edited (nothing was written). */
   error?: string;
+  /** True when nothing was written because the note is on a newer schema than the plugin knows. */
+  readOnly?: boolean;
 }
 
 export interface QueuedEdit {
@@ -165,6 +167,45 @@ export class WriteQueue {
           if (next !== text) {
             outcome.written = true;
             this.ledger.record(file.path, next);
+            this.lastWrite.set(file.path, Date.now());
+          }
+          return next;
+        });
+      } catch (e) {
+        outcome.written = false;
+        outcome.error = e instanceof Error ? e.message : String(e);
+      }
+    };
+    const prev = this.running.get(file.path) ?? Promise.resolve();
+    const next = prev.then(run);
+    this.running.set(file.path, next);
+    void next.finally(() => {
+      if (this.running.get(file.path) === next) this.running.delete(file.path);
+    });
+    await next;
+    return outcome;
+  }
+
+  /**
+   * Atomic read-modify-write of a note's whole text, in order with every other write to it. `transform` gets the text
+   * as it is now and returns the new text; returning it unchanged writes nothing. For body edits (D-79, D-80): the
+   * caller keeps the frontmatter part as it is. Not recorded in the own-write ledger, so the stamper treats the write
+   * as the edit it is and `modified` follows.
+   */
+  async process(file: TFile, transform: (text: string) => string): Promise<WriteOutcome> {
+    const outcome: WriteOutcome = { written: false, changes: [] };
+    const run = async (): Promise<void> => {
+      try {
+        await this.app.vault.process(file, (text) => {
+          const readOnly = this.readOnlyReason(file, text);
+          if (readOnly) {
+            outcome.error = readOnly;
+            outcome.readOnly = true;
+            return text;
+          }
+          const next = transform(text);
+          if (next !== text) {
+            outcome.written = true;
             this.lastWrite.set(file.path, Date.now());
           }
           return next;

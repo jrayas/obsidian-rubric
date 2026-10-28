@@ -57,6 +57,8 @@ export interface SectionTree {
   lineCount: number;
   /** The region a (file) line is in, or null for prose. */
   regionAt(line: number): Region | null;
+  /** The region still open after the last line (an unclosed fence runs to the end of the note), or null. */
+  unclosed: Region | null;
 }
 
 type Kind = 'blank' | 'text' | 'heading' | 'other';
@@ -178,6 +180,7 @@ export function parseSections(lines: string[], firstLine = 0): SectionTree {
     firstLine,
     lineCount: lines.length,
     regionAt: (line) => regions[line - firstLine] ?? null,
+    unclosed: open ? open.region : null,
   };
 }
 

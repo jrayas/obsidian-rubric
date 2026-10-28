@@ -58,7 +58,7 @@ export function insertIntoBody(body: string, ref: HeadingRef, text: string, posi
   const target =
     position === 'before' ? s.line : position === 'start' ? s.contentStart : position === 'end' ? afterLastContent(lines, s.contentStart, s.ownEnd) : afterLastContent(lines, s.contentStart, s.end);
   // Inside a fence, a math block or a comment the text would become part of it.
-  const here = tree.regionAt(target);
+  const here = target >= lines.length ? tree.unclosed : tree.regionAt(target);
   const before = target > 0 ? tree.regionAt(target - 1) : null;
   if (here && before && here.id === before.id) return { ok: false, reason: 'inside-code' };
   if (text === '') return { ok: true, body, changed: false };
@@ -77,4 +77,18 @@ export function insertIntoBody(body: string, ref: HeadingRef, text: string, posi
     insert = lastBreak ? (lineText.endsWith(eol) ? lineText : lineText + eol) : eol + (lineText.endsWith(eol) ? lineText.slice(0, -eol.length) : lineText);
   }
   return { ok: true, body: body.slice(0, offset) + insert + body.slice(offset), changed: true };
+}
+
+/** How many characters differ between two texts: what was added and what was removed, found from the common start and end. */
+export function changeSize(before: string, after: string): { added: number; removed: number } {
+  let start = 0;
+  const max = Math.min(before.length, after.length);
+  while (start < max && before.charCodeAt(start) === after.charCodeAt(start)) start++;
+  let endA = before.length;
+  let endB = after.length;
+  while (endA > start && endB > start && before.charCodeAt(endA - 1) === after.charCodeAt(endB - 1)) {
+    endA--;
+    endB--;
+  }
+  return { added: endB - start, removed: endA - start };
 }

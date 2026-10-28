@@ -76,6 +76,13 @@ describe('parseSections', () => {
     expect(t.flat).toEqual([]);
   });
 
+  it('reports a region that is still open after the last line', () => {
+    expect(parse('# A\n```\ncode\n').unclosed?.kind).toBe('fence');
+    expect(parse('# A\n```\ncode\n```\n').unclosed).toBeNull();
+    expect(parse('# A\n$$\nx\n').unclosed?.kind).toBe('math');
+    expect(parse('# A\ntext\n').unclosed).toBeNull();
+  });
+
   it('matches Obsidian on the recorded edge cases (D-82)', () => {
     const golden = JSON.parse(readFileSync(join(__dirname, 'fixtures', 'body', 'obsidian-headings.json'), 'utf8')) as {
       lines: string[];
