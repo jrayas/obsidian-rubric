@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.4.0 (2026-10-28)
+
+### Added
+- **Retired IDs in the settings.** A **Retired IDs** list shows every ID given up by renumbering or by issuing a unique ID again, and says for each whether it still holds a number back (the next number is one more than the highest used or retired). Release one with its delete button (it asks first), or release them all. The list redraws when the vault check or a conversion retires an ID.
+- **Schema presets.** Save the whole schema folder under a name (**Save schema as preset**), list and delete presets in the settings, and apply one (**Apply schema preset**): a preview lists every file that will be added, replaced or removed, your current schema is saved first as a backup preset, the folder is made to match, and the schemas reload. If a schema file changes while the preview is open, nothing is applied. Presets are one JSON file each in the plugin's folder; the generated `preview/` folder and your notes are never part of one.
+- **Export the schema as a zip** (**Export schema as zip**): the schema folder, without `preview/`, as `Rubric schema <date> <time>.zip` in the top folder of the vault. Never overwrites an earlier export. Written without any library; `unzip -t` accepts it.
+- `schema-pack/REFERENCE.md`, the README and the user guide describe all three.
+
+### Changed
+- The real-app suite now expects ten choices in the "which schema?" prompt (nine types of the rule pack and "leave unmanaged"); it had still expected nine.
+
+### Notes
+- Deleted notes do not retire their IDs. Only renumbering and reissuing do, as before; the new list lets you review and release them.
+- Applying a preset replaces schema files. The automatic backup preset covers the schema files only.
+- Not tested: Windows, mobile, Obsidian 1.13.7.
+
 ## 0.3.0 (2026-10-28)
 
 ### Added

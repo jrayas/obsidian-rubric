@@ -1,20 +1,22 @@
 # Current
 
-## Task in progress (2026-10-28): retired IDs list, schema presets, zip export — 0.4.0
+## Latest task (2026-10-28): retired IDs list, schema presets, zip export, 0.4.0 — done, committed locally, **not pushed**
 
-Agreed with the user: (1) a settings list of retired IDs to review and release (honest about the effect: numbering is highest used or retired plus one, so releasing frees a number only when nothing higher of that type and year is in use), (2) presets = named copies of the whole schema folder, kept in the plugin folder, applied back with a preview and an automatic backup preset, (3) export of the schema folder as one zip. Plan of steps: pure cores (retired report, schema bundle/preset file, zip writer) with tests; Obsidian side (`schema-presets.ts`, settings group, commands); e2e checks; REFERENCE.md, docs, 0.4.0. The previous task (body access 0.3.0) is finished and committed; its summary follows.
+Built: `src/core/retired-ids.ts`, `schema-bundle.ts`, `zip.ts` (pure, tested); `src/obsidian/schema-presets.ts`, a text prompt in `modals.ts`, three settings groups (Schema presets and export, Saved presets, Retired IDs), commands Save schema as preset / Apply schema preset / Export schema as zip. Decisions D-84 to D-86. Settings definitions are cached until `update()`, so every change calls `plugin.refreshSettings()`.
+
+Checked: 584 unit tests, typecheck, lint, build clean; `npm run e2e` 94 of 94 on Obsidian 1.14.4 (macOS), including 3 new Phase 11 checks (retired-ID release through the real settings page, preset save/cancel/apply/backup/delete, the zip through the system `unzip`). Not covered: Windows, mobile, Obsidian 1.13.7.
+
+Choices the user made: a settings list to review and release retired IDs (deleted notes still do not retire IDs), presets as named copies of the whole schema folder, export as one zip. The first message was cut off after "and"; nothing else was asked for.
 
 ---
 
-## Latest task (2026-10-28): body access layer, 0.3.0 — done, committed locally, **not pushed**
+## Earlier task (2026-10-28): body access layer, 0.3.0 — done, committed locally, **not pushed**
 
 What exists: an internal layer to read and edit a note's body (`src/core/note-text|note-sections|body-edit|body-config|body-gate|body-service|body-handlers|body-report.ts`, `src/obsidian/body-access|body-editor|body-demo.ts`, `WriteQueue.process`). **No body behaviour ships.** Kill switch "Allow Rubric to edit note bodies" and "Log body access" are off by default; `body: { enabled }` in type files is parsed (`body-shape` error, `body-unknown-key` warning). Decisions D-79 to D-83.
 
 Checked: 564 unit tests, typecheck, lint, production build clean; `npm run e2e` 91 of 91 on Obsidian 1.14.4 (macOS), including 7 new Phase 8 checks. Not covered: Windows, mobile, Obsidian 1.13.7, a real IME, `npm run test:validator` (needs the vault's validator, untouched by this task).
 
 Found on the way: the e2e suite expected 8 types in the schema prompt but the rule pack has had 9 since the `lesson` type (corrected to 10 choices); in a real Obsidian a cursor placed in the folded frontmatter lands on the first body line; the `modified` stamp after a body write is its own undo step (D-83). Phases 2/3/9 pointer checks failed once each in single runs and passed on rerun (GUI timing); no code of theirs changed.
-
-**Next, agreed with the user, not started:** (1) a settings list of retired IDs to review and release, (2) schema presets = named copies of the whole schema folder, applied back with a preview and a backup, (3) export the schema as one zip. The user's message was cut off after "and", so ask whether anything else was meant.
 
 ---
 

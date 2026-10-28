@@ -15,6 +15,7 @@ It is described as **governance-ready**, not as a compliance system: locks are a
 - **Controlled tags, statuses and types.** Synonyms are replaced after you approve; unknown tags can be added to the vocabulary in one click; an invalid status offers the allowed values; changing a note's type shows a preview and keeps old values in `archived_fields` (nothing is ever deleted).
 - **Property preview.** `_schema/preview/<type>.yaml` shows, read-only and always current, what a new note of each type starts with and what each property allows. Where a domain changes a type, `_schema/preview/<type>/<domain>.yaml` shows it for that domain.
 - **Vault check.** One report with eleven checks (missing properties, bad values, IDs, tags, names, breadcrumbs, old schema versions, leftover `domain`, timestamps, folder case clashes, schema problems). Every fix shows exactly what it will write and waits for you.
+- **Presets and export.** Save the whole schema folder under a name and apply it back later (with a preview of every file that changes and an automatic backup), or export it as one zip. Retired IDs are listed in the settings, with what each does, and can be released.
 - **Migration.** Schema 1 → 2 with a diff: old IDs to the year format, nested blocks to flat properties, `domain` removed when it repeats the breadcrumb; anything that would be lost goes to `archived_fields`.
 
 ## Install
@@ -40,6 +41,9 @@ Requires Obsidian **1.13.7 or later** (desktop only). See [docs/user-guide.md](d
 | Convert this note to another type | Preview, then convert; old values are kept in `archived_fields` |
 | Create note from schema | Creates a note with an ID, `created` and every default |
 | Install starter schema pack | Creates the starter schema files that are missing |
+| Save schema as preset | Keeps a named copy of the schema folder |
+| Apply schema preset | Picks a preset, shows what will change, saves a backup preset, then applies it |
+| Export schema as zip | Writes the schema folder to one zip file in the vault's top folder |
 
 No command has a default hotkey.
 

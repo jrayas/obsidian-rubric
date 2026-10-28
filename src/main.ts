@@ -19,6 +19,7 @@ import { OptionPickerModal } from './obsidian/picker-modal';
 import { PreviewWriter } from './obsidian/preview-writer';
 import { PropertiesLayer } from './obsidian/properties-layer';
 import { RegistryStore } from './obsidian/registry-store';
+import { SchemaPresets } from './obsidian/schema-presets';
 import { SchemaValueSuggest } from './obsidian/source-suggest';
 import { propertyUnderFocus } from './obsidian/target-property';
 import { openVaultCheck } from './obsidian/vault-check-view';
@@ -44,7 +45,10 @@ export default class RubricPlugin extends Plugin {
   vocabulary!: VocabularyStore;
   /** Reads and edits note bodies; holds the body handlers. Nothing uses it yet. */
   body!: BodyAccess;
+  /** Named copies of the schema folder, and the zip export. */
+  presets!: SchemaPresets;
   private stamper!: ModifiedStamper;
+  private settingTab: RubricSettingTab | null = null;
   watcher!: ChangeWatcher;
   private readonly shownOnce = new Set<string>();
   private statusEl: HTMLElement | null = null;
@@ -63,6 +67,7 @@ export default class RubricPlugin extends Plugin {
     this.ids = new IdService(this.app, () => this.settings);
     this.actions = new NoteActions(this);
     this.body = new BodyAccess(this);
+    this.presets = new SchemaPresets(this);
     this.registerEditorExtension(bodyEditorExtension(this));
     this.vocabulary = new VocabularyStore(this.app, this.schemas);
     this.known = new KnownIndex(this);
@@ -75,7 +80,8 @@ export default class RubricPlugin extends Plugin {
       const done = await this.actions.complete(file, type, { silent: action === 'fill' });
       if (done) await this.autoSync.afterFill(file);
     };
-    this.addSettingTab(new RubricSettingTab(this.app, this));
+    this.settingTab = new RubricSettingTab(this.app, this);
+    this.addSettingTab(this.settingTab);
     this.statusEl = this.addStatusBarItem();
     this.registerDomEvent(this.statusEl, 'click', () => void this.toggleActive());
     this.updateStatus();
@@ -137,6 +143,24 @@ export default class RubricPlugin extends Plugin {
       },
     });
     this.addCommand({
+      id: 'save-schema-preset',
+      name: 'Save schema as preset',
+      callback: () => void this.presets.save(),
+    });
+    this.addCommand({
+      id: 'apply-schema-preset',
+      name: 'Apply schema preset',
+      callback: () =>
+        void this.presets.pick().then(async (p) => {
+          if (p) await this.presets.apply(p.slug);
+        }),
+    });
+    this.addCommand({
+      id: 'export-schema-zip',
+      name: 'Export schema as zip',
+      callback: () => void this.presets.exportZip(),
+    });
+    this.addCommand({
       id: 'body-show-sections',
       name: 'Body access: show sections',
       checkCallback: (checking) => {
@@ -159,6 +183,7 @@ export default class RubricPlugin extends Plugin {
         this.known.start();
         this.autoSync.start();
         this.watcher.start();
+        void this.presets.refresh().then(() => this.refreshSettings());
         this.syncLayer();
         if (!this.settings.enabled) {
           this.notifyOnce('off-at-start', 'Rubric is off, so it will not change or ask about your notes. Turn it on in its settings, or click its item in the status bar.');
@@ -173,6 +198,19 @@ export default class RubricPlugin extends Plugin {
 
   async saveSettings(): Promise<void> {
     await this.saveData(this.settings);
+  }
+
+  /** Redraw the settings page if it is open (a list on it changed). */
+  refreshSettings(): void {
+    this.settingTab?.update();
+  }
+
+  /** Forget retired IDs, so their numbers can be issued again where nothing higher is in use. */
+  async releaseRetired(ids: string[]): Promise<void> {
+    const gone = new Set(ids);
+    this.settings.retiredIds = this.settings.retiredIds.filter((id) => !gone.has(id));
+    await this.saveSettings();
+    this.refreshSettings();
   }
 
   /** Called by the settings page after a setting that needs a side effect changes. */

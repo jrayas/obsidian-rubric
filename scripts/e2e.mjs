@@ -6,7 +6,7 @@
 import { spawnSync } from 'node:child_process';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
-import { ROOT, PLUGIN_ID } from './lib/paths.mjs';
+import { ROOT, PLUGIN_ID, SCRATCH } from './lib/paths.mjs';
 import { connect, evaluate, pickTarget, sleep } from './lib/cdp.mjs';
 
 const args = process.argv.slice(2);
@@ -1801,6 +1801,135 @@ await check('P8 a file write to a note that is open, with unsaved typing in it, 
     assert(!undone.includes('## Sub\napi\n') && undone.includes('TYPED'), `one undo should remove the api line and keep the typing: ${JSON.stringify(undone)}`);
   } finally {
     await ev(`${P}.settings.allowBodyEdits = false; ${P}.settings.stampModified = true; 0`);
+  }
+});
+
+// ---------------------------------------------------------------- Phase 11: retired IDs, presets, zip export
+const openSettingsWindow = async () => {
+  await ev(`app.setting.open(); app.setting.openTabById('${PLUGIN_ID}'); 0`);
+  const win = await connect(await waitFor(() => pickTarget('settings'), 'the settings window'));
+  await sleep(1500);
+  return win;
+};
+const settingsModal = (win) => evaluate(win, `[...document.querySelectorAll('.modal')].filter(m => !m.querySelector('.vertical-tab-nav-item')).map(m => m.querySelector('.modal-title')?.textContent)`);
+const clickIn = (win, text) =>
+  evaluate(win, `(() => { const b = [...document.querySelectorAll('.modal button')].find(x => x.textContent === ${JSON.stringify(text)}); b?.click(); return !!b; })()`);
+
+await check('P11 retired IDs: the settings page lists them with their effect; releasing one asks first and forgets only that one; release all clears', async () => {
+  await ev(`${P}.settings.retiredIds = ['NT-2090-0003', 'NT-2090-0005', 'not an id']; ${P}.refreshSettings(); 0`);
+  const win = await openSettingsWindow();
+  try {
+    const rows = () => evaluate(win, `[...document.querySelectorAll('.setting-item')].filter(r => /NT-2090|not an id/.test(r.querySelector('.setting-item-name')?.textContent ?? '')).map(r => [r.querySelector('.setting-item-name').textContent, r.querySelector('.setting-item-description')?.textContent])`);
+    const before = await rows();
+    eq(before.map((r) => r[0]), ['NT-2090-0003', 'NT-2090-0005', 'not an id'], 'rows');
+    assert(/higher retired number/.test(before[0][1]) && /Releasing it lets NT-2090-0004 be issued again/.test(before[1][1]) && /Not a readable ID/.test(before[2][1]), `effects: ${JSON.stringify(before)}`);
+    const del = (name) => evaluate(win, `(() => { const r = [...document.querySelectorAll('.setting-item')].find(r => r.querySelector('.setting-item-name')?.textContent === ${JSON.stringify(name)}); r.querySelector('.extra-setting-button').click(); return 0; })()`);
+    // Cancel: nothing is forgotten
+    await del('NT-2090-0005');
+    await waitFor(async () => (await settingsModal(win)).includes('Release this ID?'), 'the confirmation');
+    await clickIn(win, 'Cancel');
+    await sleep(500);
+    eq(await ev(`${P}.settings.retiredIds`), ['NT-2090-0003', 'NT-2090-0005', 'not an id'], 'after cancel');
+    // Release one
+    await del('NT-2090-0005');
+    await waitFor(async () => (await settingsModal(win)).includes('Release this ID?'), 'the confirmation');
+    await clickIn(win, 'Release');
+    await waitFor(async () => (await rows()).length === 2, 'the row to go');
+    eq(await ev(`${P}.settings.retiredIds`), ['NT-2090-0003', 'not an id'], 'stored list');
+    eq(await ev(`${P}.ids.allocate('NT', 2090)`), 'NT-2090-0004', 'the released number is issued again'); // 0003 is retired and 0005 was released
+    await ev(`${P}.ids.release('NT-2090-0004'); 0`);
+    // Release all
+    await evaluate(win, `(() => { const r = [...document.querySelectorAll('.setting-item')].find(r => r.querySelector('.setting-item-name')?.textContent === 'Release all retired IDs'); r.click(); return 0; })()`);
+    await waitFor(async () => (await settingsModal(win)).some((t) => /Release 2 retired IDs/.test(t ?? '')), 'the confirmation for all');
+    await clickIn(win, 'Release');
+    await waitFor(async () => (await ev(`${P}.settings.retiredIds.length`)) === 0, 'all to be forgotten');
+  } finally {
+    win.close();
+    await ev(`app.setting.close(); 0`);
+  }
+});
+
+await check('P11 presets: save, list, apply with a preview and a backup; cancel and a damaged file change nothing', async () => {
+  const noteYaml = await read('_schema/types/note.yaml');
+  const preset = (slug) => `${P}.manifest.dir + '/presets/${slug}.json'`;
+  try {
+    eq(await ev(`${P}.presets.save('E2E one')`), 'e2e-one', 'saved slug');
+    const saved = JSON.parse(await ev(`app.vault.adapter.read(${preset('e2e-one')})`));
+    assert(saved.format === 1 && saved.name === 'E2E one' && saved.files['types/note.yaml'] === noteYaml, 'preset file content');
+    assert(!Object.keys(saved.files).some((f) => f.startsWith('preview/')), 'the generated previews are not part of a preset');
+    eq(await ev(`${P}.presets.items.map(p => p.name)`), ['E2E one'], 'listed');
+    // change the schema: edit one file, add one, remove one
+    await write('_schema/types/note.yaml', noteYaml + '\n# edited\n');
+    await write('_schema/types/extra.md', 'extra\n');
+    await ev(`app.vault.adapter.remove('_schema/types/person.yaml').then(() => 0)`);
+    await sleep(800);
+    // cancel
+    await ev(`window.__ap = ${P}.presets.apply('e2e-one'); 0`);
+    await waitFor(() => ev(`[...activeDocument.querySelectorAll('.modal-title')].some(t => /Apply the preset/.test(t.textContent))`), 'the preview');
+    const shown = await ev(`[...activeDocument.querySelectorAll('.modal pre')].map(p => p.textContent).join('|')`);
+    assert(/\+ types\/person\.yaml/.test(shown) && /~ types\/note\.yaml/.test(shown) && /- types\/extra\.md/.test(shown), `preview: ${shown}`);
+    await clickButton('Cancel');
+    eq(await ev(`window.__ap`), false, 'cancelled');
+    eq(await ev(`app.vault.adapter.exists('_schema/types/extra.md')`), true, 'nothing changed after cancel');
+    eq(await ev(`${P}.presets.items.length`), 1, 'no backup after cancel');
+    // apply
+    await ev(`window.__ap = ${P}.presets.apply('e2e-one'); 0`);
+    await waitFor(() => ev(`[...activeDocument.querySelectorAll('.modal-title')].some(t => /Apply the preset/.test(t.textContent))`), 'the preview');
+    await clickButton('Apply preset');
+    eq(await ev(`window.__ap`), true, 'applied');
+    eq(await read('_schema/types/note.yaml'), noteYaml, 'edited file restored');
+    eq(await ev(`app.vault.adapter.exists('_schema/types/extra.md')`), false, 'added file removed');
+    eq(await ev(`app.vault.adapter.exists('_schema/types/person.yaml')`), true, 'removed file back');
+    await waitFor(() => ev(`${P}.schemas.status.problems.length === 0 && !!${P}.schemas.pack`), 'schema reload');
+    const names = await ev(`${P}.presets.items.map(p => p.name)`);
+    assert(names.length === 2 && names.some((n) => /^Before applying “E2E one” \d{4}-\d\d-\d\d \d\d:\d\d$/.test(n)), `backup preset: ${names}`);
+    // the backup holds the schema as it was before applying
+    const backup = await ev(`(async () => { const p = ${P}.presets.items.find(p => /^Before/.test(p.name)); return JSON.parse(await app.vault.adapter.read(${P}.manifest.dir + '/presets/' + p.slug + '.json')); })()`);
+    assert(backup.files['types/note.yaml'].endsWith('# edited\n') && backup.files['types/extra.md'] === 'extra\n' && !('types/person.yaml' in backup.files), 'backup content');
+    // the same schema again: nothing to do
+    eq(await ev(`${P}.presets.apply('e2e-one')`), false, 'identical schema');
+    // a damaged preset file is refused
+    await ev(`app.vault.adapter.write(${preset('broken')}, '{ not json').then(() => 0)`);
+    eq(await ev(`${P}.presets.apply('broken')`), false, 'damaged preset');
+    await ev(`${P}.presets.refresh().then(() => 0)`);
+    assert(!(await ev(`${P}.presets.items.map(p => p.slug)`)).includes('broken'), 'a damaged file is not listed');
+    // delete asks first
+    await ev(`window.__rm = ${P}.presets.remove('e2e-one'); 0`);
+    await waitFor(() => ev(`[...activeDocument.querySelectorAll('.modal-title')].some(t => /Delete this preset/.test(t.textContent))`), 'delete confirmation');
+    await clickButton('Delete');
+    await ev(`window.__rm.then(() => 0)`);
+    assert(!(await ev(`${P}.presets.items.map(p => p.slug)`)).includes('e2e-one'), 'deleted');
+  } finally {
+    await write('_schema/types/note.yaml', noteYaml);
+    await ev(`(async () => { const a = app.vault.adapter; for (const f of ['_schema/types/extra.md']) if (await a.exists(f)) await a.remove(f); const d = ${P}.manifest.dir + '/presets'; if (await a.exists(d)) for (const f of (await a.list(d)).files) await a.remove(f); await ${P}.presets.refresh(); await ${P}.schemas.reload('manual'); return 0; })()`);
+  }
+});
+
+await check('P11 the save command asks for a name, and the export is a valid zip with every schema file and no previews', async () => {
+  try {
+    await ev(`app.commands.executeCommandById('${PLUGIN_ID}:save-schema-preset'); 0`);
+    await waitFor(() => ev(`!!activeDocument.querySelector('.modal input')`), 'the name prompt');
+    await ev(`(() => { const i = activeDocument.querySelector('.modal input'); i.value = 'Named by command'; i.dispatchEvent(new Event('input', { bubbles: true })); i.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })); return 0; })()`);
+    await waitFor(() => ev(`${P}.presets.items.some(p => p.name === 'Named by command')`), 'the preset to be saved');
+
+    const zipPath = await ev(`${P}.presets.exportZip()`);
+    assert(/^Rubric schema \d{4}-\d\d-\d\d \d{4}\.zip$/.test(zipPath), `zip name: ${zipPath}`);
+    const full = join(SCRATCH, 'vault', zipPath);
+    const test = spawnSync('unzip', ['-tq', full], { encoding: 'utf8' });
+    if (!test.error) {
+      assert(test.status === 0, `unzip -t: ${test.stdout}${test.stderr}`);
+      const listed = spawnSync('unzip', ['-Z1', full], { encoding: 'utf8' }).stdout.trim().split('\n');
+      const onDisk = (await ev(`(async () => { const out = []; const walk = async (d) => { const l = await app.vault.adapter.list(d); out.push(...l.files); for (const f of l.folders) if (f !== '_schema/preview') await walk(f); }; await walk('_schema'); return out; })()`)).filter((f) => /\.(yaml|yml|md)$/.test(f));
+      eq(listed.sort(), onDisk.sort(), 'files in the zip');
+      assert(!listed.some((f) => f.includes('/preview/')), 'no generated previews');
+      const one = spawnSync('unzip', ['-p', full, '_schema/types/note.yaml'], { encoding: 'utf8' }).stdout;
+      eq(one, await read('_schema/types/note.yaml'), 'a file inside the zip');
+    }
+    // a second export in the same minute does not overwrite the first
+    const second = await ev(`${P}.presets.exportZip()`);
+    assert(second !== zipPath, `second export: ${second}`);
+  } finally {
+    await ev(`(async () => { const a = app.vault.adapter; const d = ${P}.manifest.dir + '/presets'; if (await a.exists(d)) for (const f of (await a.list(d)).files) await a.remove(f); await ${P}.presets.refresh(); for (const f of (await a.list('')).files) if (/^Rubric schema .*\.zip$/.test(f)) await a.remove(f); return 0; })()`);
   }
 });
 

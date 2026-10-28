@@ -4,7 +4,7 @@ Everything about the schema files in one place, so you can look things up quickl
 
 Schema files are plain YAML. Edit them in any editor.
 
-**Contents:** [Cheat sheet](#cheat-sheet) · [Folder layout](#folder-layout) · [Who writes what](#who-writes-what) · [Registry files](#registry-files) · [Modules, types, vocabularies](#modules-types-and-vocabularies) · [Value types](#value-types) · [Property attributes](#property-attributes) · [Property order](#property-order) · [Built-in and locked properties](#built-in-and-locked-properties) · [IDs](#ids) · [Domains and overrides](#domains-and-overrides) · [The shipped pack](#the-shipped-pack) · [How a note finds its schema](#how-a-note-finds-its-schema) · [What the plugin does](#what-the-plugin-does) · [Body access](#body-access) · [Vault check](#vault-check) · [Problem codes](#schema-problem-codes) · [Recipes](#recipes) · [Limits](#limits-worth-knowing)
+**Contents:** [Cheat sheet](#cheat-sheet) · [Folder layout](#folder-layout) · [Who writes what](#who-writes-what) · [Registry files](#registry-files) · [Modules, types, vocabularies](#modules-types-and-vocabularies) · [Value types](#value-types) · [Property attributes](#property-attributes) · [Property order](#property-order) · [Built-in and locked properties](#built-in-and-locked-properties) · [IDs](#ids) · [Domains and overrides](#domains-and-overrides) · [The shipped pack](#the-shipped-pack) · [How a note finds its schema](#how-a-note-finds-its-schema) · [What the plugin does](#what-the-plugin-does) · [Presets and export](#schema-presets-and-export) · [Body access](#body-access) · [Vault check](#vault-check) · [Problem codes](#schema-problem-codes) · [Recipes](#recipes) · [Limits](#limits-worth-knowing)
 
 ## Cheat sheet
 
@@ -90,6 +90,7 @@ The schema folder is `_schema` by default. A name starting with a dot (`.schema`
 | `registry/folders.yaml`, `registry/scope.yaml` | You, or the plugin when you change a folder mapping or scope rule in settings or answer the "which schema?" prompt. Comments are kept |
 | The starter pack | The command **Install starter schema pack**, which only creates files that are missing and never overwrites |
 | `preview/**` | The plugin only. Rewritten when the schema changes; never read back |
+| Any schema file, when you apply a preset | The plugin, after a preview and a backup preset (see [Schema presets and export](#schema-presets-and-export)) |
 
 ## Registry files
 
@@ -254,6 +255,8 @@ A note's properties are written in this order: the modules in the order of `uses
 | Where | Every type | Types that use the `domain` module, for domains that have a prefix |
 
 How numbers are chosen: one more than the highest in use for that prefix and year, worked out from the notes themselves. There is no counter file. A year comes from `created` and a new year starts again at `0001`. A value given up by renumbering or reissuing is never handed out again.
+
+**Retired IDs** are listed under *Retired IDs* in the settings, each with what it does to numbering. An ID is retired when a note is renumbered or its unique ID is issued again. Releasing one forgets it; its number can then be issued again only if no note, and no other retired ID, uses a higher number of the same type and year (and domain), because the next number is always one more than the highest. Release one only if nothing outside the vault refers to it.
 
 Two notes with the same ID or unique ID (for example created offline on two devices): the vault check keeps it on the older note and offers the newer one the next free number, with a preview. A malformed ID is reported and never changed. The plugin never moves or renames files.
 
@@ -545,6 +548,19 @@ Notes outside the managed scope get no suggestions, no picker, no checks, no pro
 | A note's body | Nothing in Rubric edits it. The [body access layer](#body-access) is only there for later features |
 
 Notes that arrive through sync never prompt; the vault check covers them.
+
+## Schema presets and export
+
+A **preset** is a named copy of every schema file (YAML files and `REFERENCE.md`, in every sub-folder). It is kept in the plugin's own folder (`.obsidian/plugins/rubric/presets/`, one JSON file each), not in the schema folder, so it is never read as a schema. The generated `preview/` folder and your notes are never part of a preset.
+
+| Where | What it does |
+| --- | --- |
+| Settings → **Schema presets and export** → *Save the schema as a preset*, or the command **Save schema as preset** | Asks for a name and keeps a copy. A name that is already used asks before replacing |
+| Settings → **Saved presets** (select one), or the command **Apply schema preset** | Shows every file that would be added, replaced or removed, and waits. On approval: saves your current schema as a preset called *Before applying “name” date time*, makes the schema folder match the preset exactly, and reloads the schemas. If a schema file changed while the preview was open, nothing is applied. To go back, apply the backup preset |
+| The delete button on a saved preset | Asks, then deletes the preset file. The schema folder is not changed |
+| Settings → *Export the schema as a zip*, or the command **Export schema as zip** | Writes the schema folder (without `preview/`) to `Rubric schema <date> <time>.zip` in the top folder of the vault, with the files under the schema folder's name. An existing zip is never overwritten |
+
+Applying a preset replaces files, so keep a copy of anything you are not sure about; the automatic backup covers the schema files only. Presets and exports do not need Rubric to be switched on, because they change schema files and not notes.
 
 ## Body access
 

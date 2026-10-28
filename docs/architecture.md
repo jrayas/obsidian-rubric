@@ -101,6 +101,7 @@ The code uses `Platform.isMacOS` for the default hold key (`Alt` is the same DOM
 | `fs-names.ts` | File-name rules for macOS and Windows, case collisions |
 | `note-text.ts`, `note-sections.ts`, `body-edit.ts` | Body access: split and join a note byte for byte; the heading tree and the regions that are not prose (fences, math, comments), matching Obsidian; insert whole lines at a heading |
 | `body-config.ts`, `body-gate.ts` | The `body:` key of a type file (`body-shape`, `body-unknown-key`); who may change a body (both switches, scope, type opted in, schema not newer) |
+| `retired-ids.ts`, `schema-bundle.ts`, `zip.ts` | What each retired ID still holds back; the schema folder as a set of text files, the preset file format and the diff for the preview; a minimal zip writer |
 | `body-service.ts`, `body-handlers.ts`, `body-report.ts` | Reading and writing a body through injected ports (so it is tested without an app); the handler registry and the pipeline that decides whether a key reaches a handler; text for the demo command |
 
 `src/obsidian/` (adapters)
@@ -116,6 +117,7 @@ The code uses `Platform.isMacOS` for the default hold key (`Alt` is the same DOM
 | `modified-stamper.ts`, `change-watcher.ts`, `known-index.ts`, `id-service.ts` | Stamping with the loop guard; tag/status/convert prompts and batch conversion; the first-seen index; ID allocation |
 | `note-actions.ts`, `create-note.ts`, `preview-modal.ts`, `modals.ts` | Convert and complete a note; create from schema; previews and choices |
 | `vault-check.ts`, `vault-check-view.ts` | Scan, apply fixes, the report window with batch migration |
+| `schema-presets.ts` | Reads the schema folder, saves, lists, applies (preview, backup, exact mirror, reload) and deletes presets in the plugin folder; writes the zip |
 | `body-access.ts`, `body-editor.ts`, `body-demo.ts` | The body layer on Obsidian: ports onto `vault.cachedRead` and `WriteQueue.process`; the one CodeMirror keymap (`Prec.highest`, Enter, Tab, Shift-Tab) that feeds keys to the handlers and applies a claim as one transaction; the debug command |
 | `main.ts` | Wiring, commands, lifecycle |
 

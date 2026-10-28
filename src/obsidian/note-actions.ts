@@ -77,6 +77,7 @@ export class NoteActions {
     if (typeof old === 'string' && !plugin.settings.retiredIds.includes(old)) {
       plugin.settings.retiredIds.push(old);
       await plugin.saveSettings();
+      plugin.refreshSettings();
     }
     return null;
   }

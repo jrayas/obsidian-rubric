@@ -1,7 +1,7 @@
 {
   "id": "rubric",
   "name": "Rubric",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "minAppVersion": "1.13.7",
   "description": "Drive property autocomplete, option pickers, validation and migration from YAML note schemas kept in your vault.",
   "author": "Joan Anthirayas",

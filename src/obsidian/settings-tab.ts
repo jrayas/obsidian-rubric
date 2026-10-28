@@ -2,8 +2,11 @@ import { Notice, PluginSettingTab } from 'obsidian';
 import type { App, SettingDefinitionItem } from 'obsidian';
 import { DEFAULT_SCHEMA_FOLDER, HIDDEN_SCHEMA_FOLDER, isInSchemaFolder } from '../core/folder-detect';
 import { nameKey } from '../core/normalise';
+import { reviewRetired } from '../core/retired-ids';
+import { formatLocal } from '../core/timestamps';
 import type { MatchingMode, ScopeMode } from '../core/schema-types';
 import { FolderPickerModal, askSchemaChoice, editMapping } from './choice-modals';
+import { confirm } from './modals';
 import type { RubricSettings } from '../settings';
 import type RubricPlugin from '../main';
 
@@ -112,6 +115,9 @@ export class RubricSettingTab extends PluginSettingTab {
         },
       };
     };
+
+    const presets = plugin.presets.items;
+    const retired = reviewRetired(plugin.settings.retiredIds, plugin.settings.retiredIds.length > 0 ? [...plugin.ids.usedIds(), ...plugin.ids.usedUniqueIds()] : []);
 
     const problems = plugin.schemas.status.problems;
     const conflicts = pack?.folders.conflicts ?? [];
@@ -290,6 +296,62 @@ export class RubricSettingTab extends PluginSettingTab {
         ],
       },
       {
+        type: 'group',
+        heading: 'Schema presets and export',
+        items: [
+          {
+            name: 'Save the schema as a preset',
+            desc: 'Keeps a named copy of every file in the schema folder (not the generated previews, not your notes). Applying a preset later shows what will change and saves your current schema first.',
+            action: () => void plugin.presets.save(),
+          },
+          {
+            name: 'Export the schema as a zip',
+            desc: 'Writes the schema folder to one zip file in the top folder of your vault, to share or keep.',
+            action: () => void plugin.presets.exportZip(),
+          },
+        ],
+      },
+      {
+        type: 'list',
+        heading: 'Saved presets',
+        emptyState: 'No presets saved yet.',
+        items: presets.map((p) => ({
+          name: p.name,
+          desc: `${p.fileCount} files${p.created ? ` · saved ${formatLocal(new Date(p.created)).replace('T', ' ')}` : ''}. Select to apply.`,
+          action: () => void plugin.presets.apply(p.slug),
+        })),
+        onDelete: (i) => {
+          const p = presets[i];
+          if (p) void plugin.presets.remove(p.slug);
+        },
+      },
+      {
+        type: 'group',
+        heading: 'About retired IDs',
+        items: [
+          {
+            name: 'What retiring does',
+            desc: 'An ID is retired when a note is renumbered, so the old number is never handed out again. The next number is one more than the highest used or retired number of that type and year, so releasing an ID only frees its number when nothing higher is in use. Release one only if no note, link or outside record still refers to it.',
+          },
+          {
+            name: 'Release all retired IDs',
+            desc: retired.length === 0 ? 'None are retired.' : `Forgets all ${retired.length} retired IDs.`,
+            visible: () => retired.length > 0,
+            action: () => void this.releaseRetired(retired.map((r) => r.id)),
+          },
+        ],
+      },
+      {
+        type: 'list',
+        heading: 'Retired IDs',
+        emptyState: 'No IDs are retired.',
+        items: retired.map((r) => ({ name: r.id, desc: r.detail })),
+        onDelete: (i) => {
+          const r = retired[i];
+          if (r) void this.releaseRetired([r.id]);
+        },
+      },
+      {
         type: 'list',
         heading: 'Folder mapping',
         emptyState: 'No folders are mapped to a schema yet.',
@@ -325,6 +387,20 @@ export class RubricSettingTab extends PluginSettingTab {
               ],
       },
     ];
+  }
+
+  private async releaseRetired(ids: string[]): Promise<void> {
+    const one = ids.length === 1;
+    const ok = await confirm(
+      this.app,
+      one ? 'Release this ID?' : `Release ${ids.length} retired IDs?`,
+      [
+        one ? `${ids[0] ?? ''} will be forgotten, so its number can be issued again if nothing higher is in use.` : 'They will be forgotten, so their numbers can be issued again where nothing higher is in use.',
+        'Do this only if no note, link or outside record still refers to them.',
+      ],
+      'Release',
+    );
+    if (ok) await this.plugin.releaseRetired(ids);
   }
 
   private async editMappingGroup(type: string | null, folders: string[]): Promise<void> {

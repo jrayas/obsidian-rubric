@@ -73,6 +73,7 @@ export class VaultCheckService {
       if (fix.retire?.length) {
         plugin.settings.retiredIds.push(...fix.retire.filter((id) => !plugin.settings.retiredIds.includes(id)));
         await plugin.saveSettings();
+        plugin.refreshSettings();
       }
       return null;
     }

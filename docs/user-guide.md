@@ -115,6 +115,10 @@ These questions are asked for notes you have open. Obsidian cannot tell a change
 
 Two notes with the same ID (for example created offline on two devices): the vault check keeps the ID on the older note and offers the newer one the next free number, with a preview. A renumbered ID is never given out again.
 
+### Retired IDs
+
+When a note is renumbered, or its unique ID is issued again, the old ID is retired so it is never handed out twice. The settings page lists them under **Retired IDs** and says for each whether it still holds a number back. The next number is one more than the highest used or retired number of that type and year, so releasing an ID helps only when it is that highest number; the list says so. Select the delete button to release one (it asks first), or use **Release all retired IDs**. Do this only if no note, link or outside record still refers to the ID.
+
 ### The unique ID (types with a domain)
 
 A type that uses the `domain` module also has `unique_id`: `TYPE-DOMAIN-YEAR-NNNN`, for example `KB-MA-2026-0001` (a knowledge note in maths). It is separate from `id`, which stays the one global identity and never changes. The unique ID is a readable label with its own counter per type, domain and year, so "the 42nd maths lesson this year" is easy to see. Each domain's two-letter prefix is declared in `registry/domains.yaml` (`maths: { prefix: MA }`); a domain with no prefix gets no unique ID.
@@ -123,6 +127,16 @@ A type that uses the `domain` module also has `unique_id`: `TYPE-DOMAIN-YEAR-NNN
 - When a note's **domain** changes (or its **type**, in a conversion), the plugin offers to issue it again, with a preview. The old value is kept in `archived_fields` and never handed out again. Turn the question off with **Ask when the domain changes**.
 - **Check vault** reports a missing unique ID, one that names another type or domain, a malformed one (never overwritten), and duplicates (the older note keeps it).
 - Link to a note by its `id`, never by its unique ID, which can change.
+
+## Schema presets and export
+
+Under **Schema presets and export** in the settings (and as commands) you can keep named copies of your whole schema folder, try another one, and go back.
+
+1. **Save the schema as a preset** and give it a name. Only the schema files are saved, not the generated previews and not your notes. Presets are stored in the plugin's own folder.
+2. **Apply a preset**: select it under **Saved presets** (or run **Apply schema preset**). A window lists every file that will be added, replaced or removed. If you approve, your current schema is saved first as *Before applying “name” …*, then the schema folder is made to match the preset and the schemas reload. To undo, apply that backup preset.
+3. **Export the schema as a zip** writes the schema folder to one zip in the top folder of your vault, to share or keep.
+
+Nothing here changes a note, so it works with Rubric switched off.
 
 ## Timestamps
 
