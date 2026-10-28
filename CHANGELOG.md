@@ -9,6 +9,7 @@
 - `schema-pack/REFERENCE.md`, the README and the user guide describe all three.
 
 ### Changed
+- The author in `manifest.json`, `package.json` and `LICENSE` is now "Anthirayas".
 - The real-app suite now expects ten choices in the "which schema?" prompt (nine types of the rule pack and "leave unmanaged"); it had still expected nine.
 
 ### Notes
