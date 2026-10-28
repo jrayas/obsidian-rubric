@@ -34,7 +34,7 @@ export function detectEol(text: string): Eol {
   return i > 0 && text.charAt(i - 1) === '\r' ? '\r\n' : '\n';
 }
 
-interface Split {
+export interface Split {
   /** Everything before the YAML text, including the opening delimiter line. */
   head: string;
   yaml: string;
@@ -43,7 +43,7 @@ interface Split {
 }
 
 /** Split a file into opening delimiter, YAML text and the rest. Null when there is no frontmatter. */
-function split(text: string): Split | null {
+export function split(text: string): Split | null {
   const body = text.charAt(0) === '\ufeff' ? text.slice(1) : text;
   const bom = body.length === text.length ? '' : '\ufeff';
   const firstEnd = body.indexOf('\n');

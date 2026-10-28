@@ -1,0 +1,96 @@
+{
+ "lines": [
+  "# A1",
+  "Setext two",
+  "----------",
+  "",
+  "---",
+  "#nospace",
+  "   ## three spaces",
+  "    ## four spaces",
+  "\t## tab",
+  "> # quote heading",
+  "- # list heading",
+  "#",
+  "####### seven",
+  "## closed ##   ",
+  "## trailing \\#",
+  "```js title=\"x\"",
+  "# in fence with info",
+  "```",
+  "## after fence",
+  "  ```",
+  "## in indented fence",
+  "  ```",
+  "~~~",
+  "```",
+  "## inside tilde fence with backticks",
+  "~~~",
+  "## after tilde",
+  "para line",
+  "second para line",
+  "===",
+  "$$ x",
+  "# in inline-start math",
+  "$$",
+  "## after math",
+  "%% inline comment # not heading %%",
+  "## after inline comment",
+  "```",
+  "## unclosed fence runs to end",
+  "# also swallowed",
+  ""
+ ],
+ "headings": [
+  {
+   "level": 1,
+   "text": "A1",
+   "line": 0
+  },
+  {
+   "level": 2,
+   "text": "Setext two",
+   "line": 1
+  },
+  {
+   "level": 2,
+   "text": "three spaces",
+   "line": 6
+  },
+  {
+   "level": 1,
+   "text": "",
+   "line": 11
+  },
+  {
+   "level": 2,
+   "text": "closed",
+   "line": 13
+  },
+  {
+   "level": 2,
+   "text": "trailing \\#",
+   "line": 14
+  },
+  {
+   "level": 2,
+   "text": "after fence",
+   "line": 18
+  },
+  {
+   "level": 2,
+   "text": "after tilde",
+   "line": 26
+  },
+  {
+   "level": 2,
+   "text": "after math",
+   "line": 33
+  },
+  {
+   "level": 2,
+   "text": "after inline comment",
+   "line": 35
+  }
+ ]
+}

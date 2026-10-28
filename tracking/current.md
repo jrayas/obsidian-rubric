@@ -1,5 +1,13 @@
 # Current
 
+## Task in progress (2026-10-28): body access layer, 0.3.0
+
+Plan approved with the defaults: kill switch off by default, `body-shape` is an error, insert positions `start|end|after|before`, Rubric's own body writes are not hidden from the stamper (`modified` follows), real-app spike and e2e allowed.
+
+Steps: (0) real-app spike, (1) core text/sections/edit + tests, (2) `body:` schema key + tests, (3) settings + gate, (4) `BodyAccess` + `WriteQueue.process`, (5) handler registry + CM6 extension, (6) demo command + debug log, (7) e2e, docs, 0.3.0, changelog. Nothing is built yet; the notes below are the previous task.
+
+---
+
 **Updated:** 2026-10-25 — latest task: **per-domain schema overrides** (D-63 to D-67), done and tested, committed locally, **not pushed**. The summary below it is the earlier project summary; its test counts are out of date (now 315 unit tests, 64 validator tests, 86 real-app checks that were last run before this task).
 
 ## Latest task: per-domain overrides
