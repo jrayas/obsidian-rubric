@@ -1,4 +1,5 @@
 /** Data model for a loaded schema pack. Pure data; no Obsidian types. */
+import type { BodyConfig } from './body-config';
 
 export const VALUE_TYPES = ['string', 'integer', 'boolean', 'date', 'datetime', 'url', 'link', 'enum', 'list'] as const;
 export type ValueType = (typeof VALUE_TYPES)[number];
@@ -93,6 +94,8 @@ export interface ResolvedType {
   /** Ordered: modules in order, own fields, then `position: end` fields. */
   properties: PropertyDef[];
   byName: Map<string, PropertyDef>;
+  /** The `body:` key of the type file (opt-in for the body access layer). Domain overrides do not change it. */
+  body: BodyConfig;
 }
 
 export type MatchingMode = 'combined' | 'auto' | 'manual';

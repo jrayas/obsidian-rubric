@@ -1,3 +1,4 @@
+import { parseBody } from './body-config';
 import { allPropertyOwners, declaredDomains, loadDomains } from './domain-loader';
 import { loadDomainRegistry } from './domain-registry';
 import { compareVersions } from './semver';
@@ -230,6 +231,7 @@ export async function loadSchemaPack(source: SchemaFileSource, options: LoadOpti
       }
     }
     const overrides = parseOverrides(ld, t.file, t.data);
+    const body = parseBody(ld, t.file, t.data);
     const own = parseProperties(ld, t.file, t.data, undefined);
     if (!usable || typeof prefix !== 'string' || typeof version !== 'number') continue;
 
@@ -314,6 +316,7 @@ export async function loadSchemaPack(source: SchemaFileSource, options: LoadOpti
       uses,
       properties: ordered,
       byName: new Map(ordered.map((p) => [p.name, p])),
+      body,
     };
     if (typeof t.data.description === 'string') rt.description = t.data.description;
     types.set(name, rt);
