@@ -274,6 +274,22 @@ export class RubricSettingTab extends PluginSettingTab {
         ],
       },
       {
+        type: 'group',
+        heading: 'Note bodies',
+        items: [
+          {
+            name: 'Allow Rubric to edit note bodies',
+            desc: 'The kill switch for body access. Off: no body handler runs and no body is written; reading a body is always allowed. Nothing in Rubric edits bodies yet, and a type must also opt in with body: { enabled: true } in its schema file.',
+            control: { type: 'toggle', key: 'allowBodyEdits' },
+          },
+          {
+            name: 'Log body access',
+            desc: 'Writes to the developer console which handler changed which note, and adds the command "Body access: show sections".',
+            control: { type: 'toggle', key: 'debugBodyAccess' },
+          },
+        ],
+      },
+      {
         type: 'list',
         heading: 'Folder mapping',
         emptyState: 'No folders are mapped to a schema yet.',

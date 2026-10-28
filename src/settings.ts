@@ -38,6 +38,13 @@ export interface RubricSettings {
   promptTypeChange: boolean;
   /** Ask to issue the unique ID again when a note's domain changes. */
   promptDomainChange: boolean;
+  /**
+   * Allow Rubric to edit note bodies. The kill switch for the body access layer: off, no body handler runs and no body write
+   * happens (reading a body is always allowed). Off by default (D-79).
+   */
+  allowBodyEdits: boolean;
+  /** Log which body handler changed which note, and show the "Body access: show sections" command. */
+  debugBodyAccess: boolean;
   /** Folders the user answered "Not now" for; not asked again on every open. */
   skippedFolders: string[];
   /** IDs given up by renumbering. They are never handed out again. */
@@ -68,6 +75,8 @@ export const DEFAULT_SETTINGS: RubricSettings = {
   promptStatus: true,
   promptTypeChange: true,
   promptDomainChange: true,
+  allowBodyEdits: false,
+  debugBodyAccess: false,
   skippedFolders: [],
   retiredIds: [],
   index: {},
