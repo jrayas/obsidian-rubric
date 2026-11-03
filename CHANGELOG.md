@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.7.1 (2026-11-03)
+
+### Fixed
+- **Release process only; no change to the plugin.** The release workflow now publishes the GitHub release itself (it made a draft, which the community directory could not see) and titles it with just the version number. 0.7.0 was published by hand.
+
 ## 0.7.0 (2026-11-03)
 
 ### Added

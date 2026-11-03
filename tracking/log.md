@@ -37,4 +37,4 @@
 - 2026-11-03 — Release 0.6.0 timed entries: body.entry template, handler timed-entry (Enter starts "- HH:mm"), REFERENCE/README/user guide updated. D-91. Tested with real Enter key events on an Android 15 emulator; unit tests pass. Not pushed.
 - 2026-11-03 — The user wanted a body module and formulas, not body.entry. Built the body module, formula engine, per-heading and per-key rules, starter sections (D-92), version 0.7.0. 775 unit tests; Android emulator checked with real key events. Not pushed.
 - 2026-11-03 — Author shown as "Anthirayas" everywhere it describes the project now: the specification byline and the tracking summary were the last two places with the old name (D-87 keeps the history). Merged the 0.5.1 to 0.7.0 work into main and pushed.
-- 2026-11-03 — 0.7.0 published (it was a draft, so the community directory saw no release). Release workflow now publishes like Foldwise's (D-93).
+- 2026-11-03 — 0.7.0 published (it was a draft, so the community directory saw no release). Release workflow now publishes like Foldwise's (D-93). 0.7.1 tagged with a number-only title.
