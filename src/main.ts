@@ -20,6 +20,7 @@ import { PreviewWriter } from './obsidian/preview-writer';
 import { choosePropertyToEdit } from './obsidian/property-chooser';
 import { PropertiesLayer, showInFileManager } from './obsidian/properties-layer';
 import { RegistryStore } from './obsidian/registry-store';
+import { writeText } from './obsidian/safe-write';
 import { SchemaPresets } from './obsidian/schema-presets';
 import { SchemaValueSuggest } from './obsidian/source-suggest';
 import { propertyUnderFocus } from './obsidian/target-property';
@@ -357,13 +358,17 @@ export default class RubricPlugin extends Plugin {
       'Create files',
     );
     if (!ok) return;
-    for (const rel of missing) {
-      const path = normalizePath(`${folder}/${rel}`);
-      const dir = path.split('/').slice(0, -1).join('/');
-      if (dir && !(await adapter.exists(dir))) await adapter.mkdir(dir);
-      await adapter.write(path, STARTER_PACK[rel] ?? '');
+    try {
+      for (const rel of missing) {
+        const path = normalizePath(`${folder}/${rel}`);
+        const dir = path.split('/').slice(0, -1).join('/');
+        if (dir && !(await adapter.exists(dir))) await adapter.mkdir(dir);
+        await writeText(this.app, path, STARTER_PACK[rel] ?? '');
+      }
+      new Notice(`Created ${missing.length} schema files in ${folder}.`);
+    } catch (e) {
+      new Notice(`${e instanceof Error ? e.message : String(e)} Run "Install starter schema pack" again to create the files that are missing.`, 15000);
     }
-    new Notice(`Created ${missing.length} schema files in ${folder}.`);
     await this.schemas.reload('manual');
   }
 }

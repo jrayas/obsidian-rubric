@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.5.1 (2026-11-03)
+
+### Fixed
+- **Schema files could be left empty on Android.** Obsidian's file adapter on Android now and then finishes a write without an error and leaves the file empty (about 1 in 300 writes in an Android 15 emulator; the file stays empty). One empty schema file stops the whole schema loading ("A module file must be a map"). Rubric now reads each schema, registry, vocabulary and preset file back after writing it and writes again if it does not match (up to four tries, then a clear message naming the file). This applies to the starter pack install, the generated `preview/` files, folder mappings, vocabulary terms and presets.
+- **Install starter schema pack** now says which file could not be saved and how to create the rest, instead of stopping silently.
+
+### Checked
+- In an Android 15 emulator with Obsidian 1.14.4 (real Android WebView, not desktop emulation): Rubric 0.5.0 enables and loads, the starter pack installs, the schema loads with no problems, choose schema, the confirm dialog (scrolls to its buttons) and Check vault open. Eight reinstalls (592 plugin writes) left no empty file.
+
+### Not verified
+- A real phone or tablet. Vaults that still hold Rubric 0.2.0 (`isDesktopOnly: true`) cannot enable it on mobile at all: update the plugin files in the vault.
+
 ## 0.5.0 (2026-10-29)
 
 ### Added

@@ -1,6 +1,6 @@
 {
   "name": "rubric",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "private": true,
   "description": "Schema-driven properties, validation and migration for Obsidian notes.",
   "type": "module",

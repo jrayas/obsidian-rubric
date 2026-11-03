@@ -9,6 +9,7 @@ import {
   setScopeMode,
 } from '../core/registry-edit';
 import type { MatchingMode, ScopeMode } from '../core/schema-types';
+import { writeText } from './safe-write';
 import type { SchemaService } from './schema-service';
 
 /**
@@ -29,7 +30,7 @@ export class RegistryStore {
     if (next !== text) {
       const dir = path.split('/').slice(0, -1).join('/');
       if (!(await adapter.exists(dir))) await adapter.mkdir(dir);
-      await adapter.write(path, next);
+      await writeText(this.app, path, next);
     }
     await this.schemas.reload('change');
   }

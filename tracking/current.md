@@ -1,5 +1,15 @@
 # Current
 
+## Latest task (2026-11-03): works on mobile, 0.5.1 — done, committed on branch `mobile-verified-writes`, **not pushed, not installed in any vault**
+
+Why it was "not enabled on mobile": all six vaults hold Rubric **0.2.0 with `isDesktopOnly: true`**, which Obsidian mobile will not enable (reproduced on an Android 15 emulator: nothing happens, no error). The project's 0.5.0 is not desktop-only. Tested 0.5.0 in the emulator's real Android WebView (not desktop emulation): it enables, loads, installs the starter pack, loads the schema, opens Choose schema and Check vault.
+
+Found and fixed: Android's file adapter sometimes leaves a written file empty (D-90). `src/core/verified-write.ts` + `src/obsidian/safe-write.ts`; used by the starter pack install, preview files, registry, vocabulary and presets. 672 unit tests, typecheck, lint, build clean. Emulator: 600 verified writes, one retry, none bad; eight reinstalls (592 writes), none empty.
+
+Not verified: a real phone, the Properties-area features (never installed on mobile), the property chooser on a note that has a schema, Check vault on a vault with managed notes (the test vault had none: "0 notes scanned"), `npm run e2e` (desktop suite not re-run for this small change). To use it: copy `main.js`, `manifest.json` and `styles.css` into each vault's `.obsidian/plugins/rubric/` (asked first), reload.
+
+---
+
 ## Latest task (2026-10-29): mobile-lite, 0.5.0 — done, committed locally, **not pushed**
 
 `isDesktopOnly` is now false (D-88, D-89). Built: Properties layer never installed on mobile (saved `commandsOnly` untouched), phone note in settings, command **Choose a property to edit** (`src/obsidian/property-chooser.ts`, also the fallback of **Show all options** when nothing is focused, on every platform), no start-up note scan on mobile (baseline on `file-open`), no keyboard pop-up in the picker, Electron removed (show-in-folder through `app.showInFolder`, feature-detected in `properties-layer.ts`). `tests/mobile-portable.test.ts` checks every file in `src/`; ESLint's Node-module rule is off for `tests/` only. New real-app suite `npm run e2e:mobile` (8 checks, Obsidian's mobile emulation).

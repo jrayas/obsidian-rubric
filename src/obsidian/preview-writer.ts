@@ -1,6 +1,7 @@
 import { normalizePath } from 'obsidian';
 import { PREVIEW_FOLDER, PREVIEW_MARKER, renderAllPreviews } from '../core/schema-preview';
 import type RubricPlugin from '../main';
+import { writeText } from './safe-write';
 
 /**
  * Keeps `<schema folder>/preview/<type>.yaml` in step with the loaded schema. The files are generated and read-only
@@ -65,7 +66,7 @@ export class PreviewWriter {
       const parent = path.split('/').slice(0, -1).join('/');
       if (parent !== dir) await ensureDir(parent);
       const current = (await adapter.exists(path)) ? await adapter.read(path) : null;
-      if (current !== text) await adapter.write(path, text);
+      if (current !== text) await writeText(plugin.app, path, text);
     }
     await this.removeStale(dir, dir, files);
   }

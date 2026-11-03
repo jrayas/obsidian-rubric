@@ -6,6 +6,7 @@ import { makeZip } from '../core/zip';
 import type RubricPlugin from '../main';
 import { confirm, promptText } from './modals';
 import { preview } from './preview-modal';
+import { writeText } from './safe-write';
 
 export interface PresetInfo {
   slug: string;
@@ -81,7 +82,7 @@ export class SchemaPresets {
     const adapter = this.app.vault.adapter;
     if (!(await adapter.exists(this.dir))) await adapter.mkdir(this.dir);
     const slug = presetSlug(name);
-    await adapter.write(this.fileOf(slug), serialisePreset(makePreset(name, files, new Date(), this.plugin.manifest.version)));
+    await writeText(this.app, this.fileOf(slug), serialisePreset(makePreset(name, files, new Date(), this.plugin.manifest.version)));
     return slug;
   }
 
@@ -151,7 +152,7 @@ export class SchemaPresets {
           cur = `${cur}/${part}`;
           if (!(await adapter.exists(cur))) await adapter.mkdir(cur);
         }
-        await adapter.write(normalizePath(`${root}/${rel}`), target.get(rel) ?? '');
+        await writeText(this.app, normalizePath(`${root}/${rel}`), target.get(rel) ?? '');
       }
       for (const rel of diff.removed) await adapter.remove(normalizePath(`${root}/${rel}`));
     } catch (e) {

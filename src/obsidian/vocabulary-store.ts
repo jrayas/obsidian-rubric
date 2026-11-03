@@ -1,6 +1,7 @@
 import { normalizePath } from 'obsidian';
 import type { App } from 'obsidian';
 import { addVocabularyTerm } from '../core/tags';
+import { writeText } from './safe-write';
 import type { SchemaService } from './schema-service';
 
 /**
@@ -22,7 +23,7 @@ export class VocabularyStore {
     const path = normalizePath(`${this.schemas.folder}/${file}`);
     const text = await this.app.vault.adapter.read(path);
     const next = addVocabularyTerm(text, term);
-    if (next !== text) await this.app.vault.adapter.write(path, next);
+    if (next !== text) await writeText(this.app, path, next);
     await this.schemas.reload('change');
   }
 }
