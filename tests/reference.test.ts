@@ -67,16 +67,24 @@ describe('REFERENCE.md lists every code', () => {
 });
 
 describe('REFERENCE.md describes body access', () => {
-  it('names the key, the setting, the commands and the keys, and says that no behaviour ships yet', () => {
+  it('names the key, the setting, the commands and the keys, and says which body behaviour ships', () => {
     for (const word of ['body', 'enabled', 'Allow Rubric to edit note bodies', 'Log body access', 'Body access: show sections']) {
       expect(reference.includes(word), word).toBe(true);
     }
     for (const word of ['Enter', 'Tab', 'Shift-Tab', 'start', 'end', 'after', 'before']) expect(has(word), word).toBe(true);
-    expect(reference).toMatch(/no body behaviour ships yet/i);
+    expect(reference).toMatch(/one body behaviour ships/i);
   });
 
   it('lists the keys the handler hook offers and every insert position', async () => {
     const { BODY_KEYS } = await import('../src/core/body-handlers');
     for (const k of BODY_KEYS) expect(has(k), k).toBe(true);
+  });
+});
+
+describe('REFERENCE.md describes timed entries', () => {
+  it('names the key, the token, the setting and every case in the table', () => {
+    for (const word of ['entry', '{time}', 'HH:mm', 'Timed entries', 'Allow Rubric to edit note bodies', 'body-shape', 'sub-bullet', 'blank line', 'one undo step']) {
+      expect(reference.includes(word), word).toBe(true);
+    }
   });
 });

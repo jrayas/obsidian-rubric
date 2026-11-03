@@ -73,3 +73,42 @@ describe('the body: key of a type file', () => {
     expect(typeFor(pack, 'kb', undefined)?.body).toEqual({ enabled: true });
   });
 });
+
+describe('body.entry (timed entries)', () => {
+  it('is read with enabled and keeps the text as written', async () => {
+    const r = await withBody('  enabled: true\n  entry: "- {time}"');
+    expect(r.problems.filter((p) => p.code.startsWith('body-'))).toEqual([]);
+    expect(body(r)).toEqual({ enabled: true, entry: '- {time}' });
+    expect(body(r, 'kb')).toEqual({ enabled: false });
+  });
+
+  it('is not an unknown key any more', async () => {
+    const r = await withBody('  enabled: true\n  entry: "- {time}"');
+    expect(problem(r, 'body-unknown-key')).toBeUndefined();
+  });
+
+  it('is an error, with file and line, when it has no {time}', async () => {
+    const r = await withBody('  enabled: true\n  entry: "- now"');
+    const p = problem(r, 'body-shape');
+    expect(p).toMatchObject({ severity: 'error', file: 'types/task.yaml' });
+    expect(p?.message).toContain('{time}');
+    expect(p?.line).toBeGreaterThan(5);
+    expect(r.pack).toBeNull(); // like any body-shape error: the last good copy stays
+  });
+
+  it('is an error when it is not text', async () => {
+    const r = await withBody('  enabled: true\n  entry: 5');
+    expect(problem(r, 'body-shape')?.message).toContain('body.entry');
+    expect(r.pack).toBeNull();
+  });
+
+  it('is ignored when body is not enabled', async () => {
+    expect(body(await withBody('  enabled: false\n  entry: "- {time}"'))).toEqual({ enabled: false });
+  });
+
+  it('allows an empty entry value as "none"', async () => {
+    const r = await withBody('  enabled: true\n  entry:');
+    expect(problem(r, 'body-shape')).toBeUndefined();
+    expect(body(r)).toEqual({ enabled: true });
+  });
+});

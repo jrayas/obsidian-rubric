@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.6.0 (2026-11-03)
+
+### Added
+- **Timed entries.** A type can ask for every new line in the body to be an entry with the time it was written. In the type file: `body: { enabled: true, entry: "- {time}" }`. With **Allow Rubric to edit note bodies** on, Enter in a note of that type starts a new line `- 14:09 ` (local time, HH:mm). Enter on an entry that has only its time removes it and ends the list; Enter on a blank line, a sub-bullet, a task, a numbered item, a quote or a table row does what Obsidian normally does. One undo step per new line. `{time}` is the only token and the template can be any text that contains it. A bad `entry` is a `body-shape` error naming the file and line. Works on Android (tested with real key events in an Android 15 emulator).
+
+### Changed
+- `body-unknown-key` now lists `enabled` and `entry` as the known keys; the shipped `REFERENCE.md` and the setting text for **Allow Rubric to edit note bodies** describe timed entries instead of "no body behaviour ships yet".
+
+### Not verified
+- A real phone keyboard: the emulator test used hardware Enter key events. Obsidian's editor handles the on-screen keyboard's Enter through the same key map, but that was not tried.
+- Windows, Obsidian 1.13.7.
+
 ## 0.5.1 (2026-11-03)
 
 ### Fixed

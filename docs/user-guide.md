@@ -181,6 +181,25 @@ Rubric loads on iOS and Android in a lighter form (version 0.5.0 onwards).
 
 **Not verified:** layout at real phone widths, touch gestures, a hidden `.schema` folder on mobile, large vaults, and the zip export's file hand-off (the zip is written to the top folder of the vault; use your file app or a sync tool to take it elsewhere).
 
+## Timed entries (journal notes)
+
+For a journal-style type, add this to its type file (for example `_schema/types/journal.yaml`):
+
+```yaml
+body:
+  enabled: true
+  entry: "- {time}"
+```
+
+Then switch on **Allow Rubric to edit note bodies** in Rubric's settings (it is off by default). In a note of that type, press Enter and the new line starts with the time you pressed it, as HH:mm:
+
+```
+- 10:03 woke early
+- 10:41 went for a walk
+```
+
+Press Enter on an entry that has only a time and it is removed, which ends the list; press Enter on a blank line for a normal blank line. Sub-bullets, tasks and numbered lists keep Obsidian's own behaviour. It works on a phone too. If nothing happens, check that Rubric is switched on, the note's type has the `body` block, body edits are allowed, and the schema has no problems (a typo in `entry` is reported and the old schema stays in use). The full list of cases is in `schema-pack/REFERENCE.md`, under *Timed entries*.
+
 ## Troubleshooting
 
 | Symptom | What to check |

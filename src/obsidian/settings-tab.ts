@@ -297,7 +297,7 @@ export class RubricSettingTab extends PluginSettingTab {
         items: [
           {
             name: 'Allow Rubric to edit note bodies',
-            desc: 'The kill switch for body access. Off: no body handler runs and no body is written; reading a body is always allowed. Nothing in Rubric edits bodies yet, and a type must also opt in with body: { enabled: true } in its schema file.',
+            desc: 'The kill switch for body access. Off: no body handler runs and no body is written; reading a body is always allowed. A type must also opt in with body: { enabled: true } in its schema file. Today the only body feature is timed entries: with body: { entry: "- {time}" } on a type, Enter starts a new line with the time.',
             control: { type: 'toggle', key: 'allowBodyEdits' },
           },
           {

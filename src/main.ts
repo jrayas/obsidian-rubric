@@ -5,6 +5,7 @@ import { STARTER_PACK } from './pack';
 import { SchemaService } from './obsidian/schema-service';
 import { confirm } from './obsidian/modals';
 import { NoteService } from './obsidian/note-service';
+import { makeEntryHandler } from './core/body-entry';
 import { AutoSync } from './obsidian/auto-sync';
 import { BodyAccess } from './obsidian/body-access';
 import { showBodySections } from './obsidian/body-demo';
@@ -69,6 +70,16 @@ export default class RubricPlugin extends Plugin {
     this.ids = new IdService(this.app, () => this.settings);
     this.actions = new NoteActions(this);
     this.body = new BodyAccess(this);
+    // Timed entries: Enter starts a new "- HH:mm" line in notes whose type has body.entry (and body edits are allowed).
+    this.body.handlers.register(
+      makeEntryHandler({
+        entryFor: (path) => {
+          const file = this.app.vault.getFileByPath(path);
+          return (file && this.notes.context(file).type?.body.entry) || null;
+        },
+        now: () => new Date(),
+      }),
+    );
     this.presets = new SchemaPresets(this);
     this.registerEditorExtension(bodyEditorExtension(this));
     this.vocabulary = new VocabularyStore(this.app, this.schemas);

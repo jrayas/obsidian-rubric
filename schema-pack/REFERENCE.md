@@ -167,7 +167,7 @@ An excluded note gets no suggestions, no picker, no validation, no automation an
 | `uses` | Module names, in order. Must include `base`. The note's [property order](#property-order) follows this list |
 | `overrides` | Changes to a module property for this type only (in every domain). May change `values`, `default`, `required`. Used to give `status` its values and default |
 | `properties` | The type's own properties |
-| `body` | Opts the type in to [body access](#body-access): `body: { enabled: true }`. Absent, or `enabled: false`, means off. **Reserved: no body behaviour ships yet**, so turning it on changes nothing today. Keys other than `enabled` are a warning (`body-unknown-key`) so a pack can name keys that a later version understands; a `body` that is not a map, or an `enabled` that is not true or false, is an error (`body-shape`). Read from the type file only; a domain override file cannot change it |
+| `body` | Opts the type in to [body access](#body-access): `body: { enabled: true }`. Absent, or `enabled: false`, means off. `entry` turns on [timed entries](#timed-entries): `body: { enabled: true, entry: "- {time}" }` makes Enter in the body start a new line with the entry text and the time as HH:mm; it is used only when `enabled` is true. Keys other than `enabled` and `entry` are a warning (`body-unknown-key`) so a pack can name keys that a later version understands; a `body` that is not a map, an `enabled` that is not true or false, or an `entry` that is not text containing `{time}` is an error (`body-shape`). Read from the type file only; a domain override file cannot change it |
 
 **Vocabulary file**
 
@@ -545,7 +545,7 @@ Notes outside the managed scope get no suggestions, no picker, no checks, no pro
 | `domain` changes | A preview, then a new `unique_id` (the old one kept in `archived_fields`) |
 | A tag is a synonym, unknown, or `status` is not allowed | A prompt (open notes by default). Prompts can be switched off |
 | A schema file is invalid | One notice naming the file and line; the last good copy stays in use |
-| A note's body | Nothing in Rubric edits it. The [body access layer](#body-access) is only there for later features |
+| Enter in a note's body | Only for a type with `body.entry` and body edits allowed: a new timed entry line ([timed entries](#timed-entries)). Nothing else in Rubric edits a body |
 
 Notes that arrive through sync never prompt; the vault check covers them.
 
@@ -564,7 +564,7 @@ Applying a preset replaces files, so keep a copy of anything you are not sure ab
 
 ## Body access
 
-**Status: no body behaviour ships yet.** Rubric manages a note's properties. The body access layer is an internal foundation that lets later features read and edit the body of a note safely. Nothing in this version edits a body, so with the setting below off, or with no type opted in, Rubric behaves exactly as before.
+**Status: one body behaviour ships: [timed entries](#timed-entries).** Rubric manages a note's properties. The body access layer is the foundation that lets features read and edit the body of a note safely. Timed entries are the only thing that edits a body, so with the setting below off, or with no type opted in (and given an `entry`), Rubric behaves exactly as before.
 
 **Who may change a body.** All of these must hold, checked in this order; the first that fails is the reason a write or a handler is refused:
 
@@ -579,7 +579,7 @@ Applying a preset replaces files, so keep a copy of anything you are not sure ab
 
 Reading a body is never refused. The setting **Log body access** writes one line to the developer console for each body change or refusal (which handler, which note, how many characters) and adds the command **Body access: show sections**: the active note's type, whether `body.enabled` is on, whether body edits are allowed and why not, and its heading tree with line ranges.
 
-**What a handler can do.** A handler is code that registers for a key and sees a keypress in the body of an opted-in note before Obsidian does. It can only be registered by code; there is nothing to write in the schema except `enabled`.
+**What a handler can do.** A handler is code that registers for a key and sees a keypress in the body of an opted-in note before Obsidian does. It can only be registered by code; in the schema a type writes `enabled`, and `entry` for the one handler that ships (timed entries).
 
 - Keys: `Enter`, `Tab`, `Shift-Tab`. Deleting keys are not offered.
 - It is told the note's type, the cursor line and column, the line, whether anything is selected, the list item the line starts (marker, task box, depth: a tab or the tab size in spaces is one level) and the innermost section (heading text, level, line).
@@ -587,6 +587,35 @@ Reading a body is never refused. The setting **Log body access** writes one line
 - It records edits through a transaction: insert text at the cursor or another place, insert whole lines after a line, move the cursor. Everything it records is applied together as **one undo step**.
 - It may only insert. Replacing or deleting existing text needs the handler to have been registered as allowed to rewrite, and the edit is then explicit. Edits that fall outside the note or overlap are dropped; a handler that fails is skipped and the key goes on to Obsidian.
 - It is **not** run while an input method (IME) is composing, with several cursors, in the frontmatter, or inside a code fence, a `$$` math block or a `%%` comment.
+
+### Timed entries
+
+A journal-style note where every line is an entry with the time it was written. In the type file:
+
+```yaml
+body:
+  enabled: true
+  entry: "- {time}"
+```
+
+and switch on **Allow Rubric to edit note bodies** (off by default). Then, in a note of that type, Enter in the body starts a new line made from `entry` with `{time}` replaced by the local time as HH:mm:
+
+```
+- 10:03 woke early
+- 10:41 ▮                 ← after Enter on the line above (the cursor is at ▮)
+```
+
+| You press Enter | What happens |
+| --- | --- |
+| At the end of an entry, a heading, a plain line or a photo embed | A new entry line with the current time |
+| In the middle of a line | The rest of the line moves to the new entry, after the time |
+| On an entry that has only its time (`- 10:41 `) | That line is removed and the list ends, leaving a blank line |
+| On a blank line | A normal blank line: the way out of the entries |
+| On a sub-bullet, a task (`- [ ]`), a numbered item, a quote or a table row | Obsidian's own behaviour |
+| At the start of a line, or inside the `- 10:41 ` part of an entry | Obsidian's own behaviour (the line moves down) |
+| In the frontmatter, a code fence, a `$$` block or a `%%` comment, while an input method is composing, or with several cursors or a selection | Obsidian's own behaviour |
+
+`{time}` is the only token. The template may be any text that contains it, for example `* **{time}** -`. Each new line is one undo step. A note's `entry` is read from its type, so a type without `entry` (or without `enabled: true`) is not affected. If Enter does nothing special, run **Body access: show sections** (after switching on **Log body access**) to see why the note is refused.
 
 **What the file API can do.** For features that act on a note that is not being typed in: read the body, its lines and its sections; replace the body only if it is still what the caller read; change the body with a function that sees it as it is at that moment; or insert text at a heading. Every write is one atomic read-modify-write, never touches the frontmatter, keeps the note's line endings, reports "nothing changed" instead of writing an identical file, and is done even when the note is open with unsaved typing (both are kept; it is one undo step). A body write counts as an edit, so `modified` is stamped afterwards as for your own typing; in an open note that stamp is its own undo step, so undo twice to take back a body write once `modified` has been stamped.
 
@@ -649,8 +678,8 @@ The settings page and the vault check list schema problems as `file:line message
 
 | Code | Meaning |
 | --- | --- |
-| `body-shape` | `body` in a type file is not a map, or `body.enabled` is not true or false (error) |
-| `body-unknown-key` | A key under `body` other than `enabled`. It has no effect (a warning) |
+| `body-shape` | `body` in a type file is not a map, `body.enabled` is not true or false, or `body.entry` is not text containing `{time}` (error) |
+| `body-unknown-key` | A key under `body` other than `enabled` and `entry`. It has no effect (a warning) |
 
 **Properties**
 

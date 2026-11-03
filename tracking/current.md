@@ -1,5 +1,11 @@
 # Current
 
+## Latest task (2026-11-03): timed entries, 0.6.0 — in progress (code, tests and docs done; vault changes and release pending)
+
+`body: { enabled: true, entry: "- {time}" }` on a type makes Enter in the body start a new `- HH:mm ` line (D-91). `src/core/body-entry.ts` (pure handler), `body-config.ts` (the `entry` key), registered in `main.ts`; REFERENCE, README, user guide, changelog updated. Android emulator: real Enter key events behave as designed (new entry, typed text, empty entry removed, blank line left to Obsidian). Pending: install in the Journal vault (journal.yaml body block, allowBodyEdits on), remove the empty Review folder and mapping, create starter notes (Idea inbox, How I reflect, Journal guide, Person template) as confirmed with the user, run `npm run e2e`.
+
+---
+
 ## Latest task (2026-11-03): works on mobile, 0.5.1 — done, committed on branch `mobile-verified-writes`, **not pushed, not installed in any vault**
 
 Why it was "not enabled on mobile": all six vaults hold Rubric **0.2.0 with `isDesktopOnly: true`**, which Obsidian mobile will not enable (reproduced on an Android 15 emulator: nothing happens, no error). The project's 0.5.0 is not desktop-only. Tested 0.5.0 in the emulator's real Android WebView (not desktop emulation): it enables, loads, installs the starter pack, loads the schema, opens Choose schema and Check vault.
