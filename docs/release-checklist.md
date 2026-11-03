@@ -51,7 +51,7 @@ Not yet run on a device; the automated mobile suite only uses Obsidian's emulati
 
 - [ ] `manifest.json` `version` bumped (`npm version patch`, which also updates `versions.json`); `minAppVersion` still accurate; `isDesktopOnly` is `true`.
 - [ ] `docs/` and `tracking/` updated; `README.md` still true (commands, settings, limits, privacy).
-- [ ] Commit, tag equal to the version with no `v`, push the tag. The `release` workflow builds and creates a **draft** release with `main.js`, `manifest.json`, `styles.css`; publish the draft.
+- [ ] Commit, tag equal to the version with no `v`, push the tag. The `release` workflow tests, builds and **publishes** a release with `main.js`, `manifest.json`, `styles.css` (checking that the tag exists first). Then check it: `gh release view <version>` shows it is not a draft, and the community directory only sees published releases. Edit its notes afterwards if you want (the CHANGELOG entry is a good text).
 - [ ] First release only: submit at https://community.obsidian.md and fix anything the automated review reports.
 
 ## Install test in a clean vault

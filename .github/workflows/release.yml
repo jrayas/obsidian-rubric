@@ -44,11 +44,10 @@ jobs:
             manifest.json
             styles.css
 
-      - name: Create a draft release
+      - name: Create the release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release create "$GITHUB_REF_NAME" \
-            --title "$GITHUB_REF_NAME" \
-            --draft \
-            main.js manifest.json styles.css
+          gh release create "$GITHUB_REF_NAME" main.js manifest.json styles.css \
+            --title "Rubric $GITHUB_REF_NAME" \
+            --generate-notes --verify-tag
