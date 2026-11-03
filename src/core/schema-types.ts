@@ -1,5 +1,6 @@
 /** Data model for a loaded schema pack. Pure data; no Obsidian types. */
 import type { BodyConfig } from './body-config';
+import type { BodyRules } from './body-rules';
 
 export const VALUE_TYPES = ['string', 'integer', 'boolean', 'date', 'datetime', 'url', 'link', 'enum', 'list'] as const;
 export type ValueType = (typeof VALUE_TYPES)[number];
@@ -65,6 +66,8 @@ export interface ModuleDef {
   /** Modules a type must also list under `uses` when it uses this one. */
   requires: string[];
   properties: PropertyDef[];
+  /** Body rules (`sections`, `default`) when this is a body module. */
+  body?: BodyRules;
 }
 
 export interface VocabularyTerm {

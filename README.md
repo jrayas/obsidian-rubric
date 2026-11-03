@@ -16,7 +16,7 @@ It is described as **governance-ready**, not as a compliance system: locks are a
 - **Property preview.** `_schema/preview/<type>.yaml` shows, read-only and always current, what a new note of each type starts with and what each property allows. Where a domain changes a type, `_schema/preview/<type>/<domain>.yaml` shows it for that domain.
 - **Vault check.** One report with eleven checks (missing properties, bad values, IDs, tags, names, breadcrumbs, old schema versions, leftover `domain`, timestamps, folder case clashes, schema problems). Every fix shows exactly what it will write and waits for you.
 - **Presets and export.** Save the whole schema folder under a name and apply it back later (with a preview of every file that changes and an automatic backup), or export it as one zip. Retired IDs are listed in the settings, with what each does, and can be released.
-- **Timed entries.** For a journal type, `body: { enabled: true, entry: "- {time}" }` makes Enter start a new `- 14:09 ` line, so every line is a timestamped entry (off until you allow body edits).
+- **Body module.** Describe a note's body in YAML like its properties: starter sections for new notes, and rules for Enter, Tab and Shift-Tab per heading, with `{{time:HH:mm}}` template variables and Bases-style formulas (`{{ now().format('ddd HH:mm') }}`). A journal can make every new line `- 14:09 ` (off until you allow body edits).
 - **Migration.** Schema 1 → 2 with a diff: old IDs to the year format, nested blocks to flat properties, `domain` removed when it repeats the breadcrumb; anything that would be lost goes to `archived_fields`.
 
 ## Install

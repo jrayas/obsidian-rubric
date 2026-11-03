@@ -1,4 +1,5 @@
-import { parseBody } from './body-config';
+import { parseBody, resolveBody } from './body-config';
+import { hasRules, parseBodyRules } from './body-rules';
 import { allPropertyOwners, declaredDomains, loadDomains } from './domain-loader';
 import { loadDomainRegistry } from './domain-registry';
 import { compareVersions } from './semver';
@@ -139,9 +140,14 @@ export async function loadSchemaPack(source: SchemaFileSource, options: LoadOpti
       requires: requires ?? [],
       properties: parseProperties(ld, m.file, m.data, name),
     };
+    // A body module has `sections` and/or `default` instead of (or as well as) properties.
+    if (m.data.sections !== undefined || m.data.default !== undefined) {
+      const rules = parseBodyRules(ld, m.file, m.data, []);
+      if (hasRules(rules)) def.body = rules;
+    }
     if (typeof m.data.description === 'string') def.description = m.data.description;
     // A module that lost its content (for example another file was saved over it) would otherwise vanish silently.
-    if (def.properties.length === 0 && (m.data.properties === undefined || m.data.properties === null || (isObj(m.data.properties) && Object.keys(m.data.properties).length === 0))) {
+    if (def.properties.length === 0 && !def.body && (m.data.properties === undefined || m.data.properties === null || (isObj(m.data.properties) && Object.keys(m.data.properties).length === 0))) {
       ld.error('module-empty', p, `Module "${name}" has no properties. A module file needs "module: ${name}" and a "properties" map`, 1);
     }
     modules.set(name, def);
@@ -231,7 +237,7 @@ export async function loadSchemaPack(source: SchemaFileSource, options: LoadOpti
       }
     }
     const overrides = parseOverrides(ld, t.file, t.data);
-    const body = parseBody(ld, t.file, t.data);
+    const bodyOwn = parseBody(ld, t.file, t.data);
     const own = parseProperties(ld, t.file, t.data, undefined);
     if (!usable || typeof prefix !== 'string' || typeof version !== 'number') continue;
 
@@ -316,7 +322,7 @@ export async function loadSchemaPack(source: SchemaFileSource, options: LoadOpti
       uses,
       properties: ordered,
       byName: new Map(ordered.map((p) => [p.name, p])),
-      body,
+      body: resolveBody(uses.map((m) => modules.get(m)?.body), bodyOwn),
     };
     if (typeof t.data.description === 'string') rt.description = t.data.description;
     types.set(name, rt);

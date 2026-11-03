@@ -1,6 +1,7 @@
 import { Notice } from 'obsidian';
 import type { TFile } from 'obsidian';
 import { planConversion } from '../core/convert';
+import { scaffoldBody } from '../core/body-scaffold';
 import { planCompletion } from '../core/create';
 import { domainFromFolder, domainOf, typeFor } from '../core/domain-overrides';
 import { UNIQUE_ID, applyUniqueId, planUniqueId } from '../core/unique-id';
@@ -8,8 +9,10 @@ import { desiredOrder, editFrontmatter, readFrontmatter } from '../core/frontmat
 import type { Frontmatter } from '../core/frontmatter';
 import { describeChanges } from '../core/preview';
 import type { KeyChange } from '../core/frontmatter';
+import { joinNote, splitNote } from '../core/note-text';
 import type { ResolvedType } from '../core/schema-types';
 import type RubricPlugin from '../main';
+import { formulaContext } from './body-context';
 import { preview } from './preview-modal';
 
 export interface PlannedConversion {
@@ -166,7 +169,26 @@ export class NoteActions {
       if (!options.silent) new Notice(outcome.error);
       return false;
     }
+    await this.addStarterBody(file, type, { ...loaded.fm, ...plan.added });
     return true;
+  }
+
+  /**
+   * A new note whose body is still empty gets the starter sections of its type's body rules. Needs the type to have
+   * body rules and the setting "Allow Rubric to edit note bodies"; a note that already has any body is never touched.
+   */
+  private async addStarterBody(file: TFile, type: ResolvedType, props: Record<string, unknown>): Promise<void> {
+    const { plugin } = this;
+    const rules = type.body.rules;
+    if (!type.body.enabled || !rules || !plugin.settings.allowBodyEdits) return;
+    const starter = scaffoldBody(rules, formulaContext(file, props));
+    if (starter.errors.length > 0 && plugin.settings.debugBodyAccess) plugin.body.log(`starter sections for ${file.path}: ${starter.errors.join('; ')}`);
+    if (starter.text === '') return;
+    await plugin.queue.process(file, (text) => {
+      const parts = splitNote(text);
+      if (parts.body.trim() !== '') return text;
+      return joinNote({ frontmatter: parts.frontmatter, body: starter.text.replace(/\n/g, parts.eol) });
+    });
   }
 
   /**

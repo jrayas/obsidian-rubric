@@ -1,48 +1,62 @@
-/** The `body:` key of a type file: opt-in for the body access layer. Parsed and checked; it carries no behaviour yet. Pure. */
+/**
+ * The `body:` key of a type file and the rules a type gets from the `body` module. Pure.
+ *
+ * A type is opted in to body behaviour by using the `body` module (`uses: [base, body]`) or by having its own
+ * `body:` block with sections or default rules. `body: { enabled: false }` turns it off again. Every body edit is
+ * still behind the setting "Allow Rubric to edit note bodies".
+ */
 import { isObj, show } from './loader-base';
 import type { Loader, Obj } from './loader-base';
+import { emptyRules, hasRules, mergeBodyRules, parseBodyRules } from './body-rules';
+import type { BodyRules } from './body-rules';
 import type { YamlFile } from './yaml-file';
 
 export interface BodyConfig {
-  /** Handlers may act on notes of this type. False when the type has no `body:`. */
+  /** Handlers may act on notes of this type. */
   enabled: boolean;
-  /**
-   * Timed entries: the text that starts every new line when Enter is pressed in the body, such as `- {time}`.
-   * `{time}` becomes the local time as HH:mm. Absent means the type has no entry lines. Used only when `enabled` is true.
-   */
-  entry?: string;
+  /** The merged rules of the modules the type uses and its own `body:` block. Absent when there are none. */
+  rules?: BodyRules;
 }
-
-/** The only token `body.entry` understands. */
-export const ENTRY_TIME_TOKEN = '{time}';
 
 export const NO_BODY: BodyConfig = { enabled: false };
 
-/** Keys under `body:` that mean something. Others are reported as warnings so new keys can be added later without breaking a pack. */
-export const BODY_KEYS = new Set(['enabled', 'entry']);
+/** What the type file itself says under `body:`. */
+export interface TypeBody {
+  enabled: boolean | undefined;
+  rules: BodyRules;
+}
 
-export function parseBody(ld: Loader, yf: YamlFile, data: Obj): BodyConfig {
+/** Keys under `body:` that mean something. Others are reported as warnings so new keys can be added later without breaking a pack. */
+export const BODY_KEYS = new Set(['enabled', 'sections', 'default']);
+
+export function parseBody(ld: Loader, yf: YamlFile, data: Obj): TypeBody {
+  const none: TypeBody = { enabled: undefined, rules: emptyRules() };
   const raw = data.body;
-  if (raw === undefined || raw === null) return NO_BODY;
+  if (raw === undefined || raw === null) return none;
   if (!isObj(raw)) {
     ld.error('body-shape', yf.path, `"body" must be a map such as { enabled: true } (found ${show(raw)})`, yf.lineOf(['body']));
-    return NO_BODY;
+    return none;
   }
   for (const key of Object.keys(raw)) {
     if (!BODY_KEYS.has(key)) {
       ld.warn('body-unknown-key', yf.path, `Unknown key "${key}" under "body" (it has no effect; known keys: ${[...BODY_KEYS].join(', ')})`, yf.lineOf(['body', key]));
     }
   }
-  if (raw.enabled === undefined) return NO_BODY;
-  if (typeof raw.enabled !== 'boolean') {
-    ld.error('body-shape', yf.path, `"body.enabled" must be true or false (found ${show(raw.enabled)})`, yf.lineOf(['body', 'enabled']));
-    return NO_BODY;
+  let enabled: boolean | undefined;
+  if (raw.enabled !== undefined && raw.enabled !== null) {
+    if (typeof raw.enabled !== 'boolean') {
+      ld.error('body-shape', yf.path, `"body.enabled" must be true or false (found ${show(raw.enabled)})`, yf.lineOf(['body', 'enabled']));
+    } else enabled = raw.enabled;
   }
-  if (raw.entry === undefined || raw.entry === null) return { enabled: raw.enabled };
-  if (typeof raw.entry !== 'string' || !raw.entry.includes(ENTRY_TIME_TOKEN)) {
-    ld.error('body-shape', yf.path, `"body.entry" must be text that contains ${ENTRY_TIME_TOKEN}, such as "- ${ENTRY_TIME_TOKEN}" (found ${show(raw.entry)})`, yf.lineOf(['body', 'entry']));
-    return { enabled: raw.enabled };
-  }
-  // A type that is not enabled has no entry lines, whatever it says here.
-  return raw.enabled ? { enabled: true, entry: raw.entry } : { enabled: false };
+  return { enabled, rules: parseBodyRules(ld, yf, raw, ['body']) };
+}
+
+/** Put the rules of the modules (in `uses` order) and the type's own block together. */
+export function resolveBody(fromModules: (BodyRules | undefined)[], own: TypeBody): BodyConfig {
+  let rules = emptyRules();
+  for (const m of fromModules) if (m) rules = mergeBodyRules(rules, m);
+  rules = mergeBodyRules(rules, own.rules);
+  const present = hasRules(rules);
+  const enabled = own.enabled ?? present;
+  return present ? { enabled, rules } : { enabled };
 }

@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.7.0 (2026-11-03)
+
+### Added
+- **The body module.** The body of a note can now be described in YAML, the way properties are. A module file (`modules/body.yaml`, added to the registry and pulled in with `uses: [..., body]`) lists `sections` by heading and a `default`, and each can give rules for **Enter**, **Tab** and **Shift-Tab**: `insert` (text to write), `newline`, `pass`. A type's own `body:` block can change them. Rules are merged in `uses` order, then the type's own.
+- **Placeholders and formulas in rules.** Any `insert` or `starter` text can contain `{{ }}`: template variables from Obsidian's core Templates plugin (`{{time:HH:mm}}`, `{{date:FORMAT}}`, `{{title}}`) or Bases-style formulas (`{{ now().format('ddd HH:mm') }}`, `{{ if(mood >= 4, ':)', '') }}`, `{{ file.basename }}`, note properties, text, list and date methods, `if`, `min`, `max`, `number`, `date`). A formula engine written for Rubric runs them; it never runs JavaScript. A placeholder that does not parse is a `body-formula` schema error naming the file and line.
+- **Rules per heading.** A section's rule for a key applies under that heading; a key it does not mention falls back to `default`; `pass: true` turns a key off there.
+- **Starter sections for new notes.** The sections of a body module (in order, with their `starter` text) become the body of a new note, in **Create note from schema** and when Rubric completes a new note whose body is empty. A note that already has a body is never changed.
+- Enter ends a list on a line that has only what the rule wrote (recognised by the format of its date and time placeholders), and leaves blank lines, sub-bullets, tasks, numbered items, quotes and table rows to Obsidian.
+
+### Changed
+- Replaces the `body.entry` key of 0.6.0, which was never released: use `default: { keys: { Enter: { insert: "- {{time:HH:mm}} " } } }` in a body module. `body-unknown-key` and `body-shape` cover the new keys; `body-formula` is new.
+- `REFERENCE.md` has a new section, *The body module*, with the full list of placeholders, formula parts and cases.
+
+### Not verified
+- A real phone keyboard: the Android emulator tests used hardware Enter and Tab key events.
+- Windows, Obsidian 1.13.7.
+
 ## 0.6.0 (2026-11-03)
 
 ### Added

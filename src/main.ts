@@ -5,9 +5,10 @@ import { STARTER_PACK } from './pack';
 import { SchemaService } from './obsidian/schema-service';
 import { confirm } from './obsidian/modals';
 import { NoteService } from './obsidian/note-service';
-import { makeEntryHandler } from './core/body-entry';
+import { makeBodyHandler } from './core/body-handler';
 import { AutoSync } from './obsidian/auto-sync';
 import { BodyAccess } from './obsidian/body-access';
+import { formulaContext } from './obsidian/body-context';
 import { showBodySections } from './obsidian/body-demo';
 import { bodyEditorExtension } from './obsidian/body-editor';
 import { ChangeWatcher } from './obsidian/change-watcher';
@@ -70,14 +71,20 @@ export default class RubricPlugin extends Plugin {
     this.ids = new IdService(this.app, () => this.settings);
     this.actions = new NoteActions(this);
     this.body = new BodyAccess(this);
-    // Timed entries: Enter starts a new "- HH:mm" line in notes whose type has body.entry (and body edits are allowed).
+    // The body module: Enter, Tab and Shift-Tab follow the body rules of the note's type (when body edits are allowed).
     this.body.handlers.register(
-      makeEntryHandler({
-        entryFor: (path) => {
+      makeBodyHandler({
+        rulesFor: (path) => {
           const file = this.app.vault.getFileByPath(path);
-          return (file && this.notes.context(file).type?.body.entry) || null;
+          return (file && this.notes.context(file).type?.body.rules) || null;
         },
-        now: () => new Date(),
+        context: (path) => {
+          const file = this.app.vault.getFileByPath(path);
+          return file ? formulaContext(file, this.notes.context(file).frontmatter) : null;
+        },
+        log: (message) => {
+          if (this.settings.debugBodyAccess) this.body.log(message);
+        },
       }),
     );
     this.presets = new SchemaPresets(this);

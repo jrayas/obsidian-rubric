@@ -181,24 +181,33 @@ Rubric loads on iOS and Android in a lighter form (version 0.5.0 onwards).
 
 **Not verified:** layout at real phone widths, touch gestures, a hidden `.schema` folder on mobile, large vaults, and the zip export's file hand-off (the zip is written to the top folder of the vault; use your file app or a sync tool to take it elsewhere).
 
-## Timed entries (journal notes)
+## The body module (journal-style notes)
 
-For a journal-style type, add this to its type file (for example `_schema/types/journal.yaml`):
+The body of a note can be described in YAML, like its properties. Add a module (here `_schema/modules/body.yaml`):
 
 ```yaml
-body:
-  enabled: true
-  entry: "- {time}"
+module: body
+description: What happens in the body of a note.
+sections:
+  - heading: Captures
+    level: 2
+    starter: "- {{time:HH:mm}} "
+default:
+  keys:
+    Enter: { insert: "- {{time:HH:mm}} " }
 ```
 
-Then switch on **Allow Rubric to edit note bodies** in Rubric's settings (it is off by default). In a note of that type, press Enter and the new line starts with the time you pressed it, as HH:mm:
+Then register it in `registry/types.yaml` (`modules:` → `body: modules/body.yaml`), add `body` to the type's `uses`, and switch on **Allow Rubric to edit note bodies** in Rubric's settings (it is off by default).
 
-```
-- 10:03 woke early
-- 10:41 went for a walk
-```
+What you get:
 
-Press Enter on an entry that has only a time and it is removed, which ends the list; press Enter on a blank line for a normal blank line. Sub-bullets, tasks and numbered lists keep Obsidian's own behaviour. It works on a phone too. If nothing happens, check that Rubric is switched on, the note's type has the `body` block, body edits are allowed, and the schema has no problems (a typo in `entry` is reported and the old schema stays in use). The full list of cases is in `schema-pack/REFERENCE.md`, under *Timed entries*.
+- **Every new line is an entry.** In a note of that type, press Enter and the new line starts with the time you pressed it, as HH:mm: `- 10:03 woke early`, `- 10:41 went for a walk`. Press Enter on an entry that has only its time and it is removed, which ends the list; press Enter on a blank line for a normal blank line. Sub-bullets, tasks and numbered lists keep Obsidian's own behaviour.
+- **Starter sections.** A new note of the type starts with the headings (and first lines) the module lists, so you need no template file. Notes that already have a body are never changed.
+- **Different rules under different headings.** Add a section with its own `keys`, for example plain `- ` bullets under `## Gratitude`.
+- **More than Enter.** Tab and Shift-Tab can have rules too, for example `Tab: { insert: "{{time}} ", newline: false }` to stamp the time at the cursor.
+- **Formulas.** Besides `{{time:HH:mm}}`, `{{date:FORMAT}}` and `{{title}}` you can use Bases-style formulas: `{{ now().format('ddd HH:mm') }}`, `{{ file.basename }}`, `{{ if(mood >= 4, ':)', '') }}`.
+
+It works on a phone too. If nothing happens, check that Rubric is switched on, the note's type uses the `body` module, body edits are allowed, and the schema has no problems (a typo in a rule or formula is reported, and the old schema stays in use). Everything you can write, with the full list of formula parts, is in `schema-pack/REFERENCE.md` under *The body module*.
 
 ## Troubleshooting
 

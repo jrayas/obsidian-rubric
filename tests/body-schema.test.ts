@@ -74,41 +74,117 @@ describe('the body: key of a type file', () => {
   });
 });
 
-describe('body.entry (timed entries)', () => {
-  it('is read with enabled and keeps the text as written', async () => {
-    const r = await withBody('  enabled: true\n  entry: "- {time}"');
-    expect(r.problems.filter((p) => p.code.startsWith('body-'))).toEqual([]);
-    expect(body(r)).toEqual({ enabled: true, entry: '- {time}' });
+// ---- the body module -----------------------------------------------------------------------------------------
+
+const BODY_MODULE = `module: body
+description: What happens in the body of a note.
+sections:
+  - heading: Captures
+    level: 2
+    starter: "- {{time:HH:mm}} "
+    keys:
+      Enter: { insert: "- {{time:HH:mm}} " }
+  - heading: Gratitude
+    keys:
+      Enter: { insert: "- " }
+default:
+  keys:
+    Enter: { insert: "- {{ now().format('HH:mm') }} " }
+    Tab: { insert: "{{time}} ", newline: false }
+`;
+
+const withModule = (module: string = BODY_MODULE, typeEdit: (text: string) => string = (t) => t) =>
+  loadWith(
+    {
+      'registry/types.yaml': (t) => t.replace('modules:\n', 'modules:\n  body: modules/body.yaml\n'),
+      'types/journal.yaml': (t) => typeEdit(t.replace('uses: [base, findability, relations]', 'uses: [base, findability, relations, body]')),
+    },
+    { 'modules/body.yaml': module },
+  );
+
+const journalBody = (r: Awaited<ReturnType<typeof loadWith>>) => r.pack?.types.get('journal')?.body;
+
+describe('the body module', () => {
+  it('loads with no problems, although it has no properties', async () => {
+    const r = await withModule();
+    expect(r.problems).toEqual([]);
+    expect(r.pack?.modules.get('body')?.body?.sections.map((s) => s.heading)).toEqual(['Captures', 'Gratitude']);
+  });
+
+  it('opts in a type that uses it, with the rules, and no other type', async () => {
+    const r = await withModule();
+    const b = journalBody(r);
+    expect(b?.enabled).toBe(true);
+    expect(b?.rules?.sections[0]).toEqual({
+      heading: 'Captures',
+      level: 2,
+      starter: '- {{time:HH:mm}} ',
+      scaffold: true,
+      keys: { Enter: { insert: '- {{time:HH:mm}} ' } },
+    });
+    expect(b?.rules?.default.Tab).toEqual({ insert: '{{time}} ', newline: false });
     expect(body(r, 'kb')).toEqual({ enabled: false });
   });
 
-  it('is not an unknown key any more', async () => {
-    const r = await withBody('  enabled: true\n  entry: "- {time}"');
-    expect(problem(r, 'body-unknown-key')).toBeUndefined();
+  it("is changed by the type's own body block: a section key at a time, a new section, and enabled: false", async () => {
+    const r = await withModule(BODY_MODULE, (t) =>
+      `${t}\nbody:\n  sections:\n    - heading: Captures\n      level: 2\n      keys:\n        Enter: { insert: "* {{time}} " }\n    - heading: Events\n      keys:\n        Enter: { pass: true }\n`,
+    );
+    const rules = journalBody(r)?.rules;
+    expect(rules?.sections.map((s) => s.heading)).toEqual(['Captures', 'Gratitude', 'Events']);
+    expect(rules?.sections[0]?.keys.Enter).toEqual({ insert: '* {{time}} ' });
+    expect(rules?.sections[0]?.starter).toBe('- {{time:HH:mm}} '); // kept from the module
+    expect(rules?.sections[2]?.keys.Enter).toEqual({ pass: true });
+
+    const off = await withModule(BODY_MODULE, (t) => `${t}\nbody:\n  enabled: false\n`);
+    expect(journalBody(off)?.enabled).toBe(false);
+    expect(journalBody(off)?.rules?.sections.length).toBe(2); // the rules are still there, switched off
   });
 
-  it('is an error, with file and line, when it has no {time}', async () => {
-    const r = await withBody('  enabled: true\n  entry: "- now"');
+  it('reports an unknown key name under keys, with file and line, and keeps the last good schema', async () => {
+    const r = await withModule(BODY_MODULE.replace('Tab: {', 'Space: {'));
     const p = problem(r, 'body-shape');
-    expect(p).toMatchObject({ severity: 'error', file: 'types/task.yaml' });
-    expect(p?.message).toContain('{time}');
+    expect(p).toMatchObject({ severity: 'error', file: 'modules/body.yaml' });
+    expect(p?.message).toContain('Space');
     expect(p?.line).toBeGreaterThan(5);
-    expect(r.pack).toBeNull(); // like any body-shape error: the last good copy stays
-  });
-
-  it('is an error when it is not text', async () => {
-    const r = await withBody('  enabled: true\n  entry: 5');
-    expect(problem(r, 'body-shape')?.message).toContain('body.entry');
     expect(r.pack).toBeNull();
   });
 
-  it('is ignored when body is not enabled', async () => {
-    expect(body(await withBody('  enabled: false\n  entry: "- {time}"'))).toEqual({ enabled: false });
+  it('reports a formula that does not parse as body-formula on the line of the rule', async () => {
+    const r = await withModule(BODY_MODULE.replace("now().format('HH:mm')", 'now('));
+    const p = problem(r, 'body-formula');
+    expect(p).toMatchObject({ severity: 'error', file: 'modules/body.yaml' });
+    expect(p?.message).toContain('now(');
+    expect(p?.line).toBeGreaterThan(10);
+    expect(r.pack).toBeNull();
   });
 
-  it('allows an empty entry value as "none"', async () => {
-    const r = await withBody('  enabled: true\n  entry:');
-    expect(problem(r, 'body-shape')).toBeUndefined();
-    expect(body(r)).toEqual({ enabled: true });
+  it('reports a section with no heading, a level that is not 1 to 6, and a list that is not a list', async () => {
+    expect(problem(await withModule('module: body\nsections:\n  - level: 2\n'), 'body-shape')?.message).toContain('"heading"');
+    expect(problem(await withModule('module: body\nsections:\n  - heading: A\n    level: 7\n'), 'body-shape')?.message).toContain('1 to 6');
+    expect(problem(await withModule('module: body\nsections: Captures\n'), 'body-shape')?.message).toContain('list');
+    expect(problem(await withModule('module: body\nsections:\n  - heading: A\n    scaffold: maybe\n'), 'body-shape')?.message).toContain('scaffold');
+  });
+
+  it('warns about unknown keys and a rule that does nothing, and still loads', async () => {
+    const r = await withModule(
+      'module: body\nsections:\n  - heading: A\n    colour: red\n    keys:\n      Enter: { wibble: 1 }\ndefault:\n  extra: 1\n  keys:\n    Tab: { insert: "x" }\n',
+    );
+    const warnings = r.problems.filter((p) => p.code === 'body-unknown-key');
+    expect(warnings.map((w) => w.severity)).toEqual(['warning', 'warning', 'warning', 'warning']);
+    expect(warnings.some((w) => w.message.includes('"colour"'))).toBe(true);
+    expect(warnings.some((w) => w.message.includes('does nothing'))).toBe(true);
+    expect(r.pack).not.toBeNull();
+  });
+
+  it('warns when a heading is listed twice and keeps the later one', async () => {
+    const r = await withModule('module: body\nsections:\n  - heading: A\n    starter: one\n  - heading: a\n    starter: two\n');
+    expect(problem(r, 'body-unknown-key')?.message).toContain('listed twice');
+    expect(journalBody(r)?.rules?.sections.map((s) => s.starter)).toEqual(['two']);
+  });
+
+  it('is still an error for an ordinary module with no properties', async () => {
+    const r = await loadWith({ 'modules/relations.yaml': () => 'module: relations\n' });
+    expect(problem(r, 'module-empty')).toBeDefined();
   });
 });

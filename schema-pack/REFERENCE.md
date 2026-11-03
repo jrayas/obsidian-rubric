@@ -167,7 +167,7 @@ An excluded note gets no suggestions, no picker, no validation, no automation an
 | `uses` | Module names, in order. Must include `base`. The note's [property order](#property-order) follows this list |
 | `overrides` | Changes to a module property for this type only (in every domain). May change `values`, `default`, `required`. Used to give `status` its values and default |
 | `properties` | The type's own properties |
-| `body` | Opts the type in to [body access](#body-access): `body: { enabled: true }`. Absent, or `enabled: false`, means off. `entry` turns on [timed entries](#timed-entries): `body: { enabled: true, entry: "- {time}" }` makes Enter in the body start a new line with the entry text and the time as HH:mm; it is used only when `enabled` is true. Keys other than `enabled` and `entry` are a warning (`body-unknown-key`) so a pack can name keys that a later version understands; a `body` that is not a map, an `enabled` that is not true or false, or an `entry` that is not text containing `{time}` is an error (`body-shape`). Read from the type file only; a domain override file cannot change it |
+| `body` | Body behaviour of the type, normally written once in the [body module](#the-body-module) and pulled in with `uses`. A type's own `body:` block can add to or change the module's `sections` and `default` rules, and `body: { enabled: false }` turns body behaviour off for the type. `body: { enabled: true }` opts a type in without rules. Keys other than `enabled`, `sections` and `default` are a warning (`body-unknown-key`); a wrong shape, or a formula that does not parse, is an error and the last good schema stays. Read from the type file only; a domain override file cannot change it |
 
 **Vocabulary file**
 
@@ -545,7 +545,7 @@ Notes outside the managed scope get no suggestions, no picker, no checks, no pro
 | `domain` changes | A preview, then a new `unique_id` (the old one kept in `archived_fields`) |
 | A tag is a synonym, unknown, or `status` is not allowed | A prompt (open notes by default). Prompts can be switched off |
 | A schema file is invalid | One notice naming the file and line; the last good copy stays in use |
-| Enter in a note's body | Only for a type with `body.entry` and body edits allowed: a new timed entry line ([timed entries](#timed-entries)). Nothing else in Rubric edits a body |
+| Enter, Tab and Shift-Tab in a note's body, and a new note's body | Only for a type that uses the [body module](#the-body-module), with body edits allowed: what the rules say. Nothing else in Rubric edits a body |
 
 Notes that arrive through sync never prompt; the vault check covers them.
 
@@ -564,7 +564,7 @@ Applying a preset replaces files, so keep a copy of anything you are not sure ab
 
 ## Body access
 
-**Status: one body behaviour ships: [timed entries](#timed-entries).** Rubric manages a note's properties. The body access layer is the foundation that lets features read and edit the body of a note safely. Timed entries are the only thing that edits a body, so with the setting below off, or with no type opted in (and given an `entry`), Rubric behaves exactly as before.
+**Rubric manages a note's properties, and, only where you ask, its body.** The body access layer lets features read and edit the body of a note safely. What ships on top of it is the [body module](#the-body-module): rules for Enter, Tab and Shift-Tab, per heading, and starter sections for new notes. With the setting below off, or with no type using the module, Rubric behaves exactly as before.
 
 **Who may change a body.** All of these must hold, checked in this order; the first that fails is the reason a write or a handler is refused:
 
@@ -579,7 +579,7 @@ Applying a preset replaces files, so keep a copy of anything you are not sure ab
 
 Reading a body is never refused. The setting **Log body access** writes one line to the developer console for each body change or refusal (which handler, which note, how many characters) and adds the command **Body access: show sections**: the active note's type, whether `body.enabled` is on, whether body edits are allowed and why not, and its heading tree with line ranges.
 
-**What a handler can do.** A handler is code that registers for a key and sees a keypress in the body of an opted-in note before Obsidian does. It can only be registered by code; in the schema a type writes `enabled`, and `entry` for the one handler that ships (timed entries).
+**What a handler can do.** A handler is code that registers for a key and sees a keypress in the body of an opted-in note before Obsidian does. Handlers are registered by code; the one that ships reads the rules of the [body module](#the-body-module), so a schema can say what Enter, Tab and Shift-Tab do without any code.
 
 - Keys: `Enter`, `Tab`, `Shift-Tab`. Deleting keys are not offered.
 - It is told the note's type, the cursor line and column, the line, whether anything is selected, the list item the line starts (marker, task box, depth: a tab or the tab size in spaces is one level) and the innermost section (heading text, level, line).
@@ -588,34 +588,95 @@ Reading a body is never refused. The setting **Log body access** writes one line
 - It may only insert. Replacing or deleting existing text needs the handler to have been registered as allowed to rewrite, and the edit is then explicit. Edits that fall outside the note or overlap are dropped; a handler that fails is skipped and the key goes on to Obsidian.
 - It is **not** run while an input method (IME) is composing, with several cursors, in the frontmatter, or inside a code fence, a `$$` math block or a `%%` comment.
 
-### Timed entries
+### The body module
 
-A journal-style note where every line is an entry with the time it was written. In the type file:
+Properties are described in YAML; so can the body be. A **body module** is a module file like `base` or `findability`, but it describes the body of a note: which headings a new note starts with, and what Enter, Tab and Shift-Tab do, under a heading or everywhere. Types pull it in with `uses`.
+
+**1. Add the module** to `registry/types.yaml`:
 
 ```yaml
-body:
-  enabled: true
-  entry: "- {time}"
+modules:
+  body: modules/body.yaml
 ```
 
-and switch on **Allow Rubric to edit note bodies** (off by default). Then, in a note of that type, Enter in the body starts a new line made from `entry` with `{time}` replaced by the local time as HH:mm:
+**2. Write `modules/body.yaml`:**
 
+```yaml
+module: body
+description: What happens in the body of a note.
+
+sections:                              # by heading, like properties
+  - heading: Captures                  # the heading text, without the # marks
+    level: 2                           # optional: 1 to 6; leave out to match any level
+    starter: "- {{time:HH:mm}} "       # what a new note has under it
+    keys:
+      Enter: { insert: "- {{time:HH:mm}} " }
+  - heading: Gratitude
+    keys:
+      Enter: { insert: "- " }          # plain bullets here
+
+default:                               # anywhere else in the body
+  keys:
+    Enter: { insert: "- {{time:HH:mm}} " }
+    Tab:   { insert: "{{ now().format('ddd') }} ", newline: false }
 ```
-- 10:03 woke early
-- 10:41 ▮                 ← after Enter on the line above (the cursor is at ▮)
-```
+
+**3. Use it** in a type: `uses: [base, findability, relations, body]`. Then switch on **Allow Rubric to edit note bodies** (off by default).
+
+**Sections.** Each section has a `heading` (matched without regard to case, under the heading the cursor is in; the innermost heading decides), an optional `level`, an optional `starter`, `scaffold: false` to leave it out of new notes, and `keys`. A key the section does not mention falls back to `default`. A heading listed twice is a warning and the later one wins.
+
+**Keys and rules.** `keys` takes `Enter`, `Tab` and `Shift-Tab`. A rule has:
+
+| Field | Meaning |
+| --- | --- |
+| `insert` | Text with `{{ }}` placeholders (below). Enter starts a new line with it; Tab and Shift-Tab put it at the cursor |
+| `newline` | Start a new line before the text. Default true for Enter, false for Tab and Shift-Tab |
+| `pass` | Leave the key to Obsidian here, even if `default` has a rule for it |
+
+Write any space you want after the text yourself: `"- {{time}} "` ends with one, so what you type follows it.
+
+**Placeholders `{{ ... }}`.** Either a template variable from Obsidian's core Templates plugin, or a formula:
+
+| Template variable | Writes |
+| --- | --- |
+| `{{title}}` | The note's name |
+| `{{date}}`, `{{date:FORMAT}}` | Today, default `YYYY-MM-DD` |
+| `{{time}}`, `{{time:FORMAT}}` | Now, default `HH:mm` |
+
+Formats are Moment.js tokens: `YYYY YY MMMM MMM MM M Do DD D dddd ddd dd d HH H hh h mm m ss s SSS A a Z`, and `[text]` for words that are kept as written. Day and month names are in English.
+
+A **formula** works like a Bases formula and gives a value that is written as text. It is a safe subset written for Rubric, not JavaScript, and a formula that fails is written as nothing (the debug log says why); one that does not parse is a schema error naming the file and line.
+
+| Part | Available |
+| --- | --- |
+| Values | Text in `'single'` or `"double"` quotes, numbers, `true`, `false`, `null` |
+| Operators | `+ - * / %`, `< <= > >= == !=`, `&& \|\| !`, brackets. `+` joins text |
+| Functions | `now()`, `today()`, `date("YYYY-MM-DD HH:mm")`, `if(cond, then, else)`, `number(x)`, `min(a, b, ...)`, `max(a, b, ...)` |
+| The file | `file.name`, `file.basename`, `file.path`, `file.folder`, `file.ext`, `file.ctime`, `file.mtime` |
+| The note's properties | `note.status` or just `status`; a property that is not there is nothing |
+| A date | `.format("HH:mm")`, `.time()`, `.date()`, `.year`, `.month`, `.day`, `.hour`, `.minute`, `.second`, `.millisecond`; dates compare with `<` and `==` |
+| Text | `.length`, `.contains()`, `.containsAll()`, `.containsAny()`, `.startsWith()`, `.endsWith()`, `.isEmpty()`, `.lower()`, `.title()`, `.trim()`, `.replace()`, `.repeat()`, `.reverse()`, `.slice()`, `.split()` |
+| A list | `.length`, `.contains()`, `.isEmpty()`, `.join()` |
+
+Not available: durations and date arithmetic, `link()`, `file()`, regular expressions, number methods. In YAML, write formulas inside a double-quoted string and use single quotes inside the formula.
+
+**What Enter does.** With a rule `insert: "- {{time:HH:mm}} "`:
 
 | You press Enter | What happens |
 | --- | --- |
-| At the end of an entry, a heading, a plain line or a photo embed | A new entry line with the current time |
-| In the middle of a line | The rest of the line moves to the new entry, after the time |
-| On an entry that has only its time (`- 10:41 `) | That line is removed and the list ends, leaving a blank line |
-| On a blank line | A normal blank line: the way out of the entries |
+| At the end of an entry, a heading, a plain line or a photo embed | A new line with the rule text |
+| In the middle of a line | The rest of the line moves to the new line, after the rule text |
+| On a line that has only what the rule wrote (`- 10:41 `) | That line is removed and the list ends, leaving a blank line |
+| On a blank line | A normal blank line: the way out |
 | On a sub-bullet, a task (`- [ ]`), a numbered item, a quote or a table row | Obsidian's own behaviour |
-| At the start of a line, or inside the `- 10:41 ` part of an entry | Obsidian's own behaviour (the line moves down) |
+| At the start of a line, or inside the generated `- 10:41 ` part | Obsidian's own behaviour (the line moves down) |
 | In the frontmatter, a code fence, a `$$` block or a `%%` comment, while an input method is composing, or with several cursors or a selection | Obsidian's own behaviour |
 
-`{time}` is the only token. The template may be any text that contains it, for example `* **{time}** -`. Each new line is one undo step. A note's `entry` is read from its type, so a type without `entry` (or without `enabled: true`) is not affected. If Enter does nothing special, run **Body access: show sections** (after switching on **Log body access**) to see why the note is refused.
+A line counts as "only what the rule wrote" by the format of its date and time placeholders (a formula ending in `.format("...")` counts too; any other formula matches one word). Each new line is one undo step. To find out why Enter does nothing special, switch on **Log body access** and run **Body access: show sections**.
+
+**Starter sections.** A new note of a type with a body module starts with its sections in the order listed: the heading, a blank line, the `starter` text. This happens in **Create note from schema**, and when Rubric completes a new note (a note made in Obsidian, with the create setting on **Fill automatically** or after you approve the preview) whose body is still empty. A note that already has a body is never changed. It needs **Allow Rubric to edit note bodies**.
+
+**Combining.** Rules from the modules a type uses are merged in `uses` order, then the type's own `body:` block on top: a section with the same heading (and level) is changed key by key and keeps its place, a new heading goes on the end, and each key of `default` is replaced by the later rule.
 
 **What the file API can do.** For features that act on a note that is not being typed in: read the body, its lines and its sections; replace the body only if it is still what the caller read; change the body with a function that sees it as it is at that moment; or insert text at a heading. Every write is one atomic read-modify-write, never touches the frontmatter, keeps the note's line endings, reports "nothing changed" instead of writing an identical file, and is done even when the note is open with unsaved typing (both are kept; it is one undo step). A body write counts as an edit, so `modified` is stamped afterwards as for your own typing; in an open note that stamp is its own undo step, so undo twice to take back a body write once `modified` has been stamped.
 
@@ -678,8 +739,9 @@ The settings page and the vault check list schema problems as `file:line message
 
 | Code | Meaning |
 | --- | --- |
-| `body-shape` | `body` in a type file is not a map, `body.enabled` is not true or false, or `body.entry` is not text containing `{time}` (error) |
-| `body-unknown-key` | A key under `body` other than `enabled` and `entry`. It has no effect (a warning) |
+| `body-shape` | `body`, `sections`, `default` or `keys` has the wrong shape, a section has no `heading`, a `level` is not 1 to 6, a key name is not Enter, Tab or Shift-Tab, or a flag is not true or false (error) |
+| `body-formula` | A `{{ }}` placeholder in a body rule or starter does not parse: not closed, empty, or a formula with a mistake. The message names the placeholder (error) |
+| `body-unknown-key` | An unknown key in a body block, section, `default` or rule, a rule with neither `insert` nor `pass`, or a heading listed twice. It has no effect, or the later one wins (a warning) |
 
 **Properties**
 

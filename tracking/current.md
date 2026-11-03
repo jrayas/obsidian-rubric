@@ -1,10 +1,15 @@
 # Current
 
-## Latest task (2026-11-03): timed entries, 0.6.0 — in progress (code, tests and docs done; vault changes and release pending)
+## Latest task (2026-11-03): the body module, 0.7.0 — code, tests and docs done; Journal vault migration and release pending
 
-`body: { enabled: true, entry: "- {time}" }` on a type makes Enter in the body start a new `- HH:mm ` line (D-91). `src/core/body-entry.ts` (pure handler), `body-config.ts` (the `entry` key), registered in `main.ts`; REFERENCE, README, user guide, changelog updated. Android emulator: real Enter key events behave as designed (new entry, typed text, empty entry removed, blank line left to Obsidian). Pending: install in the Journal vault (journal.yaml body block, allowBodyEdits on), remove the empty Review folder and mapping, create starter notes (Idea inbox, How I reflect, Journal guide, Person template) as confirmed with the user, run `npm run e2e`.
+The user asked for a **body module** (like `base`), customisable like the frontmatter, with proper Obsidian/Notion-style formulas instead of `{time}` (D-92). Built: `src/core/formula.ts` (safe formula engine), `moment-format.ts`, `template.ts` (`{{ }}` placeholders), `body-rules.ts` (parse, merge), `body-handler.ts` (Enter, Tab, Shift-Tab per heading), `body-scaffold.ts` (starter sections), loader support for a body module (`ModuleDef.body`, `resolveBody`), starter body in Create note and note completion. `body.entry` (0.6.0, unreleased) is gone. REFERENCE, README, user guide, CHANGELOG updated.
+
+Checked: typecheck, lint, 775 unit tests. Android 15 emulator, real key events: starter sections on a new empty note, default Enter rule, Tab formula rule, per-heading rule, ending a list. Not run yet for 0.7.0: `npm run e2e` (desktop). Not verified: a phone's on-screen keyboard.
+
+Pending: migrate the Journal vault (modules/body.yaml, registry, journal.yaml uses body, remove the old body block), install 0.7.0 there, run `npm run e2e`, commit.
 
 ---
+
 
 ## Latest task (2026-11-03): works on mobile, 0.5.1 — done, committed on branch `mobile-verified-writes`, **not pushed, not installed in any vault**
 

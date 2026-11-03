@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 const ROOT = join(__dirname, '..');
-const CORE = ['note-text.ts', 'note-sections.ts', 'body-edit.ts', 'body-config.ts', 'body-gate.ts', 'body-service.ts', 'body-handlers.ts', 'body-report.ts'].map((f) => `src/core/${f}`);
+const CORE = ['note-text.ts', 'note-sections.ts', 'body-edit.ts', 'body-config.ts', 'body-gate.ts', 'body-service.ts', 'body-handlers.ts', 'body-report.ts', 'body-rules.ts', 'body-handler.ts', 'body-scaffold.ts', 'formula.ts', 'template.ts', 'moment-format.ts'].map((f) => `src/core/${f}`);
 const ADAPTERS = readdirSync(join(ROOT, 'src', 'obsidian'))
   .filter((f) => f.startsWith('body-'))
   .map((f) => `src/obsidian/${f}`);
@@ -13,7 +13,7 @@ const imports = (file: string) => [...readFileSync(join(ROOT, file), 'utf8').mat
 
 describe('the body access layer can run on mobile later', () => {
   it('finds the files it is meant to check', () => {
-    expect(ADAPTERS.sort()).toEqual(['src/obsidian/body-access.ts', 'src/obsidian/body-demo.ts', 'src/obsidian/body-editor.ts']);
+    expect(ADAPTERS.sort()).toEqual(['src/obsidian/body-access.ts', 'src/obsidian/body-context.ts', 'src/obsidian/body-demo.ts', 'src/obsidian/body-editor.ts']);
   });
 
   it.each([...CORE, ...ADAPTERS])('%s imports nothing desktop-only', (file) => {

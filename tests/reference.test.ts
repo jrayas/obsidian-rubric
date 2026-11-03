@@ -67,12 +67,12 @@ describe('REFERENCE.md lists every code', () => {
 });
 
 describe('REFERENCE.md describes body access', () => {
-  it('names the key, the setting, the commands and the keys, and says which body behaviour ships', () => {
+  it('names the key, the setting, the commands and the keys, and says that the body is managed only where asked', () => {
     for (const word of ['body', 'enabled', 'Allow Rubric to edit note bodies', 'Log body access', 'Body access: show sections']) {
       expect(reference.includes(word), word).toBe(true);
     }
     for (const word of ['Enter', 'Tab', 'Shift-Tab', 'start', 'end', 'after', 'before']) expect(has(word), word).toBe(true);
-    expect(reference).toMatch(/one body behaviour ships/i);
+    expect(reference).toMatch(/only where you ask, its body/i);
   });
 
   it('lists the keys the handler hook offers and every insert position', async () => {
@@ -81,9 +81,15 @@ describe('REFERENCE.md describes body access', () => {
   });
 });
 
-describe('REFERENCE.md describes timed entries', () => {
-  it('names the key, the token, the setting and every case in the table', () => {
-    for (const word of ['entry', '{time}', 'HH:mm', 'Timed entries', 'Allow Rubric to edit note bodies', 'body-shape', 'sub-bullet', 'blank line', 'one undo step']) {
+describe('REFERENCE.md describes the body module', () => {
+  it('names the module, the keys, the placeholders, the formula parts and the codes', () => {
+    for (const word of ['The body module', 'sections', 'default', 'starter', 'scaffold', 'insert', 'newline', 'pass', '{{time:HH:mm}}', '{{title}}', 'Moment.js', 'now()', 'if(cond', 'file.basename', 'Starter sections', 'body-formula', 'body-shape', 'Allow Rubric to edit note bodies']) {
+      expect(reference.includes(word), word).toBe(true);
+    }
+  });
+
+  it('lists every function and method the formula engine has', () => {
+    for (const word of ['today()', 'number(x)', 'min(a, b', 'max(a, b', '.format("HH:mm")', '.time()', '.lower()', '.title()', '.replace()', '.split()', '.join()', '.containsAny()']) {
       expect(reference.includes(word), word).toBe(true);
     }
   });

@@ -1,4 +1,5 @@
 import { Modal, Notice, Setting, normalizePath } from 'obsidian';
+import { scaffoldBody } from '../core/body-scaffold';
 import { newNoteFrontmatter } from '../core/create';
 import { domainFromFolder, typeFor } from '../core/domain-overrides';
 import { checkFileName } from '../core/fs-names';
@@ -103,9 +104,13 @@ export class CreateNoteModal extends Modal {
         const now = new Date();
         const id = plugin.ids.allocate(type.prefix, now.getFullYear());
         const fm = newNoteFrontmatter(type, { name: this.name, id, now, allocateUnique: (tp, dp, year) => plugin.ids.allocateUnique(tp, dp, year), ...(domain ? { domain } : {}) });
-        const text = editFrontmatter('', (draft) => {
+        const frontmatterText = editFrontmatter('', (draft) => {
           for (const [k, v] of Object.entries(fm)) draft[k] = v;
         }).text;
+        // The starter sections of the type's body rules, when body edits are allowed.
+        const rules = type.body.enabled && plugin.settings.allowBodyEdits ? type.body.rules : undefined;
+        const starter = rules ? scaffoldBody(rules, { now, file: { name: `${this.name}.md`, basename: this.name, path, folder: this.folder, ext: 'md' }, props: fm }).text : '';
+        const text = starter === '' ? frontmatterText : (frontmatterText.endsWith('\n') ? frontmatterText : `${frontmatterText}\n`) + starter;
         if (this.folder && !plugin.app.vault.getFolderByPath(this.folder)) await plugin.app.vault.createFolder(this.folder);
         plugin.queue.ledger.record(path, text);
         return plugin.app.vault.create(path, text);
