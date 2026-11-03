@@ -83,7 +83,7 @@ An Obsidian desktop plugin, **Rubric** (`rubric`, version 0.1.0, minimum Obsidia
 4. **Real sync between two machines was not run** (checklist item 12). Sync is simulated by external writes; D-34 explains why prompts only run for open notes.
 5. The Properties-area features use undocumented Obsidian internals (isolated in `src/obsidian/properties-layer.ts`). Re-run the checklist on each Obsidian release.
 6. Decisions worth a look in `docs/decisions.md`: D-01 (autonomy over the spec's approval gates), D-05 and D-33 (the plugin writes the starter pack and one vocabulary term, which the spec's write list did not include), D-07 (own frontmatter writer because `processFrontMatter` breaks CRLF), D-34 (prompts only for open notes), D-38 (the extra "Create note from schema" command).
-7. Licence is 0BSD and author "Joan Anthirayas" (D-12); change them if you prefer.
+7. Licence is MIT and the author is "Anthirayas" (D-12, changed by D-87).
 8. Not done by design (spec "Later"): mobile, a board layer, an in-app schema editor, compliance modules.
 
 ### Where to start

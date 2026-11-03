@@ -1,6 +1,6 @@
 # Vault Schema Plugin: Specification for Claude Code
 
-Oct 20, 2026 · @Joan Anthirayas
+Oct 20, 2026 · @Anthirayas
 
 ## Purpose and scope
 
